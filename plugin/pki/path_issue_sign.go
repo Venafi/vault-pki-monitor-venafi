@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"log"
 )
 
 func pathIssue(b *backend) *framework.Path {
@@ -333,6 +334,23 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
+	if role.TPPImport {
+		sn := normalizeSerial(cb.SerialNumber)
+		log.Printf("Puting certificate with serial number %s to the TPP import queue\n. Certificate pem block: %s\n", sn, cb.Certificate)
+
+		err = req.Storage.Put(ctx, &logical.StorageEntry{
+			Key:   "import-queue/" + data.Get("role").(string) + "/" + sn,
+			Value: parsedBundle.CertificateBytes,
+		})
+		if err != nil {
+			log.Printf("Unable to store certificate in import queue: %s", err)
+		}
+		log.Printf("Running certificates import from queue")
+		ctx = context.Background()
+		go b.importToTPP(data.Get("role").(string), ctx, req)
+	}
+
+	log.Printf("Returning sign response")
 	return resp, nil
 }
 
