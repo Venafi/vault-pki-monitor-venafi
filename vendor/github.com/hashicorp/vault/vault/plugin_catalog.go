@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -39,7 +41,7 @@ func (c *Core) setupPluginCatalog() error {
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("core: successfully setup plugin catalog", "plugin-directory", c.pluginDirectory)
+		c.logger.Info("successfully setup plugin catalog", "plugin-directory", c.pluginDirectory)
 	}
 
 	return nil
@@ -48,21 +50,21 @@ func (c *Core) setupPluginCatalog() error {
 // Get retrieves a plugin with the specified name from the catalog. It first
 // looks for external plugins with this name and then looks for builtin plugins.
 // It returns a PluginRunner or an error if no plugin was found.
-func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
+func (c *PluginCatalog) Get(ctx context.Context, name string) (*pluginutil.PluginRunner, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
 	// If the directory isn't set only look for builtin plugins.
 	if c.directory != "" {
 		// Look for external plugins in the barrier
-		out, err := c.catalogView.Get(name)
+		out, err := c.catalogView.Get(ctx, name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve plugin \"%s\": %v", name, err)
+			return nil, errwrap.Wrapf(fmt.Sprintf("failed to retrieve plugin %q: {{err}}", name), err)
 		}
 		if out != nil {
 			entry := new(pluginutil.PluginRunner)
 			if err := jsonutil.DecodeJSON(out.Value, entry); err != nil {
-				return nil, fmt.Errorf("failed to decode plugin entry: %v", err)
+				return nil, errwrap.Wrapf("failed to decode plugin entry: {{err}}", err)
 			}
 
 			// prepend the plugin directory to the command
@@ -85,7 +87,7 @@ func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
 
 // Set registers a new external plugin with the catalog, or updates an existing
 // external plugin. It takes the name, command and SHA256 of the plugin.
-func (c *PluginCatalog) Set(name, command string, sha256 []byte) error {
+func (c *PluginCatalog) Set(ctx context.Context, name, command string, args []string, env []string, sha256 []byte) error {
 	if c.directory == "" {
 		return ErrDirectoryNotConfigured
 	}
@@ -100,18 +102,16 @@ func (c *PluginCatalog) Set(name, command string, sha256 []byte) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	parts := strings.Split(command, " ")
-
 	// Best effort check to make sure the command isn't breaking out of the
 	// configured plugin directory.
-	commandFull := filepath.Join(c.directory, parts[0])
+	commandFull := filepath.Join(c.directory, command)
 	sym, err := filepath.EvalSymlinks(commandFull)
 	if err != nil {
-		return fmt.Errorf("error while validating the command path: %v", err)
+		return errwrap.Wrapf("error while validating the command path: {{err}}", err)
 	}
 	symAbs, err := filepath.Abs(filepath.Dir(sym))
 	if err != nil {
-		return fmt.Errorf("error while validating the command path: %v", err)
+		return errwrap.Wrapf("error while validating the command path: {{err}}", err)
 	}
 
 	if symAbs != c.directory {
@@ -120,44 +120,45 @@ func (c *PluginCatalog) Set(name, command string, sha256 []byte) error {
 
 	entry := &pluginutil.PluginRunner{
 		Name:    name,
-		Command: parts[0],
-		Args:    parts[1:],
+		Command: command,
+		Args:    args,
+		Env:     env,
 		Sha256:  sha256,
 		Builtin: false,
 	}
 
 	buf, err := json.Marshal(entry)
 	if err != nil {
-		return fmt.Errorf("failed to encode plugin entry: %v", err)
+		return errwrap.Wrapf("failed to encode plugin entry: {{err}}", err)
 	}
 
 	logicalEntry := logical.StorageEntry{
 		Key:   name,
 		Value: buf,
 	}
-	if err := c.catalogView.Put(&logicalEntry); err != nil {
-		return fmt.Errorf("failed to persist plugin entry: %v", err)
+	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
+		return errwrap.Wrapf("failed to persist plugin entry: {{err}}", err)
 	}
 	return nil
 }
 
 // Delete is used to remove an external plugin from the catalog. Builtin plugins
 // can not be deleted.
-func (c *PluginCatalog) Delete(name string) error {
+func (c *PluginCatalog) Delete(ctx context.Context, name string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	return c.catalogView.Delete(name)
+	return c.catalogView.Delete(ctx, name)
 }
 
 // List returns a list of all the known plugin names. If an external and builtin
 // plugin share the same name, only one instance of the name will be returned.
-func (c *PluginCatalog) List() ([]string, error) {
+func (c *PluginCatalog) List(ctx context.Context) ([]string, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
 	// Collect keys for external plugins in the barrier.
-	keys, err := logical.CollectKeys(c.catalogView)
+	keys, err := logical.CollectKeys(ctx, c.catalogView)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +183,7 @@ func (c *PluginCatalog) List() ([]string, error) {
 		retList[i] = k
 		i++
 	}
-	// sort for consistent ordering of builtin pluings
+	// sort for consistent ordering of builtin plugins
 	sort.Strings(retList)
 
 	return retList, nil

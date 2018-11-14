@@ -1,6 +1,6 @@
 # Gopkg.toml example
 #
-# Refer to https://golang.github.io/dep/docs/Gopkg.toml.html
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
 # for detailed Gopkg.toml documentation.
 #
 # required = ["github.com/user/thing/cmd/thing"]
@@ -16,14 +16,13 @@
 #   source = "github.com/myfork/project2"
 #
 # [[override]]
-#   name = "github.com/x/y"
-#   version = "2.4.0"
-#
-# [prune]
-#   non-go = false
-#   go-tests = true
-#   unused-packages = true
+#  name = "github.com/x/y"
+#  version = "2.4.0"
 
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/Venafi/vcert"
 
 [[constraint]]
   name = "github.com/asaskevich/govalidator"
@@ -31,7 +30,7 @@
 
 [[constraint]]
   name = "github.com/fatih/structs"
-  version = "1.1.0"
+  version = "1.0.0"
 
 [[constraint]]
   name = "github.com/go-test/deep"
@@ -43,7 +42,7 @@
 
 [[constraint]]
   name = "github.com/hashicorp/vault"
-  version = "0.8.3"
+  version = "0.11.2"
 
 [[constraint]]
   name = "github.com/mitchellh/mapstructure"
@@ -60,7 +59,3 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/net"
-
-[prune]
-  go-tests = true
-  unused-packages = true

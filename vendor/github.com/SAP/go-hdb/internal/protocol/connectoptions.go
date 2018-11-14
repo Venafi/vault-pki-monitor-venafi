@@ -25,9 +25,9 @@ import (
 // data format version
 const (
 	dfvBaseline intType = 1
-	dfvDoNotUse         = 3
-	dfvSPS06            = 4 //see docu
-	dfvBINTEXT          = 6
+	dfvDoNotUse intType = 3
+	dfvSPS06    intType = 4 //see docu
+	dfvBINTEXT  intType = 6
 )
 
 // client distribution mode
@@ -89,22 +89,18 @@ func (o *connectOptions) get(k connectOption) (interface{}, bool) {
 }
 
 func (o *connectOptions) read(rd *bufio.Reader) error {
+	o.po.read(rd, o._numArg)
 
-	if err := o.po.read(rd, o._numArg); err != nil {
-		return err
-	}
 	if trace {
 		outLogger.Printf("connect options: %v", o)
 	}
 
-	return nil
+	return rd.GetError()
 }
 
 func (o *connectOptions) write(wr *bufio.Writer) error {
+	o.po.write(wr)
 
-	if err := o.po.write(wr); err != nil {
-		return err
-	}
 	if trace {
 		outLogger.Printf("connect options: %v", o)
 	}
