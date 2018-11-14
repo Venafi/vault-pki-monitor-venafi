@@ -320,6 +320,11 @@ Example:
 				Default:     15,
 				Description: `Timeout in second to rerun import queue`,
 			},
+			"tpp_import_workers": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Default:     3,
+				Description: `Max amount of simultaneously working instances of vcert import`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -544,6 +549,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		TPPImport:        data.Get("tpp_import").(bool),
 		TrustBundleFile:  data.Get("trust_bundle_file").(string),
 		TPPImportTimeout: data.Get("tpp_import_timeout").(int),
+		TPPImportWorkers: data.Get("tpp_import_workers").(int),
 	}
 
 	otherSANs := data.Get("allowed_other_sans").([]string)
@@ -748,6 +754,7 @@ type roleEntry struct {
 	TPPImport        bool   `json:"tpp_import"`
 	TrustBundleFile  string `json:"trust_bundle_file"`
 	TPPImportTimeout int    `json:"tpp_import_timeout"`
+	TPPImportWorkers int    `json:"tpp_import_workers"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
@@ -799,6 +806,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"tpp_import":         r.TPPImport,
 		"trust_bundle_file":  r.TrustBundleFile,
 		"tpp_import_timeout": r.TPPImportTimeout,
+		"tpp_import_workers": r.TPPImportWorkers,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength

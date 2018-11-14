@@ -162,8 +162,6 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 	}()
 
 	log.Println("!!!!Starting new import routine!!!!")
-	//TODO: remove after release, made for easier testing
-	time.Sleep(time.Duration(30) * time.Second)
 	for {
 		entries, err := req.Storage.List(ctx, importPath)
 		if err != nil {
@@ -175,18 +173,17 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 		//Update role since it's settings may be changed
 		role, err := b.getRole(ctx, req.Storage, roleName)
 		if err != nil {
-			log.Printf("Error getting role %v: %s\n. Exiting", role, err)
+			log.Printf("Error getting role %v: %s\n Exiting.", role, err)
 			return
 		}
 		if role == nil {
-			log.Printf("Unknown role %v\n. Exiting for path %s", role, importPath)
+			log.Printf("Unknown role %v\n Exiting for path %s.", role, importPath)
 			return
 		}
 
-		//TODO: make workers configurable from role options
-		noOfWorkers := 2
+		noOfWorkers := role.TPPImportWorkers
 		if len(entries) > 0 {
-			log.Println("Creating jobs on len", len(entries))
+			log.Printf("Creating %d of jobs for %d workers.\n", len(entries), noOfWorkers)
 			var jobs = make(chan Job, len(entries))
 			var results = make(chan Result, len(entries))
 			startTime := time.Now()
@@ -197,7 +194,7 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 			<-done
 			endTime := time.Now()
 			diff := endTime.Sub(startTime)
-			log.Println("total time taken ", diff.Seconds(), "seconds")
+			log.Printf("Total time taken %f seconds.\n", diff.Seconds())
 		}
 		log.Println("Waiting for next turn")
 		time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second)
