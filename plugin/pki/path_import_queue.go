@@ -288,9 +288,12 @@ func (b *backend) processImportToTPP(job Job) string {
 		Reconcile:       false,
 	}
 	importResp, err := cl.ImportCertificate(importReq)
+	/*TODO: handle error "The certificate already exists at Certificate DN"
+	could not import certificate: Import error. The certificate already exists at Certificate DN "\VED\Policy\devops\vcert\import-m0wtj.import.example.com"
+	*/
 	if err != nil {
 		return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
-		 
+
 	}
 	log.Printf("%s Certificate imported:\n %s", msg, pp(importResp))
 	log.Printf("%s Removing certificate from import path %s", msg, importPath+entry)

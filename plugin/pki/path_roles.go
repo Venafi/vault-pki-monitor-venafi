@@ -296,6 +296,7 @@ for "generate_lease".`,
 				Description: `Name of Venafi Platfrom or Cloud policy. 
 Example for Platform: testpolicy\\vault
 Example for Venafi Cloud: Default`,
+				Default: `Default`,
 			},
 			"tpp_user": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -308,6 +309,7 @@ Example for Venafi Cloud: Default`,
 			"tpp_import": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: `Import certificate to Venafi Platform if true`,
+				Default: true,
 			},
 			"trust_bundle_file": &framework.FieldSchema{
 				Type: framework.TypeString,
