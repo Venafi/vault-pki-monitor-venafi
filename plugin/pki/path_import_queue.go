@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 	"log"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -36,6 +37,7 @@ func pathImportQueue(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.pathUpdateImportQueue,
 			//TODO: add delete operation to stop import queue and delete it
+			//TODO: add delete operation to delete particular import record
 
 		},
 
@@ -288,16 +290,31 @@ func (b *backend) processImportToTPP(job Job) string {
 		Reconcile:       false,
 	}
 	importResp, err := cl.ImportCertificate(importReq)
-	/*TODO: handle error "The certificate already exists at Certificate DN"
-	could not import certificate: Import error. The certificate already exists at Certificate DN "\VED\Policy\devops\vcert\import-m0wtj.import.example.com"
-	*/
 	if err != nil {
+		if strings.Contains(string(err.Error()), "Import error. The certificate already exists at Certificate DN") {
+			//TODO: Here should be renew instead of deletion
+			b.deleteCertFromQueue(job)
+		}
 		return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
 
 	}
 	log.Printf("%s Certificate imported:\n %s", msg, pp(importResp))
+	b.deleteCertFromQueue(job)
+	return pp(importResp)
+
+	//There will be no new entries, need to find a way to refresh them. Try recursion here
+
+}
+
+func (b *backend) deleteCertFromQueue(job Job) {
+	ctx := job.ctx
+	req := job.req
+	entry := job.entry
+	id := job.id
+	msg := fmt.Sprintf("Job id: %v ###", id)
+	importPath := job.importPath
 	log.Printf("%s Removing certificate from import path %s", msg, importPath+entry)
-	err = req.Storage.Delete(ctx, importPath+entry)
+	err := req.Storage.Delete(ctx, importPath+entry)
 	if err != nil {
 		log.Printf("%s Could not delete %s from queue: %s", msg, importPath+entry, err)
 	} else {
@@ -309,10 +326,6 @@ func (b *backend) processImportToTPP(job Job) string {
 			log.Printf("%s Queue for path %s is:\n %s", msg, importPath, entries)
 		}
 	}
-	return pp(importResp)
-
-	//There will be no new entries, need to find a way to refresh them. Try recursion here
-
 }
 
 func (b *backend) cleanupImportToTPP(roleName string, ctx context.Context, req *logical.Request) {
