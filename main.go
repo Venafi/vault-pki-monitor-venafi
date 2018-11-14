@@ -1,7 +1,7 @@
 package main
 
 import (
-	pki "github.com/Venafi/vault-pki-import/plugin/pki"
+	pki "./plugin/pki"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical/plugin"
 	"log"
