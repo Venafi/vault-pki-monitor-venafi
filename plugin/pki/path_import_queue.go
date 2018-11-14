@@ -15,6 +15,7 @@ import (
 	"time"
 )
 
+//Jobs tructure for import queue worker
 type Job struct {
 	id         int
 	entry      string
@@ -24,6 +25,7 @@ type Job struct {
 	req        *logical.Request
 }
 
+//Result tructure for import queue worker
 type Result struct {
 	job    Job
 	result string
