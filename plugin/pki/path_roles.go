@@ -308,8 +308,8 @@ Example for Venafi Cloud: Default`,
 			},
 			"tpp_import": &framework.FieldSchema{
 				Type:        framework.TypeBool,
-				Description: `Import certificate to Venafi Platform if true`,
-				Default: true,
+				Description: `Import certificate to Venafi Platform if true. False by default.`,
+				Default: false,
 			},
 			"trust_bundle_file": &framework.FieldSchema{
 				Type: framework.TypeString,

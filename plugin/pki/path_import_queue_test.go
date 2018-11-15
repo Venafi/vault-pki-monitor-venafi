@@ -1,142 +1,173 @@
 package pki
 
 import (
-	"crypto/x509"
+	"context"
+	"log"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/api"
-	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/vault"
 )
 
-//TODO: req.Sotrage is nill, we must configure it or will get nil pointer dereference
-func TestBackend_ImportToTPP(t *testing.T) {
+func TestBackend_PathImportToTPP(t *testing.T) {
 	rand := randSeq(5)
 	domain := "example.com"
 	randCN := rand + "-import." + domain
 
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
 
-	client := cluster.Cores[0].Client
-	var err error
-	err = client.Sys().Mount("pki", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "60h",
-		},
-	})
-
-	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
-		"ttl":         "40h",
-		"common_name": "my-website.com",
-	})
+	b := Backend(config)
+	err := b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	caSerial := resp.Data["serial_number"]
 
-	_, err = client.Logical().Write("pki/roles/import", map[string]interface{}{
-		"allow_bare_domains": true,
-		"allow_subdomains":   true,
+	// generate root
+	rootData := map[string]interface{}{
+		"common_name": domain,
+		"ttl":         "6h",
+	}
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data:      rootData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// config urls
+	urlsData := map[string]interface{}{
+		"issuing_certificates":    "http://127.0.0.1:8200/v1/pki/ca",
+		"crl_distribution_points": "http://127.0.0.1:8200/v1/pki/crl",
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/urls",
+		Storage:   storage,
+		Data:      urlsData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to config urls, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create a role entry
+	roleData := map[string]interface{}{
 		"allowed_domains":    domain,
+		"allow_subdomains":   "true",
+		"max_ttl":            "4h",
+		"allow_bare_domains": true,
 		"generate_lease":     true,
-		"tpp_import":         "true",
+		"tpp_import":         true,
 		"tpp_url":            os.Getenv("TPPURL"),
 		"tpp_user":           os.Getenv("TPPUSER"),
 		"tpp_password":       os.Getenv("TPPPASSWORD"),
 		"zone":               os.Getenv("TPPZONE"),
 		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
-		"tpp_import_timeout": 15,
+		"tpp_import_timeout": 2,
+		"tpp_import_workers": 5,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test-import",
+		Storage:   storage,
+		Data:      roleData,
 	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var serials = make(map[int]string)
-	for i := 0; i < 6; i++ {
-		resp, err := client.Logical().Write("pki/issue/import", map[string]interface{}{
+	// issue some certs
+	i := 1
+	for i < 10 {
+		certData := map[string]interface{}{
 			"common_name": randCN,
+		}
+		resp, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "issue/test-import",
+			Storage:   storage,
+			Data:      certData,
 		})
+		if resp != nil && resp.IsError() {
+			t.Fatalf("failed to issue a cert, %#v", resp)
+		}
 		if err != nil {
 			t.Fatal(err)
 		}
-		serials[i] = resp.Data["serial_number"].(string)
+
+		i = i + 1
 	}
 
-	test := func(num int) {
-		resp, err := client.Logical().Read("pki/cert/crl")
-		if err != nil {
-			t.Fatal(err)
-		}
-		crlPem := resp.Data["certificate"].(string)
-		certList, err := x509.ParseCRL([]byte(crlPem))
-		if err != nil {
-			t.Fatal(err)
-		}
-		lenList := len(certList.TBSCertList.RevokedCertificates)
-		if lenList != num {
-			t.Fatalf("expected %d, found %d", num, lenList)
-		}
+	// list certs
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "certs",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to list certs, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	// check that the root and 9 additional certs are all listed
+	if len(resp.Data["keys"].([]string)) != 10 {
+		t.Fatalf("failed to list all 10 certs")
 	}
 
-	revoke := func(num int) {
-		resp, err = client.Logical().Write("pki/revoke", map[string]interface{}{
-			"serial_number": serials[num],
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		resp, err = client.Logical().Write("pki/revoke", map[string]interface{}{
-			"serial_number": caSerial,
-		})
-		if err == nil {
-			t.Fatal("expected error")
-		}
+	// list certs/
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "certs/",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to list certs, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	// check that the root and 9 additional certs are all listed
+	if len(resp.Data["keys"].([]string)) != 10 {
+		t.Fatalf("failed to list all 10 certs")
 	}
 
-	toggle := func(disabled bool) {
-		_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
-			"disable": disabled,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+	// list import queue
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "import-queue/",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to list certs, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	test(0)
-	revoke(0)
-	revoke(1)
-	test(2)
-	toggle(true)
-	test(0)
-	revoke(2)
-	revoke(3)
-	test(0)
-	toggle(false)
-	test(4)
-	revoke(4)
-	revoke(5)
-	test(6)
-	toggle(true)
-	test(0)
-	toggle(false)
-	test(6)
-	time.Sleep(60 * time.Second)
+	keys := resp.Data["keys"].([]string)
+	log.Printf("Import queue list is\n: %s", keys)
+	time.Sleep(30 * time.Second)
+
 }
 
 func randSeq(n int) string {
