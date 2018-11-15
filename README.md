@@ -81,13 +81,12 @@ This is the original Hashicorp Vault PKI secrets engine (https://www.vaultprojec
 
 1. Check the Vault logs, you should see there something like this:
     ```
-    2018-09-14T17:09:12.604+0300 [DEBUG] secrets.plugin.plugin_64a9ee0c.venafi-pki-import.venafi-pki-import: 2018/09/14 17:09:12 Certificate imported:
-    2018-09-14T17:09:12.604+0300 [DEBUG] secrets.plugin.plugin_64a9ee0c.venafi-pki-import.venafi-pki-import:  {
-    2018-09-14T17:09:12.604+0300 [DEBUG] secrets.plugin.plugin_64a9ee0c.venafi-pki-import.venafi-pki-import:     "CertificateDN": "\\VED\\Policy\\devops\\vcert\\import1.import.example.com",
-    2018-09-14T17:09:12.604+0300 [DEBUG] secrets.plugin.plugin_64a9ee0c.venafi-pki-import.venafi-pki-import:     "CertificateVaultId": 9120748,
-    2018-09-14T17:09:12.604+0300 [DEBUG] secrets.plugin.plugin_64a9ee0c.venafi-pki-import.venafi-pki-import:     "Guid": "{cb3dddd5-3546-4958-b91b-e95100a8ff0a}",
-    2018-09-14T17:09:12.604+0300 [DEBUG] secrets.plugin.plugin_64a9ee0c.venafi-pki-import.venafi-pki-import:     "PrivateKeyVaultId": 9120749
-    2018-09-14T17:09:12.604+0300 [DEBUG] secrets.plugin.plugin_64a9ee0c.venafi-pki-import.venafi-pki-import: }
+2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi: 2018/11/14 17:18:59 Job id: 1 ### Certificate imported:
+2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi:  {
+2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi:     "CertificateDN": "\\VED\\Policy\\devops\\vcert\\import-bt1ia.import.example.com",
+2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi:     "CertificateVaultId": 9147083,
+2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi:     "Guid": "{dffb26c2-4510-4965-89c0-4d64a04b80fa}"
+2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi: }
     ```
 
 [![demo](https://asciinema.org/a/FrX6zj2MwbYLjop9ceIwUFNVU.png)](https://asciinema.org/a/FrX6zj2MwbYLjop9ceIwUFNVU?autoplay=1)
@@ -101,13 +100,13 @@ using open ssl command below and provide it as an option to the 'trust_bundle_fi
 Use the following command to import the certificate to the chain.pem file.
 The main.tf file is already configured to use this file as a trust bundle.
 
-```
+```bash
 echo | openssl s_client -showcerts -servername TPP_ADDRESS -connect TPP_ADDRESS:TPP_PORT | openssl x509 -outform pem -out chain.pem
 ```
 
 Example:
 
-```
+```bash
 echo | openssl s_client -showcerts -servername venafi.example.com -connect venafi.example.com:5008 | openssl x509 -outform pem -out chain.pem
 ```
 
@@ -122,6 +121,32 @@ You can list certificates serial numbers in import queue using command:
 ```
 vault list venafi-pki-import/import-queue
 ```
+
+## Options
+To get whole option list run:
+```
+vault path-help  venafi-pki-import/roles/<ROLE_NAME>
+```
+
+Example:
+```bash
+vault path-help  venafi-pki-import/roles/import
+```
+
+List of Venafi monitor specific options:
+
+| Parameter          | Description | Default |
+| ------------------ | ----------- | -------|
+|`tpp_url`           |URL of Venafi Platfrom. Example: https://tpp.venafi.example/vedsdk||
+|`zone`              |Name of Venafi Platfrom or Cloud policy.<br> Example for Platform: testpolicy\\vault <br> Example for Venafi Cloud: Default|`Default`|
+|`tpp_user`          |web API user for Venafi Platform <br> Example: admin ||
+|`tpp_password`      |Password for web API user <br> Example: password ||
+|`tpp_import`        |Import certificate to Venafi Platform if true |`true`|
+|`trust_bundle_file` |Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server. <br> Example: <br> `trust_bundle_file = "/full/path/to/chain.pem"` ||
+|`tpp_import_timeout`|Timeout in second to rerun import queue |15|
+|`tpp_import_workers`|Max amount of simultaneously working instances of vcert import |3|
+
+
 ## Quickstart for developers
 
 1. Export your Venafi Platform configuration variables
