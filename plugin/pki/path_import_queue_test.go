@@ -16,7 +16,7 @@ import (
 )
 
 func TestBackend_PathImportToTPP(t *testing.T) {
-	rand := randSeq(5)
+	rand := randSeq(9)
 	domain := "example.com"
 
 	// create the backend
@@ -81,8 +81,8 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 		"tpp_password":       os.Getenv("TPPPASSWORD"),
 		"zone":               os.Getenv("TPPZONE"),
 		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
-		"tpp_import_timeout": 2,
-		"tpp_import_workers": 5,
+		"tpp_import_timeout": 15,
+		"tpp_import_workers": 2,
 	}
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -97,29 +97,6 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// issue some certs
-	//i := 1
-	//for i < 10 {
-	//	randCN := rand + "-import." + domain
-	//	certData := map[string]interface{}{
-	//		"common_name": randCN,
-	//	}
-	//	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-	//		Operation: logical.UpdateOperation,
-	//		Path:      "issue/test-import",
-	//		Storage:   storage,
-	//		Data:      certData,
-	//	})
-	//	if resp != nil && resp.IsError() {
-	//		t.Fatalf("failed to issue a cert, %#v", resp)
-	//	}
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	i = i + 1
-	//}
 
 	// issue particular cert
 	singleCN := rand + "-import." + domain
@@ -138,7 +115,7 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(15 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	//retrieve imported certificate
 	//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
@@ -151,10 +128,14 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 			User:     os.Getenv("TPPUSER"),
 			Password: os.Getenv("TPPPASSWORD")},
 		Zone: os.Getenv("TPPZONE"),
+		LogVerbose: true,
 	}
 
 	req := &certificate.Request{}
-	req.PickupID = "\\\\VED\\\\Policy\\\\devops\\\\vcert\\\\"+singleCN
+	req.PickupID = "\\VED\\Policy\\devops\\vcert\\"+singleCN
+	req.ChainOption = certificate.ChainOptionIgnore
+	//req.Thumbprint = "111111"
+
 	cl, err := vcert.NewClient(tppConfig)
 	if err != nil {
 		t.Fatalf("could not connect to endpoint: %s", err)
@@ -163,8 +144,7 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not retrieve certificate using requestId %s: %s", req.PickupID, err)
 	}
-	log.Println("Printing pcc")
-	pp(pcc)
+	log.Println("Printing pcc:",pp(pcc))
 
 
 	//list import queue
@@ -181,7 +161,7 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 	}
 	keys := resp.Data["keys"]
 	log.Printf("Import queue list is:\n %v", keys)
-	time.Sleep(30 * time.Second)
+	//time.Sleep(30 * time.Second)
 
 }
 
