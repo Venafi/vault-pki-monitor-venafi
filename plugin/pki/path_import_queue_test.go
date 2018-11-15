@@ -2,13 +2,12 @@ package pki
 
 import (
 	"context"
+	"github.com/hashicorp/vault/logical"
 	"log"
 	"math/rand"
 	"os"
 	"testing"
 	"time"
-
-	"github.com/hashicorp/vault/logical"
 )
 
 func TestBackend_PathImportToTPP(t *testing.T) {
