@@ -2,9 +2,14 @@ package pki
 
 import (
 	"context"
+	"crypto/tls"
+	"github.com/Venafi/vcert"
+	"github.com/Venafi/vcert/pkg/certificate"
+	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/hashicorp/vault/logical"
 	"log"
 	"math/rand"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -13,7 +18,6 @@ import (
 func TestBackend_PathImportToTPP(t *testing.T) {
 	rand := randSeq(5)
 	domain := "example.com"
-	randCN := rand + "-import." + domain
 
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -95,62 +99,70 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 	}
 
 	// issue some certs
-	i := 1
-	for i < 10 {
-		certData := map[string]interface{}{
-			"common_name": randCN,
-		}
-		resp, err = b.HandleRequest(context.Background(), &logical.Request{
-			Operation: logical.UpdateOperation,
-			Path:      "issue/test-import",
-			Storage:   storage,
-			Data:      certData,
-		})
-		if resp != nil && resp.IsError() {
-			t.Fatalf("failed to issue a cert, %#v", resp)
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
+	//i := 1
+	//for i < 10 {
+	//	randCN := rand + "-import." + domain
+	//	certData := map[string]interface{}{
+	//		"common_name": randCN,
+	//	}
+	//	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	//		Operation: logical.UpdateOperation,
+	//		Path:      "issue/test-import",
+	//		Storage:   storage,
+	//		Data:      certData,
+	//	})
+	//	if resp != nil && resp.IsError() {
+	//		t.Fatalf("failed to issue a cert, %#v", resp)
+	//	}
+	//	if err != nil {
+	//		t.Fatal(err)
+	//	}
+	//
+	//	i = i + 1
+	//}
 
-		i = i + 1
+	// issue particular cert
+	singleCN := rand + "-import." + domain
+	certData := map[string]interface{}{
+		"common_name": singleCN,
 	}
-
-	// list certs
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.ListOperation,
-		Path:      "certs",
+		Operation: logical.UpdateOperation,
+		Path:      "issue/test-import",
 		Storage:   storage,
+		Data:      certData,
 	})
 	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to list certs, %#v", resp)
+		t.Fatalf("failed to issue a cert, %#v", resp)
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
-	// check that the root and 9 additional certs are all listed
-	if len(resp.Data["keys"].([]string)) != 10 {
-		t.Fatalf("failed to list all 10 certs")
+	time.Sleep(5 * time.Second)
+
+	//retrieve imported certificate
+	//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
+	log.Println("Trying to retrieve requested certificate",singleCN)
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	var tppConfig = &vcert.Config{
+		ConnectorType: endpoint.ConnectorTypeTPP,
+		BaseUrl:       os.Getenv("TPPURL"),
+		Credentials: &endpoint.Authentication{
+			User:     os.Getenv("TPPUSER"),
+			Password: os.Getenv("TPPPASSWORD")},
+		Zone: os.Getenv("TPPZONE"),
 	}
 
-	// list certs/
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.ListOperation,
-		Path:      "certs/",
-		Storage:   storage,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to list certs, %#v", resp)
-	}
+	req := &certificate.Request{}
+	req.PickupID = "\\VED\\Policy\\devops\\vcert\\"+singleCN
+	cl, err := vcert.NewClient(tppConfig)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("could not connect to endpoint: %s", err)
 	}
-	// check that the root and 9 additional certs are all listed
-	if len(resp.Data["keys"].([]string)) != 10 {
-		t.Fatalf("failed to list all 10 certs")
-	}
+	cl.RetrieveCertificate(req)
 
-	// list import queue
+
+	//list import queue
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "import-queue/",
@@ -162,9 +174,8 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	keys := resp.Data["keys"].([]string)
-	log.Printf("Import queue list is\n: %s", keys)
+	keys := resp.Data["keys"]
+	log.Printf("Import queue list is:\n %v", keys)
 	time.Sleep(30 * time.Second)
 
 }
