@@ -123,7 +123,7 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 
 	//retrieve imported certificate
 	//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
-	log.Println("Trying to retrieve requested certificate",singleCN)
+	log.Println("Trying to retrieve requested certificate", singleCN)
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	var tppConfig = &vcert.Config{
 		ConnectorType: endpoint.ConnectorTypeTPP,
@@ -131,12 +131,12 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 		Credentials: &endpoint.Authentication{
 			User:     os.Getenv("TPPUSER"),
 			Password: os.Getenv("TPPPASSWORD")},
-		Zone: os.Getenv("TPPZONE"),
+		Zone:       os.Getenv("TPPZONE"),
 		LogVerbose: true,
 	}
 
 	req := &certificate.Request{}
-	req.PickupID = "\\VED\\Policy\\devops\\vcert\\"+singleCN
+	req.PickupID = "\\VED\\Policy\\devops\\vcert\\" + singleCN
 	req.ChainOption = certificate.ChainOptionIgnore
 	//req.Thumbprint = "111111"
 
@@ -309,7 +309,6 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 	}
 }
 
-
 func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	rand := randSeq(5)
 	domain := "example.com"
@@ -415,7 +414,6 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 
 		i = i + 1
 	}
-
 
 	//list import queue
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
