@@ -3,6 +3,8 @@ package pki
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"github.com/Venafi/vcert"
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/Venafi/vcert/pkg/endpoint"
@@ -11,6 +13,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -81,7 +84,7 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 		"tpp_password":       os.Getenv("TPPPASSWORD"),
 		"zone":               os.Getenv("TPPZONE"),
 		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
-		"tpp_import_timeout": 15,
+		"tpp_import_timeout": 2,
 		"tpp_import_workers": 2,
 	}
 
@@ -115,7 +118,8 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(30 * time.Second)
+	//Wait until certificate will be imported
+	time.Sleep(10 * time.Second)
 
 	//retrieve imported certificate
 	//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
@@ -144,8 +148,15 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not retrieve certificate using requestId %s: %s", req.PickupID, err)
 	}
-	log.Println("Printing pcc:",pp(pcc))
-
+	//log.Printf("Got certificate\n:%s",pp(pcc.Certificate))
+	block, _ := pem.Decode([]byte(pcc.Certificate))
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatalf("Error parsing cert: %s", err)
+	}
+	if cert.Subject.CommonName != singleCN {
+		t.Fatalf("incorrect subject common name: expected %v, got %v", cert.Subject.CommonName, singleCN)
+	}
 
 	//list import queue
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -251,7 +262,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	//issue some certs
 	i := 1
 	for i < 10 {
-		randCN := rand + "-import." + domain
+		randCN := rand + strconv.Itoa(i) + "-import." + domain
 		certData := map[string]interface{}{
 			"common_name": randCN,
 		}
@@ -291,6 +302,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 }
 
 func randSeq(n int) string {
+	rand.Seed(time.Now().UTC().UnixNano())
 	var letters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 	b := make([]rune, n)
 	for i := range b {
