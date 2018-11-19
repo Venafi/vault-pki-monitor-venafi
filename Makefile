@@ -23,7 +23,7 @@ VAULT_CLIENT_TIMEOUT = 180s
 
 test:
 	VAULT_ACC=1 \
-	go test $(TEST) $(TESTARGS) -v -timeout=$(TEST_TIMEOUT) -parallel=4
+	go test $(TEST) $(TESTARGS) -v -timeout=$(TEST_TIMEOUT) -parallel=20
 
 fmt:
 	gofmt -w $(GOFMT_FILES)
