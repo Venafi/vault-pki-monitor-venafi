@@ -3,3 +3,4 @@ pkg
 pki_custom
 credentials
 demo.sh
+!*/**
