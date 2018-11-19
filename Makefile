@@ -40,7 +40,7 @@ dev_server: unset
 	pkill vault || echo "Vault server is not running"
 	vault server -log-level=debug -dev -config=vault-config.hcl
 
-dev: build_go mount_dev
+dev: build mount_dev
 
 import: ca import_config_write import_config_read import_cert_write
 
@@ -49,8 +49,8 @@ ca:
         common_name=my-website.com \
         ttl=8760h
 
-#Build and push
-build_go:
+#Build
+build:
 	go build -o $(PLUGIN_PATH) || exit 1
 	chmod +x $(PLUGIN_PATH)
 
