@@ -6,10 +6,12 @@ This is the original Hashicorp Vault PKI secrets engine (https://www.vaultprojec
 
 1. Read about Vault plugin system https://www.vaultproject.io/docs/internals/plugins.html
 
-1. Download the plugin binary from releases page and make it executable
+1. Download the plugin zip package for your OS from releases page, unzip it and move to bin folder
+    Example for linux:  
     ```
-    curl -L -o bin/venafi-pki-import https://github.com/arykalin/test-import/releases/download/0.0.5/venafi-pki-import
-    chmod +x bin/venafi-pki-import
+    wget https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.0.2/vault-pki-monitor-venafi_0.0.3_linux.zip
+    unzip vault-pki-monitor-venafi_0.0.3_linux.zip
+    mv vault-pki-monitor-venafi bin/
     ```
 
 1. Configure your Vault to use plugin_directory where you download the plugin. Use vault-config.hcl from this repo as example.

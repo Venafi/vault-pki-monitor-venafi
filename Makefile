@@ -1,10 +1,19 @@
-TEST?=$$(go list ./... | grep -v /vendor/ | grep -v /e2e)
+# Metadata about this makefile and position
+MKFILE_PATH := $(lastword $(MAKEFILE_LIST))
+CURRENT_DIR := $(patsubst %/,%,$(dir $(realpath $(MKFILE_PATH))))
+
+
+# List of tests to run
+TEST ?= $$(go list ./... | grep -v /vendor/ | grep -v /e2e)
 TEST_TIMEOUT?=3m
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 
+#Plugin information
 PLUGIN_NAME := vault-pki-monitor-venafi
-PLUGIN_DIR := bin
+PLUGIN_DIR := pkg/bin
 PLUGIN_PATH := $(PLUGIN_DIR)/$(PLUGIN_NAME)
+DIST_DIR := pkg/dist
+VERSION := 0.0.3
 
 MOUNT := venafi-pki-import
 SHA256 := $$(shasum -a 256 "$(PLUGIN_PATH)" | cut -d' ' -f1)
@@ -51,8 +60,23 @@ ca:
 
 #Build
 build:
-	go build -o $(PLUGIN_PATH) || exit 1
-	chmod +x $(PLUGIN_PATH)
+	env GOOS=linux   GOARCH=amd64 go build -ldflags '-s -w' -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME) || exit 1
+	env GOOS=linux   GOARCH=386   go build -ldflags '-s -w' -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME) || exit 1
+	env GOOS=darwin  GOARCH=amd64 go build -ldflags '-s -w' -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME) || exit 1
+	env GOOS=darwin  GOARCH=386   go build -ldflags '-s -w' -o $(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME) || exit 1
+	env GOOS=windows GOARCH=amd64 go build -ldflags '-s -w' -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe || exit 1
+	env GOOS=windows GOARCH=386   go build -ldflags '-s -w' -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME).exe || exit 1
+	chmod +x $(PLUGIN_DIR)/*
+
+compress:
+	mkdir -p $(DIST_DIR)
+	rm -f $(DIST_DIR)/*
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_linux.zip" "$(PLUGIN_DIR)/linux/$(PLUGIN_NAME)" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_linux86.zip" "$(PLUGIN_DIR)/linux86/$(PLUGIN_NAME)" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_darwin.zip" "$(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_darwin86.zip" "$(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME)" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_windows.zip" "$(PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_windows86.zip" "$(PLUGIN_DIR)/windows86/$(PLUGIN_NAME).exe" || exit 1
 
 mount_dev: unset
 	vault write sys/plugins/catalog/$(PLUGIN_NAME) sha_256="$(SHA256)" command="$(PLUGIN_NAME)"
