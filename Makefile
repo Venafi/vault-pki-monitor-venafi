@@ -5,7 +5,7 @@ PLUGIN_NAME := vault-pki-monitor-venafi
 PLUGIN_DIR := bin
 PLUGIN_PATH := $(PLUGIN_DIR)/$(PLUGIN_NAME)
 
-MOUNT := venafi-pki-import
+MOUNT := vault-pki-monitor-venafi
 SHA256 := $$(shasum -a 256 "$(PLUGIN_PATH)" | cut -d' ' -f1)
 
 ROLE_OPTIONS := generate_lease=true store_by_cn="true" store_pkey="true" store_by_serial="true" ttl=1h max_ttl=1h
