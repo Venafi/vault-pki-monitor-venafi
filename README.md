@@ -47,7 +47,7 @@ This is the original Hashicorp Vault PKI secrets engine (https://www.vaultprojec
 
 		tpp_import="true"
 		tpp_url=<URL of Venafi Platform Example: https://venafi.example.com/vedsdk>
-		tpp_user=<web API user for Venafi Platfrom Example: admin>
+		tpp_user=<web API user for Venafi Platform Example: admin>
 		tpp_password=<Password for web API user Example: password>
 		zone=<Prepared Platform policy>
 
@@ -137,14 +137,14 @@ List of Venafi monitor specific options:
 
 | Parameter          | Description | Default |
 | ------------------ | ----------- | -------|
-|`tpp_url`           |URL of Venafi Platfrom. Example: https://tpp.venafi.example/vedsdk||
-|`zone`              |Name of Venafi Platfrom or Cloud policy.<br> Example for Platform: testpolicy\\vault <br> Example for Venafi Cloud: Default|`Default`|
-|`tpp_user`          |web API user for Venafi Platform <br> Example: admin ||
-|`tpp_password`      |Password for web API user <br> Example: password ||
-|`tpp_import`        |Import certificate to Venafi Platform if true |`true`|
-|`trust_bundle_file` |Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server. <br> Example: <br> `trust_bundle_file = "/full/path/to/chain.pem"` ||
-|`tpp_import_timeout`|Timeout in second to rerun import queue |15|
-|`tpp_import_workers`|Max amount of simultaneously working instances of vcert import |3|
+|`tpp_url`           |URL of Venafi Platform. Example: https://tpp.venafi.example/vedsdk||
+|`zone`              |Name of Venafi Platform or Cloud policy.<br> Example for Platform: testpolicy\\vault <br> Example for Venafi Cloud: Default|`Default`|
+|`tpp_user`          |Web API user for Venafi Platform. <br> Example: `admin` ||
+|`tpp_password`      |Password for web API user. <br> Example: `Passwr$$`. ||
+|`tpp_import`        |Import certificate to Venafi Platform. To disable import, specify `false`. |`true`|
+|`trust_bundle_file` |Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the Venafi Platform server. <br> Example: <br> `trust_bundle_file = "/full/path/to/chain.pem"` ||
+|`tpp_import_timeout`|Maximum seconds to wait before reimporting a certificate from the import queue. |15|
+|`tpp_import_workers`|Maximum number of concurrent threads to use for vCert import. |3|
 
 
 ## Quickstart for developers
@@ -152,7 +152,7 @@ List of Venafi monitor specific options:
 1. Export your Venafi Platform configuration variables
 
     ```
-    export TPPUSER=<web API user for Venafi Platfrom Example: admin>
+    export TPPUSER=<web API user for Venafi Platform Example: admin>
     export TPPPASSWORD=<Password for web API user Example: password>
     export TPPURL=<URL of Venafi Platform Example: https://venafi.example.com/vedsdk>
     export TPPZONE=<Prepared Platform policy>
