@@ -4,17 +4,15 @@ This is the original Hashicorp Vault PKI secrets engine (https://www.vaultprojec
 
 ## Quickstart
 
-1. Read about Vault plugin system https://www.vaultproject.io/docs/internals/plugins.html
+1. Read about the Hashicorp Vault plugin system https://www.vaultproject.io/docs/internals/plugins.html
 
-1. Download the plugin zip package for your OS from releases page, unzip it and move to bin folder
-    Example for linux:  
+1. From the command line download the plugin zip package for your OS and unzip it to bin/ folder
     ```
-    wget https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.0.2/vault-pki-monitor-venafi_0.0.3_linux.zip
-    unzip vault-pki-monitor-venafi_0.0.3_linux.zip
-    mv vault-pki-monitor-venafi bin/
+    wget https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.0.2/vault-pki-monitor-venafi_0.0.3_linux.zip && unzip vault-pki-monitor-venafi_0.0.3_linux.zip
+    mv vault-pki-monitor-venafi bin/vault-pki-monitor-venafi
     ```
 
-1. Configure your Vault to use plugin_directory where you download the plugin. Use vault-config.hcl from this repo as example.
+1. Configure your Hashicorp Vault to use plugin_directory where you download the plugin. Use vault-config.hcl from this repo as example.
 
 1. Start your Vault. If you don't have working configuration you can start it in dev mode:
     ```
@@ -24,38 +22,38 @@ This is the original Hashicorp Vault PKI secrets engine (https://www.vaultprojec
 
 [![demo](https://asciinema.org/a/VQ1f9Xdmftz5FhtX0GP1bblSg.png)](https://asciinema.org/a/VQ1f9Xdmftz5FhtX0GP1bblSg?autoplay=1)
 
-1. Export VAULT_ADDR variable to fit local started client:
+1.  From the command line, export the VAULT_ADDR variable to fit local started client:
     `
     export VAULT_ADDR=http://127.0.0.1:8200
     `
 
-1. Get sha256 checksum of plugin binary:
+1. Get the sha256 checksum of plugin binary:
     `
-    SHA256=$(shasum -a 256 bin/venafi-pki-import | cut -d' ' -f1)
-    `
-
-1. Add plugin to the vault system catalog:
-    `
-    vault write sys/plugins/catalog/venafi-pki-import sha_256="${SHA256}" command="venafi-pki-import"
+    SHA256=$(shasum -a 256 bin/vault-pki-monitor-venafi | cut -d' ' -f1)
     `
 
-1. Enable plugin secret backend:
+1. Add the plugin to the vault system catalog:
     `
-    vault secrets enable -path=venafi-pki-import -plugin-name=venafi-pki-import plugin
+    vault write sys/plugins/catalog/vault-pki-monitor-venafi sha_256="${SHA256}" command="vault-pki-monitor-venafi"
     `
 
-1. Create PKI role (https://www.vaultproject.io/docs/secrets/pki/index.html). You will need to add following Venafi Platform options:
+1. Enable the plugin secret backend:
+    `
+    vault secrets enable -path=vault-pki-monitor-venafi -plugin-name=vault-pki-monitor-venafi plugin
+    `
+
+1. Create a PKI role (https://www.vaultproject.io/docs/secrets/pki/index.html). You will need to add following Venafi Platform options:
 
 
 		tpp_import="true"
 		tpp_url=<URL of Venafi Platform Example: https://venafi.example.com/vedsdk>
-		tpp_user=<web API user for Venafi Platfrom Example: admin>
+		tpp_user=<web API user for Venafi Platform Example: admin>
 		tpp_password=<Password for web API user Example: password>
 		zone=<Prepared Platform policy>
 
     Example:
     ```
-    vault write venafi-pki-import/roles/import \
+    vault write vault-pki-monitor-venafi/roles/import \
     	tpp_import="true"  \
     	tpp_url=https://venafi.example.com/vedsdk \
     	tpp_user=admin \
@@ -66,22 +64,22 @@ This is the original Hashicorp Vault PKI secrets engine (https://www.vaultprojec
     	allow_subdomains=true
     ```
 
-1. Create PKI CA:
+1. Sign the PKI CA:
     ```
-    vault write venafi-pki-import/root/generate/internal \
+    vault write vault-pki-monitor-venafi/root/generate/internal \
             common_name=example.com \
             ttl=8760h
     ```
 
-1. Sign certificate and import it using standart PKI command. Example:
+1. Sign the certificate and import it using standart PKI command. Example:
 
     ```
-    vault write venafi-pki-import/issue/import \
+    vault write vault-pki-monitor-venafi/issue/import \
         common_name="import1.import.example.com" \
         alt_names="alt1.import.example.com,alt2-hbpxs.import.example.com"
     ```
 
-1. Check the Vault logs, you should see there something like this:
+1. Check the Vault log, you should see there something like this:
     ```
 2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi: 2018/11/14 17:18:59 Job id: 1 ### Certificate imported:
 2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi:  {
@@ -97,8 +95,8 @@ This is the original Hashicorp Vault PKI secrets engine (https://www.vaultprojec
 
 ## Import trust chain for the Platform
 
-If Venafi Platform uses an internal (self-signed) certificate, you must get your server root certificate
-using open ssl command below and provide it as an option to the 'trust_bundle_file' parameter. Otherwise, the plugin will fail because of untrusted certificate error.
+If Venafi Platform uses an internal (self-signed) certificate, you must get your server root certificate.
+Use the openssl command, below, and specify the PEM file name as the 'trust_bundle_file' parameter. Otherwise, the plugin will fail because of untrusted certificate error.
 Use the following command to import the certificate to the chain.pem file.
 The main.tf file is already configured to use this file as a trust bundle.
 
@@ -113,40 +111,40 @@ echo | openssl s_client -showcerts -servername venafi.example.com -connect venaf
 ```
 
 ## Import queue
-After certificate is signed it saved to the import queue. Import is automaticaly started after certificate is signed and will run in endless loop until plugin will exit.
+After the certificate is signed it is saved to the import queue. Import is automaticaly started after certificate is signed and will run in endless loop until plugin will exit.
 You also can start import loop by running following command:
 ```
-vault read venafi-pki-import/import-queue/<rolename>
+vault read vault-pki-monitor-venafi/import-queue/<rolename>
 ```
 
-You can list certificates serial numbers in import queue using command:
+You can list certificate serial numbers that are present in the import quque using the following command :
 ```
-vault list venafi-pki-import/import-queue
+vault list vault-pki-monitor-venafi/import-queue
 ```
 
 ## Options
-To get whole option list run:
+To list the options, run:
 ```
-vault path-help  venafi-pki-import/roles/<ROLE_NAME>
+vault path-help  vault-pki-monitor-venafi/roles/<ROLE_NAME>
 ```
 
 Example:
 ```bash
-vault path-help  venafi-pki-import/roles/import
+vault path-help  vault-pki-monitor-venafi/roles/import
 ```
 
 List of Venafi monitor specific options:
 
 | Parameter          | Description | Default |
 | ------------------ | ----------- | -------|
-|`tpp_url`           |URL of Venafi Platfrom. Example: https://tpp.venafi.example/vedsdk||
-|`zone`              |Name of Venafi Platfrom or Cloud policy.<br> Example for Platform: testpolicy\\vault <br> Example for Venafi Cloud: Default|`Default`|
-|`tpp_user`          |web API user for Venafi Platform <br> Example: admin ||
-|`tpp_password`      |Password for web API user <br> Example: password ||
-|`tpp_import`        |Import certificate to Venafi Platform if true |`true`|
-|`trust_bundle_file` |Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server. <br> Example: <br> `trust_bundle_file = "/full/path/to/chain.pem"` ||
-|`tpp_import_timeout`|Timeout in second to rerun import queue |15|
-|`tpp_import_workers`|Max amount of simultaneously working instances of vcert import |3|
+|`tpp_url`           |URL of Venafi Platform. Example: https://tpp.venafi.example/vedsdk||
+|`zone`              |Name of Venafi Platform or Cloud policy.<br> Example for Platform: testpolicy\\vault <br> Example for Venafi Cloud: Default|`Default`|
+|`tpp_user`          |Web API user for Venafi Platform. <br> Example: `admin` ||
+|`tpp_password`      |Password for web API user. <br> Example: `Passwr$$`. ||
+|`tpp_import`        |Import certificate to Venafi Platform. To disable import, specify `false`. |`true`|
+|`trust_bundle_file` |Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the Venafi Platform server. <br> Example: <br> `trust_bundle_file = "/full/path/to/chain.pem"` ||
+|`tpp_import_timeout`|Maximum seconds to wait before reimporting a certificate from the import queue. |15|
+|`tpp_import_workers`|Maximum number of concurrent threads to use for vCert import. |3|
 
 
 ## Quickstart for developers
@@ -154,7 +152,7 @@ List of Venafi monitor specific options:
 1. Export your Venafi Platform configuration variables
 
     ```
-    export TPPUSER=<web API user for Venafi Platfrom Example: admin>
+    export TPPUSER=<web API user for Venafi Platform Example: admin>
     export TPPPASSWORD=<Password for web API user Example: password>
     export TPPURL=<URL of Venafi Platform Example: https://venafi.example.com/vedsdk>
     export TPPZONE=<Prepared Platform policy>
