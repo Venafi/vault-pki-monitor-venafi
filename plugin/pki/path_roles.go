@@ -296,6 +296,7 @@ for "generate_lease".`,
 				Description: `Name of Venafi Platfrom or Cloud policy. 
 Example for Platform: testpolicy\\vault
 Example for Venafi Cloud: Default`,
+				Default: `Default`,
 			},
 			"tpp_user": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -308,6 +309,7 @@ Example for Venafi Cloud: Default`,
 			"tpp_import": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: `Import certificate to Venafi Platform if true`,
+				Default: true,
 			},
 			"trust_bundle_file": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -319,6 +321,11 @@ Example:
 				Type:        framework.TypeInt,
 				Default:     15,
 				Description: `Timeout in second to rerun import queue`,
+			},
+			"tpp_import_workers": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Default:     3,
+				Description: `Max amount of simultaneously working instances of vcert import`,
 			},
 		},
 
@@ -544,6 +551,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		TPPImport:        data.Get("tpp_import").(bool),
 		TrustBundleFile:  data.Get("trust_bundle_file").(string),
 		TPPImportTimeout: data.Get("tpp_import_timeout").(int),
+		TPPImportWorkers: data.Get("tpp_import_workers").(int),
 	}
 
 	otherSANs := data.Get("allowed_other_sans").([]string)
@@ -748,6 +756,7 @@ type roleEntry struct {
 	TPPImport        bool   `json:"tpp_import"`
 	TrustBundleFile  string `json:"trust_bundle_file"`
 	TPPImportTimeout int    `json:"tpp_import_timeout"`
+	TPPImportWorkers int    `json:"tpp_import_workers"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
@@ -799,6 +808,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"tpp_import":         r.TPPImport,
 		"trust_bundle_file":  r.TrustBundleFile,
 		"tpp_import_timeout": r.TPPImportTimeout,
+		"tpp_import_workers": r.TPPImportWorkers,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength
