@@ -22,7 +22,7 @@ ROLE_OPTIONS := generate_lease=true store_by_cn="true" store_pkey="true" store_b
 IMPORT_ROLE := import
 IMPORT_DOMAIN := import.example.com
 RANDOM_SITE_EXP := $$(head /dev/urandom | docker run --rm -i busybox tr -dc a-z0-9 | head -c 5 ; echo '')
-TRUST_BUNDLE := "/tmp/chain.pem"
+TRUST_BUNDLE := /tmp/chain.pem
 
 ### Exporting variables for demo and tests
 .EXPORT_ALL_VARIABLES:
