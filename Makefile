@@ -1,9 +1,19 @@
-TEST?=$$(go list ./... |grep -v 'vendor')
+# Metadata about this makefile and position
+MKFILE_PATH := $(lastword $(MAKEFILE_LIST))
+CURRENT_DIR := $(patsubst %/,%,$(dir $(realpath $(MKFILE_PATH))))
+
+
+# List of tests to run
+TEST ?= $$(go list ./... | grep -v /vendor/ | grep -v /e2e)
+TEST_TIMEOUT?=3m
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 
+#Plugin information
 PLUGIN_NAME := vault-pki-monitor-venafi
-PLUGIN_DIR := bin
+PLUGIN_DIR := pkg/bin
 PLUGIN_PATH := $(PLUGIN_DIR)/$(PLUGIN_NAME)
+DIST_DIR := pkg/dist
+VERSION := 0.0.3
 
 MOUNT := vault-pki-monitor-venafi
 SHA256 := $$(shasum -a 256 "$(PLUGIN_PATH)" | cut -d' ' -f1)
@@ -12,13 +22,17 @@ ROLE_OPTIONS := generate_lease=true store_by_cn="true" store_pkey="true" store_b
 IMPORT_ROLE := import
 IMPORT_DOMAIN := import.example.com
 RANDOM_SITE_EXP := $$(head /dev/urandom | docker run --rm -i busybox tr -dc a-z0-9 | head -c 5 ; echo '')
-TRUST_BUNDLE := "/tmp/chain.pem"
+TRUST_BUNDLE := /tmp/chain.pem
 
 ### Exporting variables for demo and tests
 .EXPORT_ALL_VARIABLES:
 VAULT_ADDR = http://127.0.0.1:8200
 #Must be set,otherwise cloud certificates will timeout
 VAULT_CLIENT_TIMEOUT = 180s
+
+test:
+	VAULT_ACC=1 \
+	go test $(TEST) $(TESTARGS) -v -timeout=$(TEST_TIMEOUT) -parallel=20
 
 fmt:
 	gofmt -w $(GOFMT_FILES)
@@ -35,7 +49,7 @@ dev_server: unset
 	pkill vault || echo "Vault server is not running"
 	vault server -log-level=debug -dev -config=vault-config.hcl
 
-dev: build_go mount_dev
+dev: build mount_dev
 
 import: ca import_config_write import_config_read import_cert_write
 
@@ -44,10 +58,25 @@ ca:
         common_name=my-website.com \
         ttl=8760h
 
-#Build and push
-build_go:
-	go build -o $(PLUGIN_PATH) || exit 1
-	chmod +x $(PLUGIN_PATH)
+#Build
+build:
+	env GOOS=linux   GOARCH=amd64 go build -ldflags '-s -w' -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME) || exit 1
+	env GOOS=linux   GOARCH=386   go build -ldflags '-s -w' -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME) || exit 1
+	env GOOS=darwin  GOARCH=amd64 go build -ldflags '-s -w' -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME) || exit 1
+	env GOOS=darwin  GOARCH=386   go build -ldflags '-s -w' -o $(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME) || exit 1
+	env GOOS=windows GOARCH=amd64 go build -ldflags '-s -w' -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe || exit 1
+	env GOOS=windows GOARCH=386   go build -ldflags '-s -w' -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME).exe || exit 1
+	chmod +x $(PLUGIN_DIR)/*
+
+compress:
+	mkdir -p $(DIST_DIR)
+	rm -f $(DIST_DIR)/*
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_linux.zip" "$(PLUGIN_DIR)/linux/$(PLUGIN_NAME)" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_linux86.zip" "$(PLUGIN_DIR)/linux86/$(PLUGIN_NAME)" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_darwin.zip" "$(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_darwin86.zip" "$(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME)" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_windows.zip" "$(PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe" || exit 1
+	zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_windows86.zip" "$(PLUGIN_DIR)/windows86/$(PLUGIN_NAME).exe" || exit 1
 
 mount_dev: unset
 	vault write sys/plugins/catalog/$(PLUGIN_NAME) sha_256="$(SHA256)" command="$(PLUGIN_NAME)"
