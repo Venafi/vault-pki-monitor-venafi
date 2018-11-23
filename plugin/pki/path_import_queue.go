@@ -304,7 +304,6 @@ func (b *backend) processImportToTPP(job Job) string {
 	b.deleteCertFromQueue(job)
 	return pp(importResp)
 
-	//There will be no new entries, need to find a way to refresh them. Try recursion here
 
 }
 
