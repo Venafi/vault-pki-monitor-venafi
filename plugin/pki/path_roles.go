@@ -290,6 +290,7 @@ for "generate_lease".`,
 			"tpp_url": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: `URL of Venafi Platfrom. Example: https://tpp.venafi.example/vedsdk`,
+				Required:    true,
 			},
 			"zone": &framework.FieldSchema{
 				Type: framework.TypeString,
@@ -301,15 +302,17 @@ Example for Venafi Cloud: Default`,
 			"tpp_user": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: `web API user for Venafi Platfrom Example: admin`,
+				Required:    true,
 			},
 			"tpp_password": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: `Password for web API user Example: password`,
+				Required:    true,
 			},
 			"tpp_import": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: `Import certificate to Venafi Platform if true. False by default.`,
-				Default:     false,
+				Required:    true,
 			},
 			"trust_bundle_file": &framework.FieldSchema{
 				Type: framework.TypeString,
