@@ -4,11 +4,11 @@
 package storage
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
 	math "math"
 )
@@ -41,7 +41,7 @@ var DataFormat_name = map[int32]string{
 
 var DataFormat_value = map[string]int32{
 	"DATA_FORMAT_UNSPECIFIED": 0,
-	"AVRO": 1,
+	"AVRO":                    1,
 }
 
 func (x DataFormat) String() string {

@@ -9,7 +9,17 @@ import DS from 'ember-data';
 
 const { AdapterError } = DS;
 
-const ENDPOINTS = ['health', 'seal-status', 'tokens', 'token', 'seal', 'unseal', 'init', 'capabilities-self'];
+const ENDPOINTS = [
+  'health',
+  'seal-status',
+  'tokens',
+  'token',
+  'seal',
+  'unseal',
+  'init',
+  'capabilities-self',
+  'license',
+];
 
 const REPLICATION_ENDPOINTS = {
   reindex: 'reindex',
@@ -28,6 +38,7 @@ export default ApplicationAdapter.extend({
   shouldBackgroundReloadRecord() {
     return true;
   },
+
   findRecord(store, type, id, snapshot) {
     let fetches = {
       health: this.health(),
@@ -70,7 +81,7 @@ export default ApplicationAdapter.extend({
   },
 
   features() {
-    return this.ajax(`${this.buildURL()}/license/features`, 'GET', {
+    return this.ajax(`${this.urlFor('license')}/features`, 'GET', {
       unauthenticated: true,
     });
   },
@@ -169,7 +180,7 @@ export default ApplicationAdapter.extend({
   generateDrOperationToken(data, options) {
     const verb = options && options.checkStatus ? 'GET' : 'PUT';
     let url = `${this.buildURL()}/replication/dr/secondary/generate-operation-token/`;
-    if (!data || data.pgp_key || data.otp) {
+    if (!data || data.pgp_key || data.attempt) {
       // start the generation
       url = url + 'attempt';
     } else {

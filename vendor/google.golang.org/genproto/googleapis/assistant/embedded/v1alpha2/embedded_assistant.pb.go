@@ -4,9 +4,9 @@
 package embedded
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
-	context "golang.org/x/net/context"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	latlng "google.golang.org/genproto/googleapis/type/latlng"
 	grpc "google.golang.org/grpc"
@@ -161,8 +161,8 @@ var ScreenOutConfig_ScreenMode_name = map[int32]string{
 
 var ScreenOutConfig_ScreenMode_value = map[string]int32{
 	"SCREEN_MODE_UNSPECIFIED": 0,
-	"OFF":     1,
-	"PLAYING": 3,
+	"OFF":                     1,
+	"PLAYING":                 3,
 }
 
 func (x ScreenOutConfig_ScreenMode) String() string {

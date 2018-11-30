@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "PKI - Secrets Engines - HTTP API"
-sidebar_current: "docs-http-secret-pki"
+sidebar_title: "PKI"
+sidebar_current: "api-http-secret-pki"
 description: |-
   This is the API documentation for the Vault PKI secrets engine.
 ---
@@ -786,8 +787,11 @@ request is denied.
 
 - `allowed_other_sans` `(string: "")` – Defines allowed custom OID/UTF8-string
   SANs. This field supports globbing. The format is the same as OpenSSL:
-  `<oid>;<type>:<value>` where the only current valid type is `UTF8`. This can
-  be a comma-delimited list or a JSON string slice.
+  `<oid>;<type>:<value>` where the only current valid type is `UTF8` (or
+  `UTF-8`). This can be a comma-delimited list or a JSON string slice. All
+  values, including globbing values, must use the correct syntax, with the
+  exception being a single `*` which allows any OID and any value (but type
+  must still be UTF8).
 
 - `server_flag` `(bool: true)` – Specifies if certificates are flagged for
   server use.
@@ -1541,10 +1545,9 @@ expiration time.
 - `tidy_cert_store` `(bool: false)` Specifies whether to tidy up the certificate
   store.
 
-- `tidy_revoked_certs` `(bool: false)` Set to true to expire all revoked
-  certificates, even if their duration has not yet passed, removing them both
-  from the CRL and from storage. The CRL will be rotated if this causes any
-  values to be removed.
+- `tidy_revoked_certs` `(bool: false)` Set to true to expire all revoked and
+  expired certificates, removing them both from the CRL and from storage. The
+  CRL will be rotated if this causes any values to be removed.
 
 - `safety_buffer` `(string: "")` Specifies  A duration (given as an integer
   number of seconds or a string; defaults to `72h`) used as a safety buffer to

@@ -4,12 +4,12 @@
 package containeranalysis
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	_ "github.com/golang/protobuf/ptypes/any"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	context "golang.org/x/net/context"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	v1 "google.golang.org/genproto/googleapis/iam/v1"
 	longrunning "google.golang.org/genproto/googleapis/longrunning"
@@ -106,9 +106,9 @@ var Deployable_Deployment_Platform_name = map[int32]string{
 
 var Deployable_Deployment_Platform_value = map[string]int32{
 	"PLATFORM_UNSPECIFIED": 0,
-	"GKE":    1,
-	"FLEX":   2,
-	"CUSTOM": 3,
+	"GKE":                  1,
+	"FLEX":                 2,
+	"CUSTOM":               3,
 }
 
 func (x Deployable_Deployment_Platform) String() string {

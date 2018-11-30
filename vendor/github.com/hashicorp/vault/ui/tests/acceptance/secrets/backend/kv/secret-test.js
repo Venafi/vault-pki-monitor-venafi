@@ -1,4 +1,5 @@
 import { currentURL, currentRouteName } from '@ember/test-helpers';
+import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
@@ -9,6 +10,9 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
 import withFlash from 'vault/tests/helpers/with-flash';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+
+const consoleComponent = create(consoleClass);
 
 module('Acceptance | secrets/secret/create', function(hooks) {
   setupApplicationTest(hooks);
@@ -29,12 +33,22 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     await listPage.create();
     await editPage.createSecret(path, 'foo', 'bar');
-    let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
-    assert.equal(
-      JSON.parse(capabilitiesReq.requestBody).paths,
-      `secret/data/${path}`,
-      'calls capabilites with the correct path'
-    );
+
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.ok(showPage.editIsPresent, 'shows the edit button');
+  });
+
+  test('it can create a secret when check-and-set is required', async function(assert) {
+    let enginePath = `kv-${new Date().getTime()}`;
+    let secretPath = 'foo/bar';
+    await mountSecrets.visit();
+    await mountSecrets.enable('kv', enginePath);
+    await consoleComponent.runCommands(`write ${enginePath}/config cas_required=true`);
+
+    await listPage.visitRoot({ backend: enginePath });
+    await listPage.create();
+    await editPage.createSecret(secretPath, 'foo', 'bar');
+
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
@@ -55,12 +69,9 @@ module('Acceptance | secrets/secret/create', function(hooks) {
 
     await listPage.create();
     await editPage.createSecret(secretPath, 'foo', 'bar');
-    let capabilitiesReq = this.server.passthroughRequests.findBy('url', '/v1/sys/capabilities-self');
-    assert.equal(
-      JSON.parse(capabilitiesReq.requestBody).paths,
-      `${enginePath}/${secretPath}`,
-      'calls capabilites with the correct path'
-    );
+
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
   test('it redirects to the path ending in / for list pages', async function(assert) {
@@ -71,5 +82,23 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await listPage.visit({ backend: 'secret', id: 'foo/bar' });
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list');
     assert.ok(currentURL().endsWith('/'), 'redirects to the path ending in a slash');
+  });
+
+  test('it can edit via the JSON input', async function(assert) {
+    let content = JSON.stringify({ foo: 'fa', bar: 'boo' });
+    const path = `kv-path-${new Date().getTime()}`;
+    await listPage.visitRoot({ backend: 'secret' });
+    await listPage.create();
+    await editPage.path(path).toggleJSON();
+    await editPage.editor.fillIn(this, content);
+    await editPage.save();
+
+    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.ok(showPage.editIsPresent, 'shows the edit button');
+    assert.equal(
+      showPage.editor.content(this),
+      JSON.stringify({ bar: 'boo', foo: 'fa' }, null, 2),
+      'saves the content'
+    );
   });
 });

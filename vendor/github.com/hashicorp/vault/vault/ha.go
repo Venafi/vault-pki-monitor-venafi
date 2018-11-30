@@ -91,7 +91,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	}
 
 	// Initialize a lock
-	lock, err := c.ha.LockWith(coreLockPath, "read")
+	lock, err := c.ha.LockWith(CoreLockPath, "read")
 	if err != nil {
 		c.stateLock.RUnlock()
 		return false, "", "", err
@@ -223,6 +223,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 	// Audit-log the request before going any further
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
+		Accessor:    req.ClientTokenAccessor,
 	}
 	if te != nil {
 		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
@@ -233,6 +234,7 @@ func (c *Core) StepDown(httpCtx context.Context, req *logical.Request) (retErr e
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
+		auth.TokenType = te.Type
 	}
 
 	logInput := &audit.LogInput{
@@ -392,7 +394,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			c.logger.Error("failed to generate uuid", "error", err)
 			return
 		}
-		lock, err := c.ha.LockWith(coreLockPath, uuid)
+		lock, err := c.ha.LockWith(CoreLockPath, uuid)
 		if err != nil {
 			c.logger.Error("failed to create lock", "error", err)
 			return

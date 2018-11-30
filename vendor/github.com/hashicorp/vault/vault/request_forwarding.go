@@ -166,14 +166,14 @@ func (c *Core) startForwarding(ctx context.Context) error {
 			}()
 
 			if c.logger.IsInfo() {
-				c.logger.Info("core/startClusterListener: starting listener", "listener_address", laddr)
+				c.logger.Info("starting listener", "listener_address", laddr)
 			}
 
 			// Create a TCP listener. We do this separately and specifically
 			// with TCP so that we can set deadlines.
 			tcpLn, err := net.ListenTCP("tcp", laddr)
 			if err != nil {
-				c.logger.Error("core/startClusterListener: error starting listener", "error", err)
+				c.logger.Error("error starting listener", "error", err)
 				return
 			}
 
@@ -182,7 +182,7 @@ func (c *Core) startForwarding(ctx context.Context) error {
 			defer tlsLn.Close()
 
 			if c.logger.IsInfo() {
-				c.logger.Info("core/startClusterListener: serving cluster requests", "cluster_listen_address", tlsLn.Addr())
+				c.logger.Info("serving cluster requests", "cluster_listen_address", tlsLn.Addr())
 			}
 
 			for {
@@ -373,9 +373,9 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	c.rpcClientConnCancelFunc = cancelFunc
 	c.rpcForwardingClient = &forwardingClient{
 		RequestForwardingClient: NewRequestForwardingClient(c.rpcClientConn),
-		core:        c,
-		echoTicker:  time.NewTicker(HeartbeatInterval),
-		echoContext: dctx,
+		core:                    c,
+		echoTicker:              time.NewTicker(HeartbeatInterval),
+		echoContext:             dctx,
 	}
 	c.rpcForwardingClient.startHeartbeat()
 

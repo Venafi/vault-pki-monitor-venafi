@@ -69,7 +69,7 @@ func (c *ServerCommand) enableFourClusterDev(base *vault.CoreConfig, info map[st
 		NotBefore:             time.Now().Add(-30 * time.Second),
 		NotAfter:              time.Now().Add(262980 * time.Hour),
 		BasicConstraintsValid: true,
-		IsCA: true,
+		IsCA:                  true,
 	}
 	caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, caKey.Public(), caKey)
 	if err != nil {

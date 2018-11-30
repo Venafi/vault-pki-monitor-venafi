@@ -330,6 +330,10 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 		out = append(out, fmt.Sprintf("Unseal Nonce | %s", status.Nonce))
 	}
 
+	if status.Migration {
+		out = append(out, fmt.Sprintf("Seal Migration in Progress | %t", status.Migration))
+	}
+
 	out = append(out, fmt.Sprintf("Version | %s", status.Version))
 
 	if status.ClusterName != "" && status.ClusterID != "" {
@@ -377,6 +381,10 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 				out = append(out, fmt.Sprintf("Performance Standby Last Remote WAL | %d", leaderStatus.PerfStandbyLastRemoteWAL))
 			}
 		}
+	}
+
+	if leaderStatus.LastWAL != 0 {
+		out = append(out, fmt.Sprintf("Last WAL | %d", leaderStatus.LastWAL))
 	}
 
 	ui.Output(tableOutput(out, nil))

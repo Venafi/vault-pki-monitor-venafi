@@ -2,6 +2,7 @@ package gcs
 
 import (
 	"context"
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -144,7 +145,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	// Client
 	opts := []option.ClientOption{option.WithUserAgent(useragent.String())}
 	if credentialsFile := c["credentials_file"]; credentialsFile != "" {
-		logger.Warn("physical.gcs: specifying credentials_file as an option is " +
+		logger.Warn("specifying credentials_file as an option is " +
 			"deprecated. Please use the GOOGLE_APPLICATION_CREDENTIALS environment " +
 			"variable or instance credentials instead.")
 		opts = append(opts, option.WithServiceAccountFile(credentialsFile))
@@ -177,6 +178,8 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) (retErr error)
 	// Insert
 	w := b.client.Bucket(b.bucket).Object(entry.Key).NewWriter(ctx)
 	w.ChunkSize = b.chunkSize
+	md5Array := md5.Sum(entry.Value)
+	w.MD5 = md5Array[:]
 	defer func() {
 		closeErr := w.Close()
 		if closeErr != nil {

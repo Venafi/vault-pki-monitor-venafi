@@ -4,11 +4,11 @@
 package ml
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	context "golang.org/x/net/context"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	_ "google.golang.org/genproto/googleapis/api/serviceconfig"
 	grpc "google.golang.org/grpc"
@@ -239,9 +239,9 @@ var PredictionInput_DataFormat_name = map[int32]string{
 
 var PredictionInput_DataFormat_value = map[string]int32{
 	"DATA_FORMAT_UNSPECIFIED": 0,
-	"TEXT":           1,
-	"TF_RECORD":      2,
-	"TF_RECORD_GZIP": 3,
+	"TEXT":                    1,
+	"TF_RECORD":               2,
+	"TF_RECORD_GZIP":          3,
 }
 
 func (x PredictionInput_DataFormat) String() string {

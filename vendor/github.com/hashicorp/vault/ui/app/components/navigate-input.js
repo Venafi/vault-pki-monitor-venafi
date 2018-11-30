@@ -61,8 +61,7 @@ export default Component.extend(FocusOnInsertMixin, {
     return `cert/${key}`;
   },
   onEnter: function(val) {
-    let baseKey = this.get('baseKey');
-    let mode = this.get('mode');
+    let { baseKey, mode } = this;
     let extraParams = this.get('extraNavParams');
     if (mode.startsWith('secrets') && (!val || val === baseKey)) {
       return;
@@ -78,7 +77,7 @@ export default Component.extend(FocusOnInsertMixin, {
       if (baseKey) {
         this.transitionToRoute(route, this.keyForNav(baseKey), {
           queryParams: {
-            initialKey: val.replace(this.keyForNav(baseKey), ''),
+            initialKey: val,
           },
         });
       } else {
@@ -163,8 +162,7 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
-    handleInput: function(event) {
-      var filter = event.target.value;
+    handleInput: function(filter) {
       this.get('filterDidChange')(filter);
       debounce(this, 'filterUpdated', filter, 200);
     },
@@ -173,14 +171,15 @@ export default Component.extend(FocusOnInsertMixin, {
       this.get('filterFocusDidChange')(isFocused);
     },
 
-    handleKeyPress: function(val, event) {
+    handleKeyPress: function(event) {
       if (event.keyCode === keys.TAB) {
         this.onTab(event);
       }
     },
 
-    handleKeyUp: function(val, event) {
+    handleKeyUp: function(event) {
       var keyCode = event.keyCode;
+      let val = event.target.value;
       if (keyCode === keys.ENTER) {
         this.onEnter(val);
       }
