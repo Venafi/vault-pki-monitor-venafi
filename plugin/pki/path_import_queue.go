@@ -108,69 +108,56 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 	importPath := "import-queue/" + roleName + "/"
 
 	log.Printf("Locking import mutex on backend to safely change data for import lock\n")
-	b.importQueue.Lock()
-	unlock := func() {
-		log.Printf("Unlocking import mutex on backend\n")
-		b.importQueue.Unlock()
-	}
+	err = func() (err error) {
+		b.importQueue.Lock()
+		defer log.Printf("Unlocking import mutex on backend\n")
+		defer b.importQueue.Unlock()
 
-	log.Printf("Getting import lock for path %s", lockPath)
-	importLockEntry, err := req.Storage.Get(ctx, lockPath)
-	if err != nil {
-		log.Printf("Unable to get lock import for role %s:\n %s\n", roleName, err)
-		unlock()
-		return
-	}
-
-	if importLockEntry == nil || importLockEntry.Value == nil || len(importLockEntry.Value) == 0 {
-		log.Println("Role lock is empty, assuming it is false")
-		importLocked = false
-	} else {
-		log.Printf("Got from storage %s", string(importLockEntry.Value))
-		il := string(importLockEntry.Value)
-		log.Printf("Parsing %s to bool", il)
-		importLocked, err = strconv.ParseBool(il)
+		log.Printf("Getting import lock for path %s", lockPath)
+		importLockEntry, err := req.Storage.Get(ctx, lockPath)
 		if err != nil {
-			log.Printf("Unable to parse lock import %s to bool for role %s:\n %s\n", il, roleName, err)
-			unlock()
+			log.Printf("Unable to get lock import for role %s:\n %s\n", roleName, err)
 			return
 		}
-	}
 
-	if importLocked {
-		log.Printf("Import queue for role %s is locked. Exiting", roleName)
-		unlock()
-		return
-	}
+		if importLockEntry == nil || importLockEntry.Value == nil || len(importLockEntry.Value) == 0 {
+			log.Println("Role lock is empty, assuming it is false")
+			importLocked = false
+		} else {
+			il := string(importLockEntry.Value)
+			log.Printf("Got from storage %s", il)
+			importLocked, err = strconv.ParseBool(il)
+			if err != nil {
+				log.Printf("Unable to parse lock import %s to bool for role %s:\n %s\n", il, roleName, err)
+				return
+			}
+		}
 
-	//Locking import for a role
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   lockPath,
-		Value: []byte("true"),
-	})
-	if err != nil {
-		log.Printf("Unable to lock import queue: %s\n", err)
-		unlock()
-		return
-	}
+		if importLocked {
+			log.Printf("Import queue for role %s is locked. Exiting", roleName)
+			return
+		}
 
-	unlock()
-
-	//Unlock role import on exit
-	defer func() {
-		log.Printf("Setting import lock to false on path %s\n", lockPath)
+		//Locking import for a role
 		err = req.Storage.Put(ctx, &logical.StorageEntry{
 			Key:   lockPath,
-			Value: []byte("false"),
+			Value: []byte("true"),
 		})
+		if err != nil {
+			log.Printf("Unable to lock import queue: %s\n", err)
+		}
+		return
 	}()
+	if err != nil {
+		return
+	}
 
 	log.Println("!!!!Starting new import routine!!!!")
 	for {
 		entries, err := req.Storage.List(ctx, importPath)
 		if err != nil {
 			log.Printf("Could not get queue list from path %s: %s", err, importPath)
-			return
+			break
 		}
 		log.Printf("Queue list on path %s is: %s", importPath, entries)
 
@@ -178,11 +165,11 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 		role, err := b.getRole(ctx, req.Storage, roleName)
 		if err != nil {
 			log.Printf("Error getting role %v: %s\n Exiting.", role, err)
-			return
+			break
 		}
 		if role == nil {
 			log.Printf("Unknown role %v\n Exiting for path %s.", role, importPath)
-			return
+			break
 		}
 
 		noOfWorkers := role.TPPImportWorkers
@@ -203,8 +190,11 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 		log.Println("Waiting for next turn")
 		time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second)
 	}
-	log.Println("!!!!Import stopped")
-	return
+	log.Printf("Setting import lock to false on path %s\n", lockPath)
+	err = req.Storage.Put(ctx, &logical.StorageEntry{
+		Key:   lockPath,
+		Value: []byte("false"),
+	})
 }
 
 func (b *backend) createWorkerPool(noOfWorkers int, results chan Result, jobs chan Job) {
@@ -303,7 +293,6 @@ func (b *backend) processImportToTPP(job Job) string {
 	log.Printf("%s Certificate imported:\n %s", msg, pp(importResp))
 	b.deleteCertFromQueue(job)
 	return pp(importResp)
-
 
 }
 
