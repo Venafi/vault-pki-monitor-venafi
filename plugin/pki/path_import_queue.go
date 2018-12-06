@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/hashicorp/vault/logical"
@@ -135,6 +136,7 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 
 		if importLocked {
 			log.Printf("Import queue for role %s is locked. Exiting", roleName)
+			err = errors.New("Import locked")
 			return
 		}
 
