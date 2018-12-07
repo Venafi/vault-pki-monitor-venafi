@@ -180,7 +180,7 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 			var jobs = make(chan Job, len(entries))
 			var results = make(chan Result, len(entries))
 			startTime := time.Now()
-			b.createWorkerPool(noOfWorkers, results, jobs)
+			go b.createWorkerPool(noOfWorkers, results, jobs)
 			go allocate(jobs, entries, ctx, req, roleName, importPath)
 			for result := range results {
 				log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", result.job.id, result.job.entry, result.result)
