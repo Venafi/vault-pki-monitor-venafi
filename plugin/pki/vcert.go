@@ -13,10 +13,10 @@ import (
 
 func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logical.Request, roleName string) (
 	endpoint.Connector, error) {
-	log.Printf("Using role: %s", roleName)
 	if roleName == "" {
 		return nil, fmt.Errorf("Missing role name")
 	}
+	log.Printf("Using role: %s", roleName)
 
 	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
@@ -26,39 +26,25 @@ func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logi
 		return nil, fmt.Errorf("Unknown role %v", role)
 	}
 
-	var cfg *vcert.Config
 	log.Printf("Using Venafi Platform with url %s\n", role.TPPURL)
+	cfg := &vcert.Config{
+		ConnectorType: endpoint.ConnectorTypeTPP,
+		BaseUrl:       role.TPPURL,
+		Credentials: &endpoint.Authentication{
+			User:     role.TPPUser,
+			Password: role.TPPPassword,
+		},
+		Zone:       role.Zone,
+		LogVerbose: true,
+	}
 	if role.TrustBundleFile != "" {
-		log.Printf("Trying to read trust bundle from file %s\n", role.TrustBundleFile)
 		trustBundle, err := ioutil.ReadFile(role.TrustBundleFile)
 		if err != nil {
+			log.Printf("Can`t read trust bundle from file %s: %v\n", role.TrustBundleFile, err)
 			return nil, err
 		}
-		trustBundlePEM := string(trustBundle)
-		cfg = &vcert.Config{
-			ConnectorType:   endpoint.ConnectorTypeTPP,
-			BaseUrl:         role.TPPURL,
-			ConnectionTrust: trustBundlePEM,
-			Credentials: &endpoint.Authentication{
-				User:     role.TPPUser,
-				Password: role.TPPPassword,
-			},
-			Zone:       role.Zone,
-			LogVerbose: true,
-		}
-	} else {
-		cfg = &vcert.Config{
-			ConnectorType: endpoint.ConnectorTypeTPP,
-			BaseUrl:       role.TPPURL,
-			Credentials: &endpoint.Authentication{
-				User:     role.TPPUser,
-				Password: role.TPPPassword,
-			},
-			Zone:       role.Zone,
-			LogVerbose: true,
-		}
+		cfg.ConnectionTrust = string(trustBundle)
 	}
-
 	client, err := vcert.NewClient(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Venafi issuer client: %s", err)
