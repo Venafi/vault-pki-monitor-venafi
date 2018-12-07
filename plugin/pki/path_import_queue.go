@@ -180,17 +180,15 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 			var jobs = make(chan Job, len(entries))
 			var results = make(chan Result, len(entries))
 			startTime := time.Now()
-			go b.allocate(len(entries), jobs, entries, ctx, req, roleName, importPath)
-			done := make(chan bool)
-			go result(done, results)
 			b.createWorkerPool(noOfWorkers, results, jobs)
-			<-done
-			endTime := time.Now()
-			diff := endTime.Sub(startTime)
-			log.Printf("Total time taken %f seconds.\n", diff.Seconds())
+			go allocate(jobs, entries, ctx, req, roleName, importPath)
+			for result := range results {
+				log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", result.job.id, result.job.entry, result.result)
+			}
+			log.Printf("Total time taken %v seconds.\n", time.Now().Sub(startTime))
 		}
 		log.Println("Waiting for next turn")
-		time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second)
+		time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second) //todo: maybe need to sub working time from prev line
 	}
 	log.Printf("Setting import lock to false on path %s\n", lockPath)
 	err = req.Storage.Put(ctx, &logical.StorageEntry{
@@ -209,13 +207,6 @@ func (b *backend) createWorkerPool(noOfWorkers int, results chan Result, jobs ch
 	close(results)
 }
 
-func result(done chan bool, results chan Result) {
-	for result := range results {
-		log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", result.job.id, result.job.entry, result.result)
-	}
-	done <- true
-}
-
 func (b *backend) worker(wg *sync.WaitGroup, results chan Result, jobs chan Job) {
 	for job := range jobs {
 		output := Result{job, b.processImportToTPP(job)}
@@ -224,9 +215,8 @@ func (b *backend) worker(wg *sync.WaitGroup, results chan Result, jobs chan Job)
 	wg.Done()
 }
 
-func (b *backend) allocate(noOfJobs int, jobs chan Job, entries []string, ctx context.Context, req *logical.Request, roleName string, importPath string) {
-	for i := 0; i < noOfJobs; i++ {
-		entry := entries[i]
+func allocate(jobs chan Job, entries []string, ctx context.Context, req *logical.Request, roleName string, importPath string) {
+	for i, entry := range entries {
 		log.Printf("Allocating job for entry %s", entry)
 		job := Job{
 			id:         i,
@@ -302,8 +292,7 @@ func (b *backend) deleteCertFromQueue(job Job) {
 	ctx := job.ctx
 	req := job.req
 	entry := job.entry
-	id := job.id
-	msg := fmt.Sprintf("Job id: %v ###", id)
+	msg := fmt.Sprintf("Job id: %v ###", job.id)
 	importPath := job.importPath
 	log.Printf("%s Removing certificate from import path %s", msg, importPath+entry)
 	err := req.Storage.Delete(ctx, importPath+entry)
