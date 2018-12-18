@@ -4,11 +4,11 @@
 
 This solution allows [HashiCorp Vault](https://www.vaultproject.io/) users to provide their Information Security organization visibilty into certificate issuance.  Vault issued certificates are automatically forwarded to the [Venafi Platform](https://www.venafi.com/platform/trust-protection-platform) which enables risk assessment, incident response, and auditing that ensures compliance with enterprise security policy.  The [secrets engine](https://www.vaultproject.io/docs/secrets/pki/index.html) component is the original HashiCorp Vault.
 
-# Dependencies
+## Dependencies
 
 * HashiCorp Vault: https://www.vaultproject.io/downloads.html
 
-# Requirements for use with Trust Protection Platform
+## Requirements for use with Trust Protection Platform
 
 1. The WebSDK user that Vault will be using to authenticate with the Venafi Platform has been granted view, read, write, and create permission to their policy folder.
 
