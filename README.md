@@ -59,10 +59,10 @@ It is not common for the Venafi Platform's REST API (WebSDK) to be secured using
     vault secrets enable -path=venafi-pki -plugin-name=vault-pki-monitor-venafi plugin
     ```
 
-9. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `vault-pki-monitor-venafi` making sure the `tpp_import` option is enabled:
+9. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `venafi-pki` backend making sure the `tpp_import` option is enabled:
     ```
     vault write venafi-pki/roles/vault-monitor \
-        tpp_import=true  \
+        tpp_import=true \
         tpp_url="https://tpp.venafi.example:443/vedsdk" \
         tpp_user="local:admin" \
         tpp_password="password" \
@@ -108,7 +108,7 @@ The following options are supported (note: this list can also be viewed from the
 
 [![demo](https://asciinema.org/a/FrX6zj2MwbYLjop9ceIwUFNVU.png)](https://asciinema.org/a/FrX6zj2MwbYLjop9ceIwUFNVU?autoplay=1)
 
-12. Log into the Venafi Platform, navigate to the policy folder (zone) you specified when you created the role, and review the certificate that was created.
+13. Log into the Venafi Platform, navigate to the policy folder (zone) you specified when you created the role, and review the certificate that was created.
 
 ## Import Queue
 After a certificate has been signed it is added to the import queue. Processing of certificates in the queue begins automatically and will run continuously from that point until the plugin exits.  You can also manually initiate import queue processing using the following command:
@@ -121,7 +121,7 @@ At any time you can view the contents of the import queue by certificate serial 
 vault list venafi-pki/import-queue
 ```
 
-## Development Quickstart (for Linux only)
+## Developer Quickstart (Linux only)
 
 1. Export your Venafi Platform configuration variables:
     ```
