@@ -151,7 +151,7 @@ func TestBackend_CSRValues(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps:   []logicaltest.TestStep{},
 	}
 
@@ -178,7 +178,7 @@ func TestBackend_URLsCRUD(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps:   []logicaltest.TestStep{},
 	}
 
@@ -208,7 +208,7 @@ func TestBackend_RSARoles(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -249,7 +249,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -290,7 +290,7 @@ func TestBackend_ECRoles(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -331,7 +331,7 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		Backend: b,
+		LogicalBackend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,

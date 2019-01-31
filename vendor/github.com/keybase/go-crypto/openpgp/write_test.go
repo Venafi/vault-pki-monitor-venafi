@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/rand"
-	"crypto/rsa"
 	"hash"
 	"io"
 	"io/ioutil"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/keybase/go-crypto/openpgp/packet"
+	"github.com/keybase/go-crypto/rsa"
 )
 
 func TestSignDetached(t *testing.T) {

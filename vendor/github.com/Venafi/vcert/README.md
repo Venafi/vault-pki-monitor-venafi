@@ -48,6 +48,20 @@ go test -v ./example -run TestRequestCertificate
 
 For command line examples, please see the [Knowledge Base at support.venafi.com](https://support.venafi.com/hc/en-us/articles/217991528-Introducing-VCert-API-Abstraction-for-DevOpsSec).
 
+## Prerequisites for using with Trust Protection Platform
+
+1. A user account that has been granted WebSDK Access
+2. A folder (zone) where the user has been granted the following permissions: View, Read, Write, Create, Revoke (for the revoke action), and Private Key Read (for the pickup action when CSR is service generated)
+3. Policy applied to the folder which specifies:
+    1. CA Template that Trust Protection Platform will use to enroll certificate requests submitted by VCert
+    2. Subject DN values for Organizational Unit (OU), Organization (O), City (L), State (ST) and Country (C)
+    3. Management Type not locked or locked to 'Enrollment'
+    4. Certificate Signing Request (CSR) Generation not locked or locked to 'Service Generated CSR'
+    5. Generate Key/CSR on Application not locked or locked to 'No'
+    6. (Recommended) Disable Automatic Renewal set to 'Yes'
+    7. (Recommended) Key Bit Strength set to 2048 or higher
+    8. (Recommended) Domain Whitelisting policy appropriately assigned
+
 ## Testing with Trust Protection Platform and Cloud
 
 Unit tests:
@@ -94,11 +108,13 @@ The completed test run will report on the number of test "scenarios" and "steps"
 
 ## Contributing to VCert
 
-1. Fork it (<https://github.com/yourname/yourproject/fork>)
-2. Create your feature branch (`git checkout -b Venafi/vcert`)
-3. Commit your changes (`git commit -am 'Added some cool functionality'`)
-4. Push to the branch (`git push origin Venafi/vcert`)
-5. Create a new Pull Request
+1. Fork it to your account (https://github.com/Venafi/vcert/fork)
+2. Clone your fork (`git clone git@github.com:youracct/vcert.git`)
+3. Create a feature branch (`git checkout -b your-branch-name`)
+4. Implement and test your changes
+5. Commit your changes (`git commit -am 'Added some cool functionality'`)
+6. Push to the branch (`git push origin your-branch-name`)
+7. Create a new Pull Request (https://github.com/youracct/vcert/pull/new/working-branch)
 
 ## Release History
 

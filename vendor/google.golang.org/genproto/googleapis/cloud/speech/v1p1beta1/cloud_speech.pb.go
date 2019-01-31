@@ -4,12 +4,12 @@
 package speech
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	_ "github.com/golang/protobuf/ptypes/any"
 	duration "github.com/golang/protobuf/ptypes/duration"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	context "golang.org/x/net/context"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	longrunning "google.golang.org/genproto/googleapis/longrunning"
 	status "google.golang.org/genproto/googleapis/rpc/status"
@@ -240,8 +240,8 @@ var RecognitionMetadata_OriginalMediaType_name = map[int32]string{
 
 var RecognitionMetadata_OriginalMediaType_value = map[string]int32{
 	"ORIGINAL_MEDIA_TYPE_UNSPECIFIED": 0,
-	"AUDIO": 1,
-	"VIDEO": 2,
+	"AUDIO":                           1,
+	"VIDEO":                           2,
 }
 
 func (x RecognitionMetadata_OriginalMediaType) String() string {

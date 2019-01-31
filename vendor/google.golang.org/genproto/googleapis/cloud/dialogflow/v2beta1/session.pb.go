@@ -4,10 +4,10 @@
 package dialogflow
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	_struct "github.com/golang/protobuf/ptypes/struct"
-	context "golang.org/x/net/context"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	status "google.golang.org/genproto/googleapis/rpc/status"
 	latlng "google.golang.org/genproto/googleapis/type/latlng"
@@ -124,9 +124,9 @@ var KnowledgeAnswers_Answer_MatchConfidenceLevel_name = map[int32]string{
 
 var KnowledgeAnswers_Answer_MatchConfidenceLevel_value = map[string]int32{
 	"MATCH_CONFIDENCE_LEVEL_UNSPECIFIED": 0,
-	"LOW":    1,
-	"MEDIUM": 2,
-	"HIGH":   3,
+	"LOW":                                1,
+	"MEDIUM":                             2,
+	"HIGH":                               3,
 }
 
 func (x KnowledgeAnswers_Answer_MatchConfidenceLevel) String() string {

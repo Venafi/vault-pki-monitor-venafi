@@ -1,7 +1,8 @@
 ---
 layout: "api"
 page_title: "AWS - Auth Methods - HTTP API"
-sidebar_current: "docs-http-auth-aws"
+sidebar_title: "AWS"
+sidebar_current: "api-http-auth-aws"
 description: |-
   This is the API documentation for the Vault AWS auth method.
 ---
@@ -134,7 +135,7 @@ $ curl \
 ## Configure Identity Integration
 
 This configures the way that Vault interacts with the
-[Identity](/docs/secrets/identity/index.html.md) store. This currently only
+[Identity](/docs/secrets/identity/index.html) store. This currently only
 configures how identity aliases are generated when using the `iam` auth method.
 
 | Method   | Path                         | Produces               |

@@ -299,7 +299,7 @@ func GenerateKey(curve elliptic.Curve, random io.Reader) (priv *PrivateKey, err 
 		privBytes[0] &= 127
 		privBytes[0] |= 64
 
-		Vx, Vy = curve.ScalarBaseMult(privBytes)
+		Vx,Vy = curve.ScalarBaseMult(privBytes)
 	} else {
 		privBytes, Vx, Vy, err = elliptic.GenerateKey(curve, random)
 		if err != nil {

@@ -4,9 +4,9 @@
 package texttospeech
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
-	context "golang.org/x/net/context"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	math "math"
@@ -51,9 +51,9 @@ var SsmlVoiceGender_name = map[int32]string{
 
 var SsmlVoiceGender_value = map[string]int32{
 	"SSML_VOICE_GENDER_UNSPECIFIED": 0,
-	"MALE":    1,
-	"FEMALE":  2,
-	"NEUTRAL": 3,
+	"MALE":                          1,
+	"FEMALE":                        2,
+	"NEUTRAL":                       3,
 }
 
 func (x SsmlVoiceGender) String() string {

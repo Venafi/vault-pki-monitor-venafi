@@ -4,10 +4,10 @@
 package dialogflow
 
 import (
+	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	_ "github.com/golang/protobuf/ptypes/empty"
-	context "golang.org/x/net/context"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	longrunning "google.golang.org/genproto/googleapis/longrunning"
 	_ "google.golang.org/genproto/protobuf/field_mask"
@@ -53,8 +53,8 @@ var Document_KnowledgeType_name = map[int32]string{
 
 var Document_KnowledgeType_value = map[string]int32{
 	"KNOWLEDGE_TYPE_UNSPECIFIED": 0,
-	"FAQ":           1,
-	"EXTRACTIVE_QA": 2,
+	"FAQ":                        1,
+	"EXTRACTIVE_QA":              2,
 }
 
 func (x Document_KnowledgeType) String() string {
