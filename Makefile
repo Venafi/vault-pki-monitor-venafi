@@ -13,7 +13,11 @@ PLUGIN_NAME := vault-pki-monitor-venafi
 PLUGIN_DIR := pkg/bin
 PLUGIN_PATH := $(PLUGIN_DIR)/$(PLUGIN_NAME)
 DIST_DIR := pkg/dist
-VERSION := 0.0.3
+ifdef BUILD_NUMBER
+VERSION=`git describe --abbrev=0 --tags`+$(BUILD_NUMBER)
+else
+VERSION=`git describe --abbrev=0 --tags`
+endif
 
 MOUNT := vault-pki-monitor-venafi
 SHA256 := $$(shasum -a 256 "$(PLUGIN_PATH)" | cut -d' ' -f1)
@@ -104,3 +108,15 @@ import_cert_write:
 	$(eval RANDOM_SITE := $(shell echo $(RANDOM_SITE_EXP)))
 	@echo "Issuing import-$(RANDOM_SITE).$(IMPORT_DOMAIN)"
 		vault write $(MOUNT)/issue/$(IMPORT_ROLE) common_name="import-$(RANDOM_SITE).$(IMPORT_DOMAIN)" alt_names="alt-$(RANDOM_SITE).$(IMPORT_DOMAIN),alt2-$(RANDOM_SITE).$(IMPORT_DOMAIN)"
+
+
+collect_artifacts:
+	mkdir -p artifcats
+	VERSION=`git describe --abbrev=0 --tags`
+	mv (PLUGIN_DIR)/linux/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)-$(VERSION)_linux
+	mv (PLUGIN_DIR)/linux86/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)-$(VERSION)_linux86
+	mv (PLUGIN_DIR)/darwin/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)-$(VERSION)_darwin
+	mv (PLUGIN_DIR)/darwin86/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)-$(VERSION)_darwin86
+	mv (PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe artifcats/$(PLUGIN_NAME)-$(VERSION)_windows.exe
+	mv (PLUGIN_DIR)/windows86/$(PLUGIN_NAME).ext artifcats/$(PLUGIN_NAME)-$(VERSION)_windows86.exe
+	cd artifcats; sha1sum * > hashsums.sha1
