@@ -13,7 +13,12 @@ PLUGIN_NAME := vault-pki-monitor-venafi
 PLUGIN_DIR := pkg/bin
 PLUGIN_PATH := $(PLUGIN_DIR)/$(PLUGIN_NAME)
 DIST_DIR := pkg/dist
-VERSION := 0.0.3
+
+ifdef BUILD_NUMBER
+	VERSION=`git describe --abbrev=0 --tags`+$(BUILD_NUMBER)
+else
+	VERSION=`git describe --abbrev=0 --tags`
+endif
 
 MOUNT := vault-pki-monitor-venafi
 SHA256 := $$(shasum -a 256 "$(PLUGIN_PATH)" | cut -d' ' -f1)
@@ -49,7 +54,7 @@ dev_server: unset
 	pkill vault || echo "Vault server is not running"
 	vault server -log-level=debug -dev -config=vault-config.hcl
 
-dev: build mount_dev
+dev: dev_build mount_dev
 
 import: ca import_config_write import_config_read import_cert_write
 
@@ -67,6 +72,9 @@ build:
 	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe || exit 1
 	env CGO_ENABLED=0 GOOS=windows GOARCH=386   go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME).exe || exit 1
 	chmod +x $(PLUGIN_DIR)/*
+
+dev_build:
+	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME) || exit 1
 
 compress:
 	mkdir -p $(DIST_DIR)
@@ -91,7 +99,7 @@ import_config_write:
 		tpp_password=$(TPPPASSWORD) \
 		zone="$(TPPZONE)" \
 		$(ROLE_OPTIONS) \
-		allowed_domains=$(IMPORT_DOMAIN) \
+		allowed_domains=$(IMPORT_DOMAIN)s \
 		allow_subdomains=true \
 		trust_bundle_file=$(TRUST_BUNDLE) \
 		tpp_import_timeout=15 \
