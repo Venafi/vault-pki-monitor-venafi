@@ -1,1 +1,1 @@
-plugin_directory = "bin"
+plugin_directory = "pkg/bin"
