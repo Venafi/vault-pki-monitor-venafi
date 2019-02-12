@@ -967,6 +967,12 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		}
 	}
 
+	//TODO: we will check against TPP policy here
+	check := checkAgainstVenafiPolicy(b, data)
+	if check != nil {
+		return check
+	}
+
 	subject := pkix.Name{
 		CommonName:         cn,
 		SerialNumber:       ridSerialNumber,

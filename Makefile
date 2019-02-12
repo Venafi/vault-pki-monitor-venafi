@@ -99,7 +99,7 @@ import_config_write:
 		tpp_password=$(TPPPASSWORD) \
 		zone="$(TPPZONE)" \
 		$(ROLE_OPTIONS) \
-		allowed_domains=$(IMPORT_DOMAIN)s \
+		allowed_domains=$(IMPORT_DOMAIN) \
 		allow_subdomains=true \
 		trust_bundle_file=$(TRUST_BUNDLE) \
 		tpp_import_timeout=15 \
