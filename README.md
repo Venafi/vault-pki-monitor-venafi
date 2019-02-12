@@ -121,6 +121,50 @@ At any time you can view the contents of the import queue by certificate serial 
 vault list venafi-pki/import-queue
 ```
 
+## Venafi Policy check (UNDER DEVELOPMENT)
+
+Venafi policy check is a feature which allows to limit PKI role by Venafi Trust Protection Platform or Venafi Cloud policies.
+Policy check is configured in venafi-policy path, you can restrict this path for InfoSec team only using Vault policies.
+
+1. Write venafi policy configuration into venafi-policy path:
+    1. For Trust Protection Platform:
+    ```
+    vault write pki/venafi-policy \
+        tpp_url="https://tpp.venafi.example:443/vedsdk" \
+        tpp_user="local:admin" \
+        tpp_password="password" \
+        zone="DevOps\\Vault Monitor" \
+        trust_bundle_file="/opt/venafi/bundle.pem"
+    ```
+    1. For the Cloud:
+    ```
+    vault write venafi-policy \
+        token="xxxxx-xxxxx-xxxxx-xxxxx-xxxxxx" \
+        zone="Default" \
+    ```
+
+    TODO: add scheduled update script with prod ready security example here.
+
+    Policy will be downloaded, parsed, saved into path and user will see output with parsed policy.
+    After policy creation any requested certificate will be checked against it. If checks will not pass
+    user will see error similar to standart PKI role checks i.e.:
+    ```
+    URL: PUT http://127.0.0.1:8200/v1/vault-pki-monitor-venafi/issue/domain.com
+    Code: 400. Errors:
+
+    * common name import-vl9kt.import.example.com not allowed by Venafi policy
+    ```
+
+1. Policy can be deleted by performing delete operation to the venafi-polict path:
+    ```
+    vault delete pki/venafi-policy
+    ```
+
+1. You can read content of the policy using read operation:
+    ```
+    vault read pki/venafi-policy
+    ```
+
 ## Developer Quickstart (Linux only)
 
 1. Export your Venafi Platform configuration variables:
