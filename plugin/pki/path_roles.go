@@ -31,12 +31,12 @@ func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": {
+			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
 
-			"ttl": {
+			"ttl": &framework.FieldSchema{
 				Type: framework.TypeDurationSecond,
 				Description: `The lease duration if no specific lease duration is
 requested. The lease duration controls the expiration
@@ -44,19 +44,19 @@ of certificates issued by this backend. Defaults to
 the value of max_ttl.`,
 			},
 
-			"max_ttl": {
+			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Description: "The maximum allowed lease duration",
 			},
 
-			"allow_localhost": {
+			"allow_localhost": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `Whether to allow "localhost" as a valid common
 name in a request`,
 			},
 
-			"allowed_domains": {
+			"allowed_domains": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, clients can request certificates for
 subdomains directly beneath these domains, including
@@ -65,7 +65,7 @@ information. This parameter accepts a comma-separated
 string or list of domains.`,
 			},
 
-			"allow_bare_domains": {
+			"allow_bare_domains": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates
 for the base domains themselves, e.g. "example.com".
@@ -73,7 +73,7 @@ This is a separate option as in some cases this can
 be considered a security threat.`,
 			},
 
-			"allow_subdomains": {
+			"allow_subdomains": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates for
 subdomains of the CNs allowed by the other role options,
@@ -81,84 +81,84 @@ including wildcard subdomains. See the documentation for
 more information.`,
 			},
 
-			"allow_glob_domains": {
+			"allow_glob_domains": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `If set, domains specified in "allowed_domains"
 can include glob patterns, e.g. "ftp*.example.com". See
 the documentation for more information.`,
 			},
 
-			"allow_any_name": {
+			"allow_any_name": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates for
 any CN they like. See the documentation for more
 information.`,
 			},
 
-			"enforce_hostnames": {
+			"enforce_hostnames": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, only valid host names are allowed for
 CN and SANs. Defaults to true.`,
 			},
 
-			"allow_ip_sans": {
+			"allow_ip_sans": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, IP Subject Alternative Names are allowed.
 Any valid IP is accepted.`,
 			},
 
-			"allowed_uri_sans": {
+			"allowed_uri_sans": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed URIs to put in the URI Subject Alternative Names.
 Any valid URI is accepted, these values support globbing.`,
 			},
 
-			"allowed_other_sans": {
+			"allowed_other_sans": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
-				Description: `If set, an array of allowed other names to put in SANs. These values support globbing.`,
+				Description: `If set, an array of allowed other names to put in SANs. These values support globbing and must be in the format <oid>;<type>:<value>. Currently only "utf8" is a valid type. All values, including globbing values, must use this syntax, with the exception being a single "*" which allows any OID and any value (but type must still be utf8).`,
 			},
 
-			"allowed_serial_numbers": {
+			"allowed_serial_numbers": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed serial numbers to put in Subject. These values support globbing.`,
 			},
 
-			"server_flag": {
+			"server_flag": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, certificates are flagged for server auth use.
 Defaults to true.`,
 			},
 
-			"client_flag": {
+			"client_flag": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, certificates are flagged for client auth use.
 Defaults to true.`,
 			},
 
-			"code_signing_flag": {
+			"code_signing_flag": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `If set, certificates are flagged for code signing
 use. Defaults to false.`,
 			},
 
-			"email_protection_flag": {
+			"email_protection_flag": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `If set, certificates are flagged for email
 protection use. Defaults to false.`,
 			},
 
-			"key_type": {
+			"key_type": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "rsa",
 				Description: `The type of key to use; defaults to RSA. "rsa"
 and "ec" are the only valid values.`,
 			},
 
-			"key_bits": {
+			"key_bits": &framework.FieldSchema{
 				Type:    framework.TypeInt,
 				Default: 2048,
 				Description: `The number of bits to use. You will almost
@@ -166,7 +166,7 @@ certainly want to change this if you adjust
 the key_type.`,
 			},
 
-			"key_usage": {
+			"key_usage": &framework.FieldSchema{
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
 				Description: `A comma-separated string or list of key usages (not extended
@@ -177,7 +177,7 @@ To remove all key usages from being set, set
 this value to an empty list.`,
 			},
 
-			"ext_key_usage": {
+			"ext_key_usage": &framework.FieldSchema{
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{},
 				Description: `A comma-separated string or list of extended key usages. Valid values can be found at
@@ -187,12 +187,12 @@ To remove all key usages from being set, set
 this value to an empty list.`,
 			},
 
-			"ext_key_usage_oids": {
+			"ext_key_usage_oids": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or list of extended key usage oids.`,
 			},
 
-			"use_csr_common_name": {
+			"use_csr_common_name": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, when used with a signing profile,
@@ -201,7 +201,7 @@ does *not* include any requested Subject Alternative
 Names. Defaults to true.`,
 			},
 
-			"use_csr_sans": {
+			"use_csr_sans": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If set, when used with a signing profile,
@@ -209,49 +209,49 @@ the SANs in the CSR will be used. This does *not*
 include the Common Name (cn). Defaults to true.`,
 			},
 
-			"ou": {
+			"ou": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, OU (OrganizationalUnit) will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"organization": {
+			"organization": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, O (Organization) will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"country": {
+			"country": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Country will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"locality": {
+			"locality": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Locality will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"province": {
+			"province": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Province will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"street_address": {
+			"street_address": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Street Address will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"postal_code": {
+			"postal_code": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `If set, Postal Code will be set to
 this value in certificates issued by this role.`,
 			},
 
-			"generate_lease": {
+			"generate_lease": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `
 If set, certificates issued/signed against this role will have Vault leases
@@ -263,7 +263,7 @@ to the CRL.  When large number of certificates are generated with long
 lifetimes, it is recommended that lease generation be disabled, as large amount of
 leases adversely affect the startup time of Vault.`,
 			},
-			"no_store": {
+			"no_store": &framework.FieldSchema{
 				Type: framework.TypeBool,
 				Description: `
 If set, certificates issued/signed against this role will not be stored in the
@@ -273,18 +273,23 @@ or revoked, so this option is recommended only for certificates that are
 non-sensitive, or extremely short-lived. This option implies a value of "false"
 for "generate_lease".`,
 			},
-			"require_cn": {
+			"require_cn": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: `If set to false, makes the 'common_name' field optional while generating a certificate.`,
 			},
-			"policy_identifiers": {
+			"policy_identifiers": &framework.FieldSchema{
 				Type:        framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or list of policy oids.`,
 			},
-			"basic_constraints_valid_for_non_ca": {
+			"basic_constraints_valid_for_non_ca": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: `Mark Basic Constraints valid when issuing non-CA certificates.`,
+			},
+			"not_before_duration": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Default:     30,
+				Description: `The duration before now the cert needs to be created / signed.`,
 			},
 			//Role options added for Venafi Platform import
 			"tpp_url": {
@@ -460,20 +465,17 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 }
 
 func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
-	roleName := data.Get("name").(string)
-	role, err := b.getRole(ctx, req.Storage, roleName)
+	err := req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
+
+	//Cleanup Venafi import if defined
+	roleName := data.Get("name").(string)
+	role, err := b.getRole(ctx, req.Storage, roleName)
 	if role.TPPImport {
 		b.cleanupImportToTPP(roleName, ctx, req)
 	}
-	err = req.Storage.Delete(ctx, "role/"+roleName)
-	if err != nil {
-		return nil, err
-	}
-
 	return nil, nil
 }
 
@@ -546,6 +548,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
 		PolicyIdentifiers:             data.Get("policy_identifiers").([]string),
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
+		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 		//Role options added for Venafi Platform import
 		TPPURL:           data.Get("tpp_url").(string),
 		Zone:             data.Get("zone").(string),
@@ -751,6 +754,7 @@ type roleEntry struct {
 	PolicyIdentifiers             []string      `json:"policy_identifiers" mapstructure:"policy_identifiers"`
 	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids" mapstructure:"ext_key_usage_oids"`
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
+	NotBeforeDuration             time.Duration `json:"not_before_duration" mapstructure:"not_before_duration"`
 	//Role options added for Venafi Platform import
 	TPPURL           string `json:"tpp_url"`
 	Zone             string `json:"zone"`
@@ -803,6 +807,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"require_cn":                         r.RequireCN,
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
+		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
 		//Role options added for Venafi Platform import
 		"tpp_url":            r.TPPURL,
 		"zone":               r.Zone,
