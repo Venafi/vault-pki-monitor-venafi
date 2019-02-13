@@ -13,8 +13,55 @@ import (
 // This returns the list of queued for import to TPP certificates
 func pathVenafiPolicy(b *backend) *framework.Path {
 	ret := &framework.Path{
-		Pattern: "venafi-policy",
+		Pattern: "venafi-policy/" + framework.GenericNameRegex("name"),
+		Fields: map[string]*framework.FieldSchema{
+			"name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of the Venafi policy",
+			},
 
+			"tpp_url": {
+				Type:        framework.TypeString,
+				Description: `URL of Venafi Platfrom. Example: https://tpp.venafi.example/vedsdk`,
+				Required:    true,
+			},
+			"zone": {
+				Type: framework.TypeString,
+				Description: `Name of Venafi Platfrom or Cloud policy. 
+Example for Platform: testpolicy\\vault
+Example for Venafi Cloud: Default`,
+				Default: `Default`,
+			},
+			"tpp_user": {
+				Type:        framework.TypeString,
+				Description: `web API user for Venafi Platfrom Example: admin`,
+				Required:    true,
+			},
+			"tpp_password": {
+				Type:        framework.TypeString,
+				Description: `Password for web API user Example: password`,
+				Required:    true,
+			},
+			"tpp_import": {
+				Type:        framework.TypeBool,
+				Description: `Import certificate to Venafi Platform if true. False by default.`,
+				Required:    true,
+			},
+			"trust_bundle_file": {
+				Type: framework.TypeString,
+				Description: `Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server.
+Example:
+  trust_bundle_file = "/full/path/to/chain.pem""`,
+			},
+			"apikey": {
+				Type:        framework.TypeString,
+				Description: `API key for Venafi Cloud. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
+			},
+			"cloud_url": {
+				Type:        framework.TypeString,
+				Description: `URL for Venafi Cloud. Set it only if you want to use non production Cloud`,
+			},
+		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathUpdateVenafiPolicy,
 			logical.ReadOperation:   b.pathReadVenafiPolicy,

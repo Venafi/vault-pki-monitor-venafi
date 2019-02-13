@@ -96,9 +96,8 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//TODO: Policy data should be stored and read in json
-	policyJSON := resp.Data["venafi_policy"]
-	if policyJSON == nil {
+	//TODO: Check expected policy properties here
+	if resp.Data["subject_cn_regexes"] != "*.example.venafi.com" {
 		t.Fatalf("Can't read policy data")
 	}
 

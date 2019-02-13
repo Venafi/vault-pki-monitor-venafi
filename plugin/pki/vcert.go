@@ -31,6 +31,7 @@ func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logi
 		return nil, fmt.Errorf("Unknown role %v", role)
 	}
 
+	//TODO: Add Cloud connector for policy check
 	log.Printf("Using Venafi Platform with url %s\n", role.TPPURL)
 	cfg := &vcert.Config{
 		ConnectorType: endpoint.ConnectorTypeTPP,
