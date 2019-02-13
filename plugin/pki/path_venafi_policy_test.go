@@ -5,7 +5,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"os"
 	"testing"
-	"time"
 )
 
 func TestBackend_VenafiPolicyTPP(t *testing.T) {
@@ -90,6 +89,19 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 		Storage:   storage,
 	})
 
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to read venafi policy, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//TODO: Policy data should be stored and read in json
+	policyJSON := resp.Data["venafi_policy"]
+	if policyJSON == nil {
+		t.Fatalf("Can't read policy data")
+	}
+
 	// create a role entry with default policy
 	roleData := map[string]interface{}{
 		"allowed_domains":    domain,
@@ -134,8 +146,6 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//Wait until certificate will be imported
-	time.Sleep(10 * time.Second)
 
 
 }
