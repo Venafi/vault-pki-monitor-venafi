@@ -81,7 +81,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 			SerialNumber:          big.NewInt(mathrand.Int63()),
 			NotAfter:              time.Now().Add(262980 * time.Hour),
 			BasicConstraintsValid: true,
-			IsCA:                  true,
+			IsCA: true,
 		}
 		caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, cak.Public(), cak)
 		if err != nil {
