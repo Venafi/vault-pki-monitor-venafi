@@ -737,6 +737,15 @@ func signCert(b *backend,
 // from the various endpoints and generates a creationParameters with the
 // parameters that can be used to issue or sign
 func generateCreationBundle(b *backend, data *dataBundle) error {
+	if VenafiPolciyCheck {
+		//Calling Venafi policy check before performing any checks
+		check := checkAgainstVenafiPolicy(b, data)
+		if check != nil {
+			return check
+		}
+	}
+
+
 	// Read in names -- CN, DNS and email addresses
 	var cn string
 	var ridSerialNumber string
@@ -965,12 +974,6 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 				}
 			}
 		}
-	}
-
-	//TODO: we will check against TPP policy here
-	check := checkAgainstVenafiPolicy(b, data)
-	if check != nil {
-		return check
 	}
 
 	subject := pkix.Name{

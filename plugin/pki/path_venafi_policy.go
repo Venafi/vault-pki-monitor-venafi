@@ -55,13 +55,14 @@ func (b *backend) pathDeleteVenafiPolicy(ctx context.Context, req *logical.Reque
 
 func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
 	ctx := context.Background()
-	//TODO: Check that policy exists, if nothing exists in the policy just skip all the checks.
+	//TODO: Check that policy exists
 	//TODO: Get and parse Venafi policy
 	policy, err := data.req.Storage.Get(ctx, "venafi-policy")
 	if err != nil {
 		return err
 	}
-	log.Printf("Checking creation bundle %s against policy %s", "data", "policy")
+	//TODO: If nothing exists in the policy deny all.
+	log.Printf("Checking creation bundle %s against policy %s", "data", policy)
 	//TODO: Check data *dataBundle against Venafi polycu.
 	//TODO: in case of exception return errutil.UserError{}
 	if "data-bundle" != "policy-checks" {

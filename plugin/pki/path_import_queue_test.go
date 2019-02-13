@@ -10,7 +10,6 @@ import (
 	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/hashicorp/vault/logical"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -431,14 +430,4 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	log.Printf("Import queue list is:\n %v", keys)
 	time.Sleep(30 * time.Second)
 
-}
-
-func randSeq(n int) string {
-	rand.Seed(time.Now().UTC().UnixNano())
-	var letters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
 }

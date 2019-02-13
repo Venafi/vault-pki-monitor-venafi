@@ -9,7 +9,12 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"io/ioutil"
 	"log"
+	"math/rand"
+	"time"
 )
+
+//Set it false to disable Venafi policy check. It can be done only on the code level of the plugin.
+const VenafiPolciyCheck = true
 
 func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logical.Request, roleName string) (
 	endpoint.Connector, error) {
@@ -60,4 +65,14 @@ func pp(a interface{}) string {
 		fmt.Println("error:", err)
 	}
 	return fmt.Sprintf(string(b))
+}
+
+func randSeq(n int) string {
+	rand.Seed(time.Now().UTC().UnixNano())
+	var letters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }

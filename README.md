@@ -126,19 +126,19 @@ vault list venafi-pki/import-queue
 Venafi policy check is a feature which allows to limit PKI role by Venafi Trust Protection Platform or Venafi Cloud policies.
 Policy check is configured in venafi-policy path, you can restrict this path for InfoSec team only using Vault policies.
 
-1. Write venafi policy configuration into venafi-policy path:
+1. Write default venafi policy configuration into venafi-policy path:
     1. For Trust Protection Platform:
     ```
-    vault write pki/venafi-policy \
+    vault write pki/venafi-policy/default \
         tpp_url="https://tpp.venafi.example:443/vedsdk" \
         tpp_user="local:admin" \
         tpp_password="password" \
-        zone="DevOps\\Vault Monitor" \
+        zone="DevOps\\Default" \
         trust_bundle_file="/opt/venafi/bundle.pem"
     ```
     1. For the Cloud:
     ```
-    vault write venafi-policy \
+    vault write pki/venafi-policy/default \
         token="xxxxx-xxxxx-xxxxx-xxxxx-xxxxxx" \
         zone="Default" \
     ```
@@ -162,8 +162,33 @@ Policy check is configured in venafi-policy path, you can restrict this path for
 
 1. You can read content of the policy using read operation:
     ```
-    vault read pki/venafi-policy
+    vault read pki/venafi-policy/default
     ```
+1. You can use multiple policies for different roles.
+    1. Write another policy configuration:
+    ```
+    vault write pki/venafi-policy/another-policy \
+        tpp_url="https://tpp.venafi.example:443/vedsdk" \
+        tpp_user="local:admin" \
+        tpp_password="password" \
+        zone="DevOps\\Another policy" \
+        trust_bundle_file="/opt/venafi/bundle.pem"
+    ```
+    1. Specify policy on role configuration:
+    ```
+    vault write venafi-pki/roles/venafi \
+        tpp_import=true \
+        tpp_url="https://tpp.venafi.example:443/vedsdk" \
+        tpp_user="local:admin" \
+        tpp_password="password" \
+        zone="DevOps\\Vault Monitor" \
+        venafi_check_policy="another-policy" \
+        trust_bundle_file="/opt/venafi/bundle.pem" \
+        generate_lease=true store_by_cn=true store_pkey=true store_by_serial=true ttl=1h max_ttl=1h \
+        allowed_domains=example.com \
+        allow_subdomains=true
+    ```
+
 
 ## Developer Quickstart (Linux only)
 

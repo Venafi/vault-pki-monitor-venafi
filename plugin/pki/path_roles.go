@@ -335,6 +335,11 @@ Example:
 				Default:     3,
 				Description: `Max amount of simultaneously working instances of vcert import`,
 			},
+			"venafi_check_policy": {
+				Type:        framework.TypeString,
+				Default:     "default",
+				Description: `Which Venafi policy check to use`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
