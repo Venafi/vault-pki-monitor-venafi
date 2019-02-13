@@ -76,12 +76,35 @@ Example:
 	return ret
 }
 
-func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
+func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var err error
+	name := data.Get("name").(string)
+
 	//TODO: Get policy from TPP of Cloud
 	//cl, err := b.ClientVenafi(ctx, req.Storage, data, req, roleName)
 	//TODO: Write it into req.Storage using Put (err = req.Storage.Put(ctx, entry))
+	entry := &policyEntry{
+		TPPURL:          data.Get("tpp_url").(string),
+		CloudURL:        data.Get("cloud_url").(string),
+		Zone:            data.Get("zone").(string),
+		TPPPassword:     data.Get("tpp_password").(string),
+		Apikey:          data.Get("apikey").(string),
+		TPPUser:         data.Get("tpp_user").(string),
+		TrustBundleFile: data.Get("trust_bundle_file").(string),
+
+	}
+	if entry.Apikey == "" && (entry.TPPURL == "" || entry.TPPUser == "" || entry.TPPPassword == "") {
+		return logical.ErrorResponse("Invalid mode. apikey or tpp credentials required"), nil
+	}
+	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
+	if err != nil {
+		return nil, err
+	}
+	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+		return nil, err
+	}
+
 	//TODO: Return policy so user can read it
-	ctx = context.Background()
 	//policy :=
 
 	return nil, nil
