@@ -121,5 +121,32 @@ func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
 	return nil
 }
 
+func (b *backend) getPolicy(ctx context.Context, s logical.Storage, n string) (*policyEntry, error) {
+	entry, err := s.Get(ctx, "venafi-policy/"+n)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var result policyEntry
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+type policyEntry struct {
+	TPPURL          string `json:"tpp_url"`
+	Zone            string `json:"zone"`
+	TPPPassword     string `json:"tpp_password"`
+	TPPUser         string `json:"tpp_user"`
+	TPPImport       bool   `json:"tpp_import"`
+	TrustBundleFile string `json:"trust_bundle_file"`
+	Apikey          string `json:"apikey"`
+	CloudURL        string `json:"cloud_url"`
+}
+
 const pathVenafiPolicySyn = `help here`
 const pathVenafiPolicyDesc = `description here`
