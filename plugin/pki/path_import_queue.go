@@ -241,7 +241,7 @@ func (b *backend) processImportToTPP(job Job) string {
 	importPath := job.importPath
 	log.Printf("%s Processing entry %s\n", msg, entry)
 	log.Printf("%s Trying to import certificate with SN %s", msg, entry)
-	cl, err := b.ClientVenafi(ctx, req.Storage, req, roleName)
+	cl, err := b.ClientVenafi(ctx, req.Storage, req, roleName, "role")
 	if err != nil {
 		return fmt.Sprintf("%s Could not create venafi client: %s", msg, err)
 	}

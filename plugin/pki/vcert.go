@@ -16,48 +16,61 @@ import (
 //Set it false to disable Venafi policy check. It can be done only on the code level of the plugin.
 const VenafiPolciyCheck = true
 
-func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logical.Request, roleName string) (
+func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logical.Request, configName string, configType string) (
 	endpoint.Connector, error) {
-	if roleName == "" {
-		return nil, fmt.Errorf("Missing role name")
-	}
-	log.Printf("Using role: %s", roleName)
 
-	role, err := b.getRole(ctx, req.Storage, roleName)
-	if err != nil {
-		return nil, err
-	}
-	if role == nil {
-		return nil, fmt.Errorf("Unknown role %v", role)
-	}
+	var cfg = &vcert.Config{}
 
-	//TODO: Add Cloud connector for policy check
-	log.Printf("Using Venafi Platform with url %s\n", role.TPPURL)
-	cfg := &vcert.Config{
-		ConnectorType: endpoint.ConnectorTypeTPP,
-		BaseUrl:       role.TPPURL,
-		Credentials: &endpoint.Authentication{
-			User:     role.TPPUser,
-			Password: role.TPPPassword,
-		},
-		Zone:       role.Zone,
-		LogVerbose: true,
-	}
-	if role.TrustBundleFile != "" {
-		trustBundle, err := ioutil.ReadFile(role.TrustBundleFile)
+	if configType == "role" {
+		if configName == "" {
+			return nil, fmt.Errorf("missing role name")
+		}
+		log.Printf("Using role: %s", configName)
+
+		role, err := b.getRole(ctx, req.Storage, configName)
 		if err != nil {
-			log.Printf("Can`t read trust bundle from file %s: %v\n", role.TrustBundleFile, err)
 			return nil, err
 		}
-		cfg.ConnectionTrust = string(trustBundle)
+		if role == nil {
+			return nil, fmt.Errorf("unknown role %v", role)
+		}
+
+		log.Printf("Using Venafi Platform with url %s\n", role.TPPURL)
+		cfg = &vcert.Config{
+			ConnectorType: endpoint.ConnectorTypeTPP,
+			BaseUrl:       role.TPPURL,
+			Credentials: &endpoint.Authentication{
+				User:     role.TPPUser,
+				Password: role.TPPPassword,
+			},
+			Zone:       role.Zone,
+			LogVerbose: true,
+		}
+		if role.TrustBundleFile != "" {
+			trustBundle, err := ioutil.ReadFile(role.TrustBundleFile)
+			if err != nil {
+				log.Printf("Can`t read trust bundle from file %s: %v\n", role.TrustBundleFile, err)
+				return nil, err
+			}
+			cfg.ConnectionTrust = string(trustBundle)
+		}
+
+	} else if configType == "policy" {
+		if configName == "" {
+			return nil, fmt.Errorf("missing policy name")
+		}
+		log.Printf("Using policy: %s", configName)
+
+	} else {
+		return nil, fmt.Errorf("couldn't determine config type")
 	}
+
 	client, err := vcert.NewClient(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Venafi issuer client: %s", err)
 	}
 
 	return client, nil
-
 }
 
 func pp(a interface{}) string {

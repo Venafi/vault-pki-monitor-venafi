@@ -78,9 +78,11 @@ Example:
 
 func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
 	//TODO: Get policy from TPP of Cloud
+	//cl, err := b.ClientVenafi(ctx, req.Storage, data, req, roleName)
 	//TODO: Write it into req.Storage using Put (err = req.Storage.Put(ctx, entry))
 	//TODO: Return policy so user can read it
 	ctx = context.Background()
+	//policy :=
 
 	return nil, nil
 }
