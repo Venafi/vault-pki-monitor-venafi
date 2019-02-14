@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"github.com/hashicorp/vault/logical"
+	"log"
 	"os"
 	"testing"
 )
@@ -82,22 +83,27 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	log.Printf("data is %s", resp.Data["subject_cn_regexes"])
+	if resp.Data["subject_cn_regexes"].([]string)[0] != ".*" {
+		t.Fatalf("subject_cn_regexes is unexpected value")
+	}
+
 	//TODO: read venafi policy configuration
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "venafi-policy/default",
+		Path:      "venafi-policy/default/policy",
 		Storage:   storage,
 	})
 
 	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to read venafi policy, %#v", resp)
+		t.Fatalf("failed to read venafi policy from venafi-policy/default/policy, %#v", resp)
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	//TODO: Check expected policy properties here
-	if resp.Data["subject_cn_regexes"] != "*.example.venafi.com" {
+	if resp.Data["subject_cn_regexes"] != ".*" {
 		t.Fatalf("Can't read policy data")
 	}
 

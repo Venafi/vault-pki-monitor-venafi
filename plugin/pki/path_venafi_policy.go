@@ -3,9 +3,7 @@ package pki
 
 import (
 	"context"
-	"fmt"
 	"github.com/Venafi/vcert/pkg/endpoint"
-	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"log"
@@ -73,7 +71,6 @@ Example:
 		HelpSynopsis:    pathVenafiPolicySyn,
 		HelpDescription: pathVenafiPolicyDesc,
 	}
-	ret.Fields = addNonCACommonFields(map[string]*framework.FieldSchema{})
 	return ret
 }
 
@@ -201,10 +198,10 @@ func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
 	log.Printf("Checking creation bundle %s against policy %s", "data", policy)
 	//TODO: Check data *dataBundle against Venafi polycu.
 	//TODO: in case of exception return errutil.UserError{}
-	if "data-bundle" != "policy-checks" {
-		return errutil.UserError{Err: fmt.Sprintf(
-			"Not implemented yet")}
-	}
+	//if "data-bundle" != "policy-checks" {
+	//	return errutil.UserError{Err: fmt.Sprintf(
+	//		"Not implemented yet")}
+	//}
 	return nil
 }
 
