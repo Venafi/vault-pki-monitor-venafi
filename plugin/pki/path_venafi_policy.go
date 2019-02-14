@@ -112,7 +112,7 @@ func (b *backend) pathReadVenafiPolicyRead(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 
-	//Send policy to the use output
+	//Send policy to the user output
 	respData := map[string]interface{}{
 		"subject_cn_regexes": policy.SubjectCNRegexes,
 		"subject_or_egexes":  policy.SubjectORegexes,
@@ -137,11 +137,10 @@ func (b *backend) pathReadVenafiPolicyRead(ctx context.Context, req *logical.Req
 	}, nil
 }
 
-func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var err error
+func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, err error) {
 	name := data.Get("name").(string)
 
-	//Write policy endpoint configuration into storage
+	log.Printf("Write policy endpoint configuration into storage")
 	configEntry := &venafiPolicyConfigEntry{
 		TPPURL:          data.Get("tpp_url").(string),
 		CloudURL:        data.Get("cloud_url").(string),
@@ -161,7 +160,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
-	//Geting policy from TPP or Cloud
+	log.Printf("Geting policy from zone %s", data.Get("zone").(string))
 	policy, err := b.getPolicyFromVenafi(ctx, req, data.Get("zone").(string), name)
 
 	//Form policy entry for storage
@@ -185,7 +184,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		AllowKeyReuse:  policy.AllowKeyReuse,
 	}
 
-	//Save policy into Vault storage
+	log.Printf("Saving policy into Vault storage")
 	jsonEntry, err = logical.StorageEntryJSON("venafi-policy/"+name+"/policy", policyEntry)
 	if err != nil {
 		return nil, err
@@ -193,39 +192,18 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
-
-	//Send policy to the use output
-	respData := map[string]interface{}{
-		"subject_cn_regexes": policy.SubjectCNRegexes,
-		"subject_or_egexes":  policy.SubjectORegexes,
-		"subject_ou_regexes": policy.SubjectOURegexes,
-		"subject_st_regexes": policy.SubjectSTRegexes,
-		"subject_l_regexes":  policy.SubjectLRegexes,
-		"subject_c_regexes":  policy.SubjectCRegexes,
-		//"key_type": policy.KeyType,
-		//"key_sizes": policy.KeySizes,
-		//"key_curves": policy.KeyCurves,
-		"dns_san_regexes":   policy.DnsSanRegExs,
-		"ip_san_regexes":    policy.IpSanRegExs,
-		"email_san_regexes": policy.EmailSanRegExs,
-		"uri_san_regexes":   policy.UriSanRegExs,
-		"upn_san_regexes":   policy.UpnSanRegExs,
-		"allow_wildcards":   policy.AllowWildcards,
-		"allow_key_reuse":   policy.AllowKeyReuse,
-	}
-
-	return &logical.Response{
-		Data: respData,
-	}, nil
+	return nil, nil
 }
 
 func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request, zone string, policyConfig string) (policy *endpoint.Policy, err error) {
 
+	log.Printf("Creating Venafi client")
 	cl, err := b.ClientVenafi(ctx, req.Storage, req, policyConfig, "policy")
 	if err != nil {
 		return policy, err
 	}
 
+	log.Printf("Getting policy from Venafi endpoint")
 	policy, err = cl.ReadPolicyConfiguration(zone)
 	if err != nil {
 		return policy, err
