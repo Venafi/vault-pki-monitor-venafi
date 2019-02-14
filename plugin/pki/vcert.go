@@ -60,7 +60,7 @@ func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logi
 			return nil, fmt.Errorf("missing policy name")
 		}
 
-		policy, err := b.getPolicy(ctx, req.Storage, configName)
+		policy, err := b.getPolicyConfig(ctx, req.Storage, configName)
 		if err != nil {
 			return nil, err
 		}

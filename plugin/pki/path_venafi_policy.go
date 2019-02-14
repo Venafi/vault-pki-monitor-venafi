@@ -4,6 +4,7 @@ package pki
 import (
 	"context"
 	"fmt"
+	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -80,10 +81,8 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	var err error
 	name := data.Get("name").(string)
 
-	//TODO: Get policy from TPP of Cloud
-	//cl, err := b.ClientVenafi(ctx, req.Storage, data, req, roleName)
-	//TODO: Write it into req.Storage using Put (err = req.Storage.Put(ctx, entry))
-	entry := &policyEntry{
+	//Write policy endpoint configuration into storage
+	configEntry := &venafiPolicyConfigEntry{
 		TPPURL:          data.Get("tpp_url").(string),
 		CloudURL:        data.Get("cloud_url").(string),
 		Zone:            data.Get("zone").(string),
@@ -91,23 +90,65 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		Apikey:          data.Get("apikey").(string),
 		TPPUser:         data.Get("tpp_user").(string),
 		TrustBundleFile: data.Get("trust_bundle_file").(string),
-
 	}
-	if entry.Apikey == "" && (entry.TPPURL == "" || entry.TPPUser == "" || entry.TPPPassword == "") {
+	if configEntry.Apikey == "" && (configEntry.TPPURL == "" || configEntry.TPPUser == "" || configEntry.TPPPassword == "") {
 		return logical.ErrorResponse("Invalid mode. apikey or tpp credentials required"), nil
 	}
-	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
+	jsonEntry, err := logical.StorageEntryJSON("venafi-policy/"+name, configEntry)
 	if err != nil {
 		return nil, err
 	}
 	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
+	//TODO: Get policy from TPP or Cloud
+	policy, err := b.getPolicyFromVenafi(ctx, req, data.Get("zone").(string), name)
 
-	//TODO: Return policy so user can read it
-	//policy :=
+	//TODO: Write it into req.Storage("venafi-policy/"+name+"/policy") using Put (err = req.Storage.Put(ctx, entry))
+	policyEntry := &venafiPolicyEntry{
+		SubjectCNRegexes: policy.SubjectCNRegexes,
+		SubjectORegexes: policy.SubjectORegexes,
+		SubjectOURegexes: policy.SubjectOURegexes,
+		SubjectSTRegexes: policy.SubjectSTRegexes,
+		SubjectLRegexes: policy.SubjectLRegexes,
+		SubjectCRegexes: policy.SubjectCRegexes,
+		//TODO: parse and write key configuration
+		//KeyType: policy.AllowedKeyConfigurations[KeyType],
+		//KeySizes: policy.AllowedKeyConfigurations[KeySizes],
+		//KeyCurves: policy.AllowedKeyConfigurations[KeyCurves],
+		DnsSanRegExs: policy.DnsSanRegExs,
+		IpSanRegExs: policy.IpSanRegExs,
+		EmailSanRegExs: policy.EmailSanRegExs,
+		UriSanRegExs: policy.UriSanRegExs,
+		UpnSanRegExs: policy.UpnSanRegExs,
+		AllowWildcards: policy.AllowWildcards,
+		AllowKeyReuse: policy.AllowKeyReuse,
+	}
 
+	jsonEntry, err = logical.StorageEntryJSON("venafi-policy/"+name+"/policy", policyEntry)
+	if err != nil {
+		return nil, err
+	}
+	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+		return nil, err
+	}
+	//TODO: Read policy ("venafi-policy/"+name+"/policy") and send it to the user
 	return nil, nil
+}
+
+func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request, zone string, policyConfig string) (policy *endpoint.Policy, err error) {
+
+	cl, err := b.ClientVenafi(ctx, req.Storage, req, policyConfig, "policy")
+	if err != nil {
+		return policy, err
+	}
+
+	policy, err = cl.ReadPolicyConfiguration(zone)
+	if err != nil {
+		return policy, err
+	}
+
+	return policy, nil
 }
 
 func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
@@ -144,7 +185,7 @@ func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
 	return nil
 }
 
-func (b *backend) getPolicy(ctx context.Context, s logical.Storage, n string) (*policyEntry, error) {
+func (b *backend) getPolicyConfig(ctx context.Context, s logical.Storage, n string) (*venafiPolicyConfigEntry, error) {
 	entry, err := s.Get(ctx, "venafi-policy/"+n)
 	if err != nil {
 		return nil, err
@@ -153,14 +194,14 @@ func (b *backend) getPolicy(ctx context.Context, s logical.Storage, n string) (*
 		return nil, nil
 	}
 
-	var result policyEntry
+	var result venafiPolicyConfigEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
 	return &result, nil
 }
 
-type policyEntry struct {
+type venafiPolicyConfigEntry struct {
 	TPPURL          string `json:"tpp_url"`
 	Zone            string `json:"zone"`
 	TPPPassword     string `json:"tpp_password"`
@@ -169,6 +210,25 @@ type policyEntry struct {
 	TrustBundleFile string `json:"trust_bundle_file"`
 	Apikey          string `json:"apikey"`
 	CloudURL        string `json:"cloud_url"`
+}
+
+type venafiPolicyEntry struct {
+	SubjectCNRegexes []string `json:"subject_cn_regexes"`
+	SubjectORegexes  []string `json:"subject_or_egexes"`
+	SubjectOURegexes []string `json:"subject_ou_regexes"`
+	SubjectSTRegexes []string `json:"subject_st_regexes"`
+	SubjectLRegexes  []string `json:"subject_l_regexes"`
+	SubjectCRegexes  []string `json:"subject_c_regexes"`
+	KeyType          []string   `json:"key_type"`
+	KeySizes         []int    `json:"key_sizes"`
+	KeyCurves        []string `json:"key_curves"`
+	DnsSanRegExs     []string `json:"dns_san_regexes"`
+	IpSanRegExs      []string `json:"ip_san_regexes"`
+	EmailSanRegExs   []string `json:"email_san_regexes"`
+	UriSanRegExs     []string `json:"uri_san_regexes"`
+	UpnSanRegExs     []string `json:"upn_san_regexes"`
+	AllowWildcards   bool     `json:"allow_wildcards"`
+	AllowKeyReuse    bool     `json:"allow_key_reuse"`
 }
 
 const pathVenafiPolicySyn = `help here`

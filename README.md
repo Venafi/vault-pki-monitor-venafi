@@ -162,7 +162,7 @@ Policy check is configured in venafi-policy path, you can restrict this path for
 
 1. You can read content of the policy using read operation:
     ```
-    vault read pki/venafi-policy/default
+    vault read pki/venafi-policy/default/policy
     ```
 1. You can use multiple policies for different roles.
     1. Write another policy configuration:
