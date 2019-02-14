@@ -112,7 +112,6 @@ import_cert_write:
 
 collect_artifacts:
 	mkdir -p artifcats
-	VERSION=`git describe --abbrev=0 --tags`
 	mv (PLUGIN_DIR)/linux/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)-$(VERSION)_linux
 	mv (PLUGIN_DIR)/linux86/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)-$(VERSION)_linux86
 	mv (PLUGIN_DIR)/darwin/$(PLUGIN_NAME) artifcats/$(PLUGIN_NAME)-$(VERSION)_darwin
