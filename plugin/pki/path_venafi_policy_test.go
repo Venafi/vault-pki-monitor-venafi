@@ -70,6 +70,7 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
 	}
 
+	//Write Venafi policy configuration
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "venafi-policy/default",
@@ -83,12 +84,13 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	//After write policy should be on output
 	log.Printf("data is %s", resp.Data["subject_cn_regexes"])
 	if resp.Data["subject_cn_regexes"].([]string)[0] != ".*" {
 		t.Fatalf("subject_cn_regexes is unexpected value")
 	}
 
-	//TODO: read venafi policy configuration
+	//Read saved Venafi policy
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "venafi-policy/default/policy",
@@ -102,9 +104,9 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//TODO: Check expected policy properties here
-	if resp.Data["subject_cn_regexes"] != ".*" {
-		t.Fatalf("Can't read policy data")
+	//Check expected policy properties
+	if resp.Data["subject_cn_regexes"].([]string)[0] != ".*" {
+		t.Fatalf("subject_cn_regexes is unexpected value")
 	}
 
 	// create a role entry with default policy
@@ -141,7 +143,7 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "issue/test-import",
+		Path:      "issue/test-venafi-policy",
 		Storage:   storage,
 		Data:      certData,
 	})

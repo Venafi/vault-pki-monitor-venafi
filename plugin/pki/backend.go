@@ -76,6 +76,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathImportQueue(&b),
 			pathImportQueueList(&b),
 			pathVenafiPolicy(&b),
+			pathVenafiPolicyRead(&b),
 			pathRevoke(&b),
 			pathTidy(&b),
 		},

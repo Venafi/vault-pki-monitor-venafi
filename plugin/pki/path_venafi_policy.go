@@ -16,7 +16,7 @@ func pathVenafiPolicy(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of the Venafi policy",
+				Description: "Name of the Venafi policy config",
 			},
 
 			"tpp_url": {
@@ -72,6 +72,69 @@ Example:
 		HelpDescription: pathVenafiPolicyDesc,
 	}
 	return ret
+}
+
+func pathVenafiPolicyRead(b *backend) *framework.Path {
+	ret := &framework.Path{
+		Pattern: "venafi-policy/" + framework.GenericNameRegex("config") + "/policy",
+		Fields: map[string]*framework.FieldSchema{
+			"config": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of the Venafi policy config",
+			},
+		},
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.pathReadVenafiPolicyRead,
+		},
+
+		HelpSynopsis:    pathVenafiPolicySyn,
+		HelpDescription: pathVenafiPolicyDesc,
+	}
+	return ret
+}
+func (b *backend) pathReadVenafiPolicyRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config := data.Get("config").(string)
+	log.Printf("Trying to read policy for config %s", config)
+
+	if len(config) == 0 {
+		return logical.ErrorResponse("Non config specified or wrong config path name"), nil
+	}
+
+	entry, err := req.Storage.Get(ctx, "venafi-policy/"+config+"/policy")
+	if err != nil {
+		return nil, err
+	}
+
+	var policy venafiPolicyEntry
+
+	if err := entry.DecodeJSON(&policy); err != nil {
+		log.Printf("error reading Venafi policy configuration: %s", err)
+		return nil, err
+	}
+
+	//Send policy to the use output
+	respData := map[string]interface{}{
+		"subject_cn_regexes": policy.SubjectCNRegexes,
+		"subject_or_egexes":  policy.SubjectORegexes,
+		"subject_ou_regexes": policy.SubjectOURegexes,
+		"subject_st_regexes": policy.SubjectSTRegexes,
+		"subject_l_regexes":  policy.SubjectLRegexes,
+		"subject_c_regexes":  policy.SubjectCRegexes,
+		//"key_type": policy.KeyType,
+		//"key_sizes": policy.KeySizes,
+		//"key_curves": policy.KeyCurves,
+		"dns_san_regexes":   policy.DnsSanRegExs,
+		"ip_san_regexes":    policy.IpSanRegExs,
+		"email_san_regexes": policy.EmailSanRegExs,
+		"uri_san_regexes":   policy.UriSanRegExs,
+		"upn_san_regexes":   policy.UpnSanRegExs,
+		"allow_wildcards":   policy.AllowWildcards,
+		"allow_key_reuse":   policy.AllowKeyReuse,
+	}
+
+	return &logical.Response{
+		Data: respData,
+	}, nil
 }
 
 func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
