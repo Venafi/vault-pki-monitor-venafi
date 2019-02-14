@@ -101,30 +101,31 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
-	//TODO: Get policy from TPP or Cloud
+	//Geting policy from TPP or Cloud
 	policy, err := b.getPolicyFromVenafi(ctx, req, data.Get("zone").(string), name)
 
-	//TODO: Write it into req.Storage("venafi-policy/"+name+"/policy") using Put (err = req.Storage.Put(ctx, entry))
+	//Form policy entry for storage
 	policyEntry := &venafiPolicyEntry{
 		SubjectCNRegexes: policy.SubjectCNRegexes,
-		SubjectORegexes: policy.SubjectORegexes,
+		SubjectORegexes:  policy.SubjectORegexes,
 		SubjectOURegexes: policy.SubjectOURegexes,
 		SubjectSTRegexes: policy.SubjectSTRegexes,
-		SubjectLRegexes: policy.SubjectLRegexes,
-		SubjectCRegexes: policy.SubjectCRegexes,
+		SubjectLRegexes:  policy.SubjectLRegexes,
+		SubjectCRegexes:  policy.SubjectCRegexes,
 		//TODO: parse and write key configuration
 		//KeyType: policy.AllowedKeyConfigurations[KeyType],
 		//KeySizes: policy.AllowedKeyConfigurations[KeySizes],
 		//KeyCurves: policy.AllowedKeyConfigurations[KeyCurves],
-		DnsSanRegExs: policy.DnsSanRegExs,
-		IpSanRegExs: policy.IpSanRegExs,
+		DnsSanRegExs:   policy.DnsSanRegExs,
+		IpSanRegExs:    policy.IpSanRegExs,
 		EmailSanRegExs: policy.EmailSanRegExs,
-		UriSanRegExs: policy.UriSanRegExs,
-		UpnSanRegExs: policy.UpnSanRegExs,
+		UriSanRegExs:   policy.UriSanRegExs,
+		UpnSanRegExs:   policy.UpnSanRegExs,
 		AllowWildcards: policy.AllowWildcards,
-		AllowKeyReuse: policy.AllowKeyReuse,
+		AllowKeyReuse:  policy.AllowKeyReuse,
 	}
 
+	//Save policy into Vault storage
 	jsonEntry, err = logical.StorageEntryJSON("venafi-policy/"+name+"/policy", policyEntry)
 	if err != nil {
 		return nil, err
@@ -132,8 +133,30 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
-	//TODO: Read policy ("venafi-policy/"+name+"/policy") and send it to the user
-	return nil, nil
+
+	//Send policy to the use output
+	respData := map[string]interface{}{
+		"subject_cn_regexes": policy.SubjectCNRegexes,
+		"subject_or_egexes":  policy.SubjectORegexes,
+		"subject_ou_regexes": policy.SubjectOURegexes,
+		"subject_st_regexes": policy.SubjectSTRegexes,
+		"subject_l_regexes":  policy.SubjectLRegexes,
+		"subject_c_regexes":  policy.SubjectCRegexes,
+		//"key_type": policy.KeyType,
+		//"key_sizes": policy.KeySizes,
+		//"key_curves": policy.KeyCurves,
+		"dns_san_regexes":   policy.DnsSanRegExs,
+		"ip_san_regexes":    policy.IpSanRegExs,
+		"email_san_regexes": policy.EmailSanRegExs,
+		"uri_san_regexes":   policy.UriSanRegExs,
+		"upn_san_regexes":   policy.UpnSanRegExs,
+		"allow_wildcards":   policy.AllowWildcards,
+		"allow_key_reuse":   policy.AllowKeyReuse,
+	}
+
+	return &logical.Response{
+		Data: respData,
+	}, nil
 }
 
 func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request, zone string, policyConfig string) (policy *endpoint.Policy, err error) {
@@ -219,7 +242,7 @@ type venafiPolicyEntry struct {
 	SubjectSTRegexes []string `json:"subject_st_regexes"`
 	SubjectLRegexes  []string `json:"subject_l_regexes"`
 	SubjectCRegexes  []string `json:"subject_c_regexes"`
-	KeyType          []string   `json:"key_type"`
+	KeyType          []string `json:"key_type"`
 	KeySizes         []int    `json:"key_sizes"`
 	KeyCurves        []string `json:"key_curves"`
 	DnsSanRegExs     []string `json:"dns_san_regexes"`
