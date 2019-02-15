@@ -29,7 +29,7 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 		"generate_lease":     true,
 	}
 
-	VenafiPolicyTests(t, policyData, roleData, rand, domain)
+	VenafiPolicyTests(t, policyData, roleData, rand, domain, "tpp")
 }
 
 func TestBackend_VenafiPolicyCloud(t *testing.T) {
@@ -51,11 +51,12 @@ func TestBackend_VenafiPolicyCloud(t *testing.T) {
 		"generate_lease":     true,
 	}
 
-	VenafiPolicyTests(t, policyData, roleData, rand, domain)
+	VenafiPolicyTests(t, policyData, roleData, rand, domain, "cloud")
 }
 
-func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData map[string]interface{}, rand string, domain string) {
-
+func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData map[string]interface{}, rand string, domain string, endpoint string) {
+	var want interface{}
+	var have interface{}
 	// create the backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
@@ -123,13 +124,26 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	}
 
 	log.Println("After write policy should be on output")
-	if resp.Data["subject_cn_regexes"].([]string)[0] != ".*" {
-		t.Fatalf("subject_cn_regexes is unexpected value")
-	}
-
 	for key, value := range resp.Data {
 		log.Println(key, ":", value)
 	}
+
+	if endpoint == "tpp" {
+		want = ".*"
+		have = resp.Data["subject_cn_regexes"].([]string)[0]
+		if have != want {
+			t.Fatalf("subject_cn_regexes want %s but have %s", want, have )
+		}
+	} else if endpoint == "cloud" {
+		want = `[\w-]*\.vfidev\.(com|net)`
+		have = resp.Data["subject_cn_regexes"].([]string)[0]
+		if have != want {
+			t.Fatalf("subject_cn_regexes want %s but have %s", want, have )
+		}
+	} else {
+		t.Fatalf("Frong endpoint: %s", endpoint)
+	}
+
 
 	log.Println("Read saved policy configuration")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -145,12 +159,16 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
+	for key, value := range resp.Data {
+		log.Println(key, ":", value)
+	}
+
 	log.Println("Check expected policy config properties")
 	if resp.Data["zone"].(string) != policyData["zone"] {
 		t.Fatalf("%s != %s", resp.Data["zone"].(string), policyData["zone"])
 	}
 
-	log.Println("Read saved Venafi policy")
+	log.Println("Read saved Venafi policy content")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "venafi-policy/default/policy",
@@ -164,9 +182,24 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
-	//Check expected policy properties
-	if resp.Data["subject_cn_regexes"].([]string)[0] != ".*" {
-		t.Fatalf("subject_cn_regexes is unexpected value")
+	for key, value := range resp.Data {
+		log.Println(key, ":", value)
+	}
+
+	if endpoint == "tpp" {
+		want = ".*"
+		have = resp.Data["subject_cn_regexes"].([]string)[0]
+		if have != want {
+			t.Fatalf("subject_cn_regexes want %s but have %s", want, have )
+		}
+	} else if endpoint == "cloud" {
+		want = `[\w-]*\.vfidev\.(com|net)`
+		have = resp.Data["subject_cn_regexes"].([]string)[0]
+		if have != want {
+			t.Fatalf("subject_cn_regexes want %s but have %s", want, have )
+		}
+	} else {
+		t.Fatalf("Frong endpoint: %s", endpoint)
 	}
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{

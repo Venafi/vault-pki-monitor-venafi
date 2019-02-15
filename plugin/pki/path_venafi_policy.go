@@ -251,7 +251,7 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		"tpp_import": config.TPPImport,
 		"trust_bundle_file": config.TrustBundleFile,
 		"apikey": config.Apikey,
-		"cloud_url": config.Apikey,
+		"cloud_url": config.CloudURL,
 	}
 
 	return &logical.Response{
