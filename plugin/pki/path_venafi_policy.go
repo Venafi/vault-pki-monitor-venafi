@@ -3,13 +3,11 @@ package pki
 
 import (
 	"context"
-	"fmt"
+	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"log"
-	"regexp"
-	"strings"
 )
 
 // This returns the list of queued for import to TPP certificates
@@ -107,9 +105,6 @@ func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return logical.ErrorResponse("policy data is nil. Looks like it doesn't exists."), nil
-	}
 
 	var policy venafiPolicyEntry
 
@@ -171,6 +166,16 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		UpnSanRegExs:   policy.UpnSanRegExs,
 		AllowWildcards: policy.AllowWildcards,
 		AllowKeyReuse:  policy.AllowKeyReuse,
+	}
+	for _, a := range policy.AllowedKeyConfigurations {
+		policyEntry.KeyType = append(policyEntry.KeyType, a.KeyType.String())
+		if a.KeyType == certificate.KeyTypeRSA {
+			policyEntry.KeySizes = append(policyEntry.KeySizes, a.KeySizes...)
+		} else if a.KeyType == certificate.KeyTypeECDSA {
+			for _, c := range a.KeyCurves {
+				policyEntry.KeyCurves = append(policyEntry.KeyCurves, c.String())
+			}
+		}
 	}
 
 	log.Printf("Saving policy into Vault storage")
@@ -241,10 +246,6 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	if entry == nil {
-		return logical.ErrorResponse("policy config is nil. Looks like it doesn't exists."), nil
-	}
-
 	var config venafiPolicyConfigEntry
 
 	if err := entry.DecodeJSON(&config); err != nil {
@@ -281,52 +282,15 @@ func (b *backend) pathDeleteVenafiPolicy(ctx context.Context, req *logical.Reque
 
 func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
 	ctx := context.Background()
-	var policyConfig string
-	if len(data.role.VenafiCheckPolicy) > 0 {
-		policyConfig = data.role.VenafiCheckPolicy
-	} else {
-		policyConfig = "default"
-	}
-
-	entry, err := data.req.Storage.Get(ctx, "venafi-policy/"+policyConfig+"/policy")
+	//TODO: Check that policy exists
+	//TODO: Get and parse Venafi policy
+	policy, err := data.req.Storage.Get(ctx, "venafi-policy")
 	if err != nil {
 		return err
 	}
-	if entry == nil {
-		if VenafiPolicyDenyAll {
-			if strings.Contains(data.req.Path,"root/generate")  {
-				//internal certificate won't output error response
-				log.Println("policy data is nil. You need configure Venafi policy to proceed")
-			}
-			return fmt.Errorf("policy data is nil. You need configure Venafi policy to proceed")
-		} else {
-			return nil
-		}
-	}
-
-	//TODO: parse Venafi policy
-	var policy venafiPolicyEntry
-
-	if err := entry.DecodeJSON(&policy); err != nil {
-		log.Printf("error reading Venafi policy configuration: %s", err)
-		return err
-	}
-
-	log.Printf("Checking creation bundle:\n %v\n against policy %s", data.signingBundle, policyConfig)
-
-	//TODO: Check data *dataBundle against Venafi policy
-	for _, r := range policy.SubjectCNRegexes {
-		cn_regex := r
-		cn_have := data.apiData.Get("common_name").(string)
-		match, err := regexp.MatchString(cn_regex, cn_have )
-		if err != nil {
-			return err
-		}
-		if !match {
-			return fmt.Errorf("common name %s doesn't match regexp %s", cn_regex[0], cn_have)
-		}
-	}
-
+	//TODO: If nothing exists in the policy deny all.
+	log.Printf("Checking creation bundle %s against policy %s", "data", policy)
+	//TODO: Check data *dataBundle against Venafi polycu.
 	//TODO: in case of exception return errutil.UserError{}
 	//if "data-bundle" != "policy-checks" {
 	//	return errutil.UserError{Err: fmt.Sprintf(
