@@ -76,9 +76,9 @@ Example:
 
 func pathVenafiPolicyContent(b *backend) *framework.Path {
 	ret := &framework.Path{
-		Pattern: "venafi-policy/" + framework.GenericNameRegex("config") + "/policy",
+		Pattern: "venafi-policy/" + framework.GenericNameRegex("name") + "/policy",
 		Fields: map[string]*framework.FieldSchema{
-			"config": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the Venafi policy config",
 			},
@@ -93,14 +93,14 @@ func pathVenafiPolicyContent(b *backend) *framework.Path {
 	return ret
 }
 func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	config := data.Get("config").(string)
-	log.Printf("Trying to read policy for config %s", config)
+	name := data.Get("name").(string)
+	log.Printf("Trying to read policy for config %s", name)
 
-	if len(config) == 0 {
+	if len(name) == 0 {
 		return logical.ErrorResponse("Non config specified or wrong config path name"), nil
 	}
 
-	entry, err := req.Storage.Get(ctx, "venafi-policy/"+config+"/policy")
+	entry, err := req.Storage.Get(ctx, "venafi-policy/"+name+"/policy")
 	if err != nil {
 		return nil, err
 	}
@@ -223,8 +223,40 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request,
 }
 
 func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
-	//TODO: read policy content
-	return nil, nil
+	name := data.Get("name").(string)
+	log.Printf("Trying to read policy for config %s", name)
+
+	if len(name) == 0 {
+		return logical.ErrorResponse("Non config specified or wrong config path name"), nil
+	}
+
+	entry, err := req.Storage.Get(ctx, "venafi-policy/"+name)
+	if err != nil {
+		return nil, err
+	}
+
+	var config venafiPolicyConfigEntry
+
+	if err := entry.DecodeJSON(&config); err != nil {
+		log.Printf("error reading Venafi policy configuration: %s", err)
+		return nil, err
+	}
+
+	//Send config to the user output
+	respData := map[string]interface{}{
+		"tpp_url": config.TPPURL,
+		"zone": config.Zone,
+		"tpp_password": config.TPPPassword,
+		"tpp_user": config.TPPUser,
+		"tpp_import": config.TPPImport,
+		"trust_bundle_file": config.TrustBundleFile,
+		"apikey": config.Apikey,
+		"cloud_url": config.Apikey,
+	}
+
+	return &logical.Response{
+		Data: respData,
+	}, nil
 }
 
 func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {

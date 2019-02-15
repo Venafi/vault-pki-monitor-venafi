@@ -131,6 +131,25 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		log.Println(key, ":", value)
 	}
 
+	log.Println("Read saved policy configuration")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "venafi-policy/default",
+		Storage:   storage,
+	})
+
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to read venafi policy from venafi-policy/default/policy, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Println("Check expected policy config properties")
+	if resp.Data["zone"].(string) != policyData["zone"] {
+		t.Fatalf("%s != %s", resp.Data["zone"].(string), policyData["zone"])
+	}
+
 	log.Println("Read saved Venafi policy")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
