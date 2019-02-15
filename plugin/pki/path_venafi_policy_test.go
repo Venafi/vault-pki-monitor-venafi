@@ -132,18 +132,17 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		want = ".*"
 		have = resp.Data["subject_cn_regexes"].([]string)[0]
 		if have != want {
-			t.Fatalf("subject_cn_regexes want %s but have %s", want, have )
+			t.Fatalf("subject_cn_regexes want %s but have %s", want, have)
 		}
 	} else if endpoint == "cloud" {
 		want = `[\w-]*\.vfidev\.(com|net)`
 		have = resp.Data["subject_cn_regexes"].([]string)[0]
 		if have != want {
-			t.Fatalf("subject_cn_regexes want %s but have %s", want, have )
+			t.Fatalf("subject_cn_regexes want %s but have %s", want, have)
 		}
 	} else {
 		t.Fatalf("Frong endpoint: %s", endpoint)
 	}
-
 
 	log.Println("Read saved policy configuration")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -186,17 +185,20 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		log.Println(key, ":", value)
 	}
 
+	//TODO: Add test when getting policy content by invalid path (default1 for example).
+	//should get logical.ErrorResponse("policy data is nil. Look like it doesn't exists.")
+
 	if endpoint == "tpp" {
 		want = ".*"
 		have = resp.Data["subject_cn_regexes"].([]string)[0]
 		if have != want {
-			t.Fatalf("subject_cn_regexes want %s but have %s", want, have )
+			t.Fatalf("subject_cn_regexes want %s but have %s", want, have)
 		}
 	} else if endpoint == "cloud" {
 		want = `[\w-]*\.vfidev\.(com|net)`
 		have = resp.Data["subject_cn_regexes"].([]string)[0]
 		if have != want {
-			t.Fatalf("subject_cn_regexes want %s but have %s", want, have )
+			t.Fatalf("subject_cn_regexes want %s but have %s", want, have)
 		}
 	} else {
 		t.Fatalf("Frong endpoint: %s", endpoint)

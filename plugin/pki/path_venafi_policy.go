@@ -3,6 +3,7 @@ package pki
 
 import (
 	"context"
+	"fmt"
 	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -103,6 +104,9 @@ func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.
 	entry, err := req.Storage.Get(ctx, "venafi-policy/"+name+"/policy")
 	if err != nil {
 		return nil, err
+	}
+	if entry == nil {
+		return logical.ErrorResponse("policy data is nil. Looks like it doesn't exists."), nil
 	}
 
 	var policy venafiPolicyEntry
@@ -271,12 +275,22 @@ func (b *backend) pathDeleteVenafiPolicy(ctx context.Context, req *logical.Reque
 
 func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
 	ctx := context.Background()
-	//TODO: Check that policy exists
-	//TODO: Get and parse Venafi policy
-	policy, err := data.req.Storage.Get(ctx, "venafi-policy")
+	var policyConfig string
+	if len(data.role.VenafiCheckPolicy) > 0 {
+		policyConfig = data.role.VenafiCheckPolicy
+	} else {
+		policyConfig = "default"
+	}
+
+	policy, err := data.req.Storage.Get(ctx, "venafi-policy/"+policyConfig+"/policy")
 	if err != nil {
 		return err
 	}
+	if policy == nil {
+		return fmt.Errorf("policy data is nil. You need configure Venafi policy to proceed")
+	}
+
+	//TODO: parse Venafi policy
 	//TODO: If nothing exists in the policy deny all.
 	log.Printf("Checking creation bundle %s against policy %s", "data", policy)
 	//TODO: Check data *dataBundle against Venafi polycu.

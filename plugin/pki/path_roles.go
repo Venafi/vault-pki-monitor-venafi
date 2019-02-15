@@ -563,6 +563,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		TrustBundleFile:  data.Get("trust_bundle_file").(string),
 		TPPImportTimeout: data.Get("tpp_import_timeout").(int),
 		TPPImportWorkers: data.Get("tpp_import_workers").(int),
+		VenafiCheckPolicy: data.Get("venafi_check_policy").(string),
 	}
 
 	otherSANs := data.Get("allowed_other_sans").([]string)
@@ -769,6 +770,7 @@ type roleEntry struct {
 	TrustBundleFile  string `json:"trust_bundle_file"`
 	TPPImportTimeout int    `json:"tpp_import_timeout"`
 	TPPImportWorkers int    `json:"tpp_import_workers"`
+	VenafiCheckPolicy string `json:"venafi_check_policy"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
@@ -822,6 +824,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"trust_bundle_file":  r.TrustBundleFile,
 		"tpp_import_timeout": r.TPPImportTimeout,
 		"tpp_import_workers": r.TPPImportWorkers,
+		"venafi_check_policy": r.VenafiCheckPolicy,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength
