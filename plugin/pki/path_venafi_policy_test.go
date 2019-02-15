@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"github.com/hashicorp/vault/logical"
+	"log"
 	"os"
 	"testing"
 )
@@ -10,6 +11,50 @@ import (
 func TestBackend_VenafiPolicyTPP(t *testing.T) {
 	rand := randSeq(9)
 	domain := "example.com"
+	// Configure Venafi default policy
+	policyData := map[string]interface{}{
+		"tpp_url":           os.Getenv("TPPURL"),
+		"tpp_user":          os.Getenv("TPPUSER"),
+		"tpp_password":      os.Getenv("TPPPASSWORD"),
+		"zone":              os.Getenv("TPPZONE"),
+		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+	}
+
+	// create a role entry with default policy
+	roleData := map[string]interface{}{
+		"allowed_domains":    domain,
+		"allow_subdomains":   "true",
+		"max_ttl":            "4h",
+		"allow_bare_domains": true,
+		"generate_lease":     true,
+	}
+
+	VenafiPolicyTests(t, policyData, roleData, rand, domain)
+}
+
+func TestBackend_VenafiPolicyCloud(t *testing.T) {
+	rand := randSeq(9)
+	domain := "example.com"
+	// Configure Venafi default policy
+	policyData := map[string]interface{}{
+		"cloud_url":           os.Getenv("CLOUDURL"),
+		"apikey":          os.Getenv("CLOUDAPIKEY"),
+		"zone":              os.Getenv("CLOUDZONE"),
+	}
+
+	// create a role entry with default policy
+	roleData := map[string]interface{}{
+		"allowed_domains":    domain,
+		"allow_subdomains":   "true",
+		"max_ttl":            "4h",
+		"allow_bare_domains": true,
+		"generate_lease":     true,
+	}
+
+	VenafiPolicyTests(t, policyData, roleData, rand, domain)
+}
+
+func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData map[string]interface{}, rand string, domain string) {
 
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -60,15 +105,6 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Configure Venafi default policy
-	policyData := map[string]interface{}{
-		"tpp_url":            os.Getenv("TPPURL"),
-		"tpp_user":           os.Getenv("TPPUSER"),
-		"tpp_password":       os.Getenv("TPPPASSWORD"),
-		"zone":               os.Getenv("TPPZONE"),
-		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
-	}
-
 	//Write Venafi policy configuration
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -86,12 +122,17 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 
 	}
 
-	//After write policy should be on output
+	log.Println("After write policy should be on output")
 	if resp.Data["subject_cn_regexes"].([]string)[0] != ".*" {
 		t.Fatalf("subject_cn_regexes is unexpected value")
 	}
 
-	//Read saved Venafi policy
+
+	for key, value := range resp.Data{
+		log.Println(key, ":", value)
+	}
+
+	log.Println("Read saved Venafi policy")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "venafi-policy/default/policy",
@@ -108,20 +149,6 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 	//Check expected policy properties
 	if resp.Data["subject_cn_regexes"].([]string)[0] != ".*" {
 		t.Fatalf("subject_cn_regexes is unexpected value")
-	}
-
-	// create a role entry with default policy
-	roleData := map[string]interface{}{
-		"allowed_domains":    domain,
-		"allow_subdomains":   "true",
-		"max_ttl":            "4h",
-		"allow_bare_domains": true,
-		"generate_lease":     true,
-		"tpp_url":            os.Getenv("TPPURL"),
-		"tpp_user":           os.Getenv("TPPUSER"),
-		"tpp_password":       os.Getenv("TPPPASSWORD"),
-		"zone":               os.Getenv("TPPZONE"),
-		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
 	}
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -158,4 +185,3 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 	//TODO: issuer certificate which won't match policy
 
 }
-
