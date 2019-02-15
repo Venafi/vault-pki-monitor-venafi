@@ -68,27 +68,25 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
-	//TODO: Trying to generate root CA before policy configuration should fail
-	// generate root
-	//rootData := map[string]interface{}{
-	//	"common_name": domain,
-	//	"ttl":         "6h",
-	//}
-	//resp, err := b.HandleRequest(context.Background(), &logical.Request{
-	//	Operation: logical.UpdateOperation,
-	//	Path:      "root/generate/internal",
-	//	Storage:   storage,
-	//	Data:      rootData,
-	//})
-	//if resp != nil && resp.IsError() {
-	//	t.Fatalf("failed to generate root, %#v", resp)
-	//}
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
+	rootData := map[string]interface{}{
+		"common_name": domain,
+		"ttl":         "6h",
+	}
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data:      rootData,
+	})
+	if resp == nil {
+		t.Fatalf("Error should be generated in response")
+	}
+	if resp.Error() == nil {
+		t.Fatalf("Should failt to generate root before configuring policy")
+	}
 
 	//Write Venafi policy configuration
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "venafi-policy/default",
 		Storage:   storage,
@@ -198,7 +196,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
-	rootData := map[string]interface{}{
+	rootData = map[string]interface{}{
 		"common_name": "ca."+domain,
 		"ttl":         "6h",
 	}
@@ -265,7 +263,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		Data:      certData,
 	})
 
-	if err == nil {
+	if resp.Error() == nil {
 		t.Fatalf("certificate issue should be denied by policy, %#v", resp)
 	}
 
