@@ -252,14 +252,14 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 
 	//Send config to the user output
 	respData := map[string]interface{}{
-		"tpp_url": config.TPPURL,
-		"zone": config.Zone,
-		"tpp_password": config.TPPPassword,
-		"tpp_user": config.TPPUser,
-		"tpp_import": config.TPPImport,
+		"tpp_url":           config.TPPURL,
+		"zone":              config.Zone,
+		"tpp_password":      config.TPPPassword,
+		"tpp_user":          config.TPPUser,
+		"tpp_import":        config.TPPImport,
 		"trust_bundle_file": config.TrustBundleFile,
-		"apikey": config.Apikey,
-		"cloud_url": config.CloudURL,
+		"apikey":            config.Apikey,
+		"cloud_url":         config.CloudURL,
 	}
 
 	return &logical.Response{
