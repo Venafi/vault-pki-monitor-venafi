@@ -34,7 +34,7 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 
 func TestBackend_VenafiPolicyCloud(t *testing.T) {
 	rand := randSeq(9)
-	domain := "example.com"
+	domain := "vfidev.com"
 	// Configure Venafi default policy
 	policyData := map[string]interface{}{
 		"cloud_url": os.Getenv("CLOUDURL"),
@@ -182,7 +182,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 			t.Fatalf("subject_cn_regexes want %s but have %s", want, have)
 		}
 	} else {
-		t.Fatalf("Frong endpoint: %s", endpoint)
+		t.Fatalf("Wrong endpoint: %s", endpoint)
 	}
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -199,7 +199,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	}
 
 	rootData := map[string]interface{}{
-		"common_name": domain,
+		"common_name": "ca."+domain,
 		"ttl":         "6h",
 	}
 
@@ -235,7 +235,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
-	// issue particular cert
+	log.Println("issue pproper cert")
 	singleCN := rand + "-import." + domain
 	certData := map[string]interface{}{
 		"common_name": singleCN,
@@ -251,6 +251,22 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	}
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	log.Println("issue wrong cert")
+	singleCN = rand + "-import." + "example.com"
+	certData = map[string]interface{}{
+		"common_name": singleCN,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/test-venafi-policy",
+		Storage:   storage,
+		Data:      certData,
+	})
+
+	if err == nil {
+		t.Fatalf("certificate issue should be denied by policy, %#v", resp)
 	}
 
 	//TODO: issuer certificate which won't match policy

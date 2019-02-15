@@ -312,7 +312,7 @@ func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
 		return err
 	}
 
-	log.Printf("Checking creation bundle:\n %v\n against policy %s", data.signingBundle, policyConfig)
+	log.Printf("Checking creation bundle against policy %s", policyConfig)
 
 	//TODO: Check data *dataBundle against Venafi policy
 	for _, r := range policy.SubjectCNRegexes {
@@ -323,7 +323,8 @@ func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
 			return err
 		}
 		if !match {
-			return fmt.Errorf("common name %s doesn't match regexp %s", cn_regex[0], cn_have)
+			//TODO: I'm getting null pointer if cn doesn't match on creating internal CA. Need to fix.
+			return fmt.Errorf("common name %s doesn't match regexp %s", cn_regex, cn_have)
 		}
 	}
 
