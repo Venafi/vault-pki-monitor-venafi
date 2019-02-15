@@ -14,7 +14,7 @@ func pathVenafiPolicy(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "venafi-policy/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the Venafi policy config",
 			},
@@ -74,7 +74,7 @@ Example:
 	return ret
 }
 
-func pathVenafiPolicyRead(b *backend) *framework.Path {
+func pathVenafiPolicyContent(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "venafi-policy/" + framework.GenericNameRegex("config") + "/policy",
 		Fields: map[string]*framework.FieldSchema{
@@ -84,7 +84,7 @@ func pathVenafiPolicyRead(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathReadVenafiPolicyRead,
+			logical.ReadOperation: b.pathReadVenafiPolicyContent,
 		},
 
 		HelpSynopsis:    pathVenafiPolicySyn,
@@ -92,7 +92,7 @@ func pathVenafiPolicyRead(b *backend) *framework.Path {
 	}
 	return ret
 }
-func (b *backend) pathReadVenafiPolicyRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	config := data.Get("config").(string)
 	log.Printf("Trying to read policy for config %s", config)
 
@@ -184,7 +184,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	}, nil
 }
 
-func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface{}){
+func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface{}) {
 	return map[string]interface{}{
 		"subject_cn_regexes": policy.SubjectCNRegexes,
 		"subject_or_egexes":  policy.SubjectORegexes,

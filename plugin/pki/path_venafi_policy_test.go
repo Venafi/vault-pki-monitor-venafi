@@ -37,9 +37,9 @@ func TestBackend_VenafiPolicyCloud(t *testing.T) {
 	domain := "example.com"
 	// Configure Venafi default policy
 	policyData := map[string]interface{}{
-		"cloud_url":           os.Getenv("CLOUDURL"),
-		"apikey":          os.Getenv("CLOUDAPIKEY"),
-		"zone":              os.Getenv("CLOUDZONE"),
+		"cloud_url": os.Getenv("CLOUDURL"),
+		"apikey":    os.Getenv("CLOUDAPIKEY"),
+		"zone":      os.Getenv("CLOUDZONE"),
 	}
 
 	// create a role entry with default policy
@@ -127,8 +127,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatalf("subject_cn_regexes is unexpected value")
 	}
 
-
-	for key, value := range resp.Data{
+	for key, value := range resp.Data {
 		log.Println(key, ":", value)
 	}
 

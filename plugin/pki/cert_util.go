@@ -745,7 +745,6 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		}
 	}
 
-
 	// Read in names -- CN, DNS and email addresses
 	var cn string
 	var ridSerialNumber string
