@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"log"
+	"regexp"
+	"strings"
 )
 
 // This returns the list of queued for import to TPP certificates
@@ -286,18 +288,45 @@ func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
 		policyConfig = "default"
 	}
 
-	policy, err := data.req.Storage.Get(ctx, "venafi-policy/"+policyConfig+"/policy")
+	entry, err := data.req.Storage.Get(ctx, "venafi-policy/"+policyConfig+"/policy")
 	if err != nil {
 		return err
 	}
-	if policy == nil {
-		return fmt.Errorf("policy data is nil. You need configure Venafi policy to proceed")
+	if entry == nil {
+		if VenafiPolicyDenyAll {
+			if strings.Contains(data.req.Path,"root/generate")  {
+				//internal certificate won't output error response
+				log.Println("policy data is nil. You need configure Venafi policy to proceed")
+			}
+			return fmt.Errorf("policy data is nil. You need configure Venafi policy to proceed")
+		} else {
+			return nil
+		}
 	}
 
 	//TODO: parse Venafi policy
-	//TODO: If nothing exists in the policy deny all.
-	log.Printf("Checking creation bundle %s against policy %s", "data", policy)
-	//TODO: Check data *dataBundle against Venafi polycu.
+	var policy venafiPolicyEntry
+
+	if err := entry.DecodeJSON(&policy); err != nil {
+		log.Printf("error reading Venafi policy configuration: %s", err)
+		return err
+	}
+
+	log.Printf("Checking creation bundle:\n %v\n against policy %s", data.signingBundle, policyConfig)
+
+	//TODO: Check data *dataBundle against Venafi policy
+	for _, r := range policy.SubjectCNRegexes {
+		cn_regex := r
+		cn_have := data.apiData.Get("common_name").(string)
+		match, err := regexp.MatchString(cn_regex, cn_have )
+		if err != nil {
+			return err
+		}
+		if !match {
+			return fmt.Errorf("common name %s doesn't match regexp %s", cn_regex[0], cn_have)
+		}
+	}
+
 	//TODO: in case of exception return errutil.UserError{}
 	//if "data-bundle" != "policy-checks" {
 	//	return errutil.UserError{Err: fmt.Sprintf(

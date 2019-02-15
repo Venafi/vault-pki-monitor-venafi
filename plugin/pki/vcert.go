@@ -15,6 +15,7 @@ import (
 
 //Set it false to disable Venafi policy check. It can be done only on the code level of the plugin.
 const VenafiPolciyCheck = true
+const VenafiPolicyDenyAll = true
 
 func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logical.Request, configName string, configType string) (
 	endpoint.Connector, error) {

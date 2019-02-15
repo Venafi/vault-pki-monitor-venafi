@@ -68,46 +68,27 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
+	//TODO: Fix null pointer when trying to configure root CA before policy configuration
 	// generate root
-	rootData := map[string]interface{}{
-		"common_name": domain,
-		"ttl":         "6h",
-	}
-
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "root/generate/internal",
-		Storage:   storage,
-		Data:      rootData,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to generate root, %#v", resp)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// config urls
-	urlsData := map[string]interface{}{
-		"issuing_certificates":    "http://127.0.0.1:8200/v1/pki/ca",
-		"crl_distribution_points": "http://127.0.0.1:8200/v1/pki/crl",
-	}
-
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config/urls",
-		Storage:   storage,
-		Data:      urlsData,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to config urls, %#v", resp)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
+	//rootData := map[string]interface{}{
+	//	"common_name": domain,
+	//	"ttl":         "6h",
+	//}
+	//resp, err := b.HandleRequest(context.Background(), &logical.Request{
+	//	Operation: logical.UpdateOperation,
+	//	Path:      "root/generate/internal",
+	//	Storage:   storage,
+	//	Data:      rootData,
+	//})
+	//if resp != nil && resp.IsError() {
+	//	t.Fatalf("failed to generate root, %#v", resp)
+	//}
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
 
 	//Write Venafi policy configuration
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "venafi-policy/default",
 		Storage:   storage,
@@ -212,6 +193,43 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	})
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rootData := map[string]interface{}{
+		"common_name": domain,
+		"ttl":         "6h",
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data:      rootData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// config urls
+	urlsData := map[string]interface{}{
+		"issuing_certificates":    "http://127.0.0.1:8200/v1/pki/ca",
+		"crl_distribution_points": "http://127.0.0.1:8200/v1/pki/crl",
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/urls",
+		Storage:   storage,
+		Data:      urlsData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to config urls, %#v", resp)
 	}
 	if err != nil {
 		t.Fatal(err)

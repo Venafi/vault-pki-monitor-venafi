@@ -14,6 +14,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"regexp"
@@ -739,6 +740,7 @@ func signCert(b *backend,
 func generateCreationBundle(b *backend, data *dataBundle) error {
 	if VenafiPolciyCheck {
 		//Calling Venafi policy check before performing any checks
+		log.Println("Checking creation bundle against Venafi policy")
 		check := checkAgainstVenafiPolicy(b, data)
 		if check != nil {
 			return check
