@@ -113,24 +113,7 @@ func (b *backend) pathReadVenafiPolicyRead(ctx context.Context, req *logical.Req
 	}
 
 	//Send policy to the user output
-	respData := map[string]interface{}{
-		"subject_cn_regexes": policy.SubjectCNRegexes,
-		"subject_or_egexes":  policy.SubjectORegexes,
-		"subject_ou_regexes": policy.SubjectOURegexes,
-		"subject_st_regexes": policy.SubjectSTRegexes,
-		"subject_l_regexes":  policy.SubjectLRegexes,
-		"subject_c_regexes":  policy.SubjectCRegexes,
-		//"key_type": policy.KeyType,
-		//"key_sizes": policy.KeySizes,
-		//"key_curves": policy.KeyCurves,
-		"dns_san_regexes":   policy.DnsSanRegExs,
-		"ip_san_regexes":    policy.IpSanRegExs,
-		"email_san_regexes": policy.EmailSanRegExs,
-		"uri_san_regexes":   policy.UriSanRegExs,
-		"upn_san_regexes":   policy.UpnSanRegExs,
-		"allow_wildcards":   policy.AllowWildcards,
-		"allow_key_reuse":   policy.AllowKeyReuse,
-	}
+	respData := formPolicyRespData(policy)
 
 	return &logical.Response{
 		Data: respData,
@@ -192,9 +175,34 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
+
+	//Send policy to the user output
+	respData := formPolicyRespData(*policyEntry)
+
 	return &logical.Response{
-		Data: map[string]interface{}{"status":"Venafi policy configured successfully"},
+		Data: respData,
 	}, nil
+}
+
+func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface{}){
+	return map[string]interface{}{
+		"subject_cn_regexes": policy.SubjectCNRegexes,
+		"subject_or_egexes":  policy.SubjectORegexes,
+		"subject_ou_regexes": policy.SubjectOURegexes,
+		"subject_st_regexes": policy.SubjectSTRegexes,
+		"subject_l_regexes":  policy.SubjectLRegexes,
+		"subject_c_regexes":  policy.SubjectCRegexes,
+		//"key_type": policy.KeyType,
+		//"key_sizes": policy.KeySizes,
+		//"key_curves": policy.KeyCurves,
+		"dns_san_regexes":   policy.DnsSanRegExs,
+		"ip_san_regexes":    policy.IpSanRegExs,
+		"email_san_regexes": policy.EmailSanRegExs,
+		"uri_san_regexes":   policy.UriSanRegExs,
+		"upn_san_regexes":   policy.UpnSanRegExs,
+		"allow_wildcards":   policy.AllowWildcards,
+		"allow_key_reuse":   policy.AllowKeyReuse,
+	}
 }
 
 func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request, zone string, policyConfig string) (policy *endpoint.Policy, err error) {

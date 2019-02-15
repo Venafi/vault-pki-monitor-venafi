@@ -87,8 +87,8 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 	}
 
 	//After write policy should be on output
-	if resp.Data["status"].(string) != "Venafi policy configured successfully" {
-		t.Fatalf("Expected status: Venafi policy configured successfully is different from %s", resp.Data["status"].(string))
+	if resp.Data["subject_cn_regexes"].([]string)[0] != ".*" {
+		t.Fatalf("subject_cn_regexes is unexpected value")
 	}
 
 	//Read saved Venafi policy
