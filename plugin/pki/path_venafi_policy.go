@@ -239,6 +239,10 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
+	if entry == nil {
+		return logical.ErrorResponse("policy config is nil. Looks like it doesn't exists."), nil
+	}
+
 	var config venafiPolicyConfigEntry
 
 	if err := entry.DecodeJSON(&config); err != nil {
