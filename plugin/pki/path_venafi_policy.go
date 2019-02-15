@@ -323,7 +323,6 @@ func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
 			return err
 		}
 		if !match {
-			//TODO: I'm getting null pointer if cn doesn't match on creating internal CA. Need to fix.
 			return fmt.Errorf("common name %s doesn't match regexp %s", cn_regex, cn_have)
 		}
 	}
