@@ -192,7 +192,9 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return &logical.Response{
+		Data: map[string]interface{}{"status":"Venafi policy configured successfully"},
+	}, nil
 }
 
 func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request, zone string, policyConfig string) (policy *endpoint.Policy, err error) {

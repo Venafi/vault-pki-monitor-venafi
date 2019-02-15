@@ -3,7 +3,6 @@ package pki
 import (
 	"context"
 	"github.com/hashicorp/vault/logical"
-	"log"
 	"os"
 	"testing"
 )
@@ -83,11 +82,13 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if resp == nil {
+
+	}
 
 	//After write policy should be on output
-	log.Printf("data is %s", resp.Data["subject_cn_regexes"])
-	if resp.Data["subject_cn_regexes"].([]string)[0] != ".*" {
-		t.Fatalf("subject_cn_regexes is unexpected value")
+	if resp.Data["status"].(string) != "Venafi policy configured successfully" {
+		t.Fatalf("Expected status: Venafi policy configured successfully is different from %s", resp.Data["status"].(string))
 	}
 
 	//Read saved Venafi policy
