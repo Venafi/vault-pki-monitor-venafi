@@ -68,7 +68,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
-	//TODO: Fix null pointer when trying to configure root CA before policy configuration
+	//TODO: Trying to generate root CA before policy configuration should fail
 	// generate root
 	//rootData := map[string]interface{}{
 	//	"common_name": domain,
