@@ -743,7 +743,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		log.Println("Checking creation bundle against Venafi policy")
 		check := checkAgainstVenafiPolicy(b, data)
 		if check != nil {
-			return check
+			return errutil.UserError{Err: check.Error()}
 		}
 	}
 
