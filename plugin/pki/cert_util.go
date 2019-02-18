@@ -738,14 +738,6 @@ func signCert(b *backend,
 // from the various endpoints and generates a creationParameters with the
 // parameters that can be used to issue or sign
 func generateCreationBundle(b *backend, data *dataBundle) error {
-	if VenafiPolciyCheck {
-		//Calling Venafi policy check before performing any checks
-		log.Println("Checking creation bundle against Venafi policy")
-		check := checkAgainstVenafiPolicy(b, data)
-		if check != nil {
-			return errutil.UserError{Err: check.Error()}
-		}
-	}
 
 	// Read in names -- CN, DNS and email addresses
 	var cn string
@@ -823,6 +815,16 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 						}
 					}
 				}
+			}
+		}
+		if venafiPolciyCheck {
+			//Calling Venafi policy check before performing any checks
+			log.Println("Checking creation bundle against Venafi policy")
+			//todo: add ip addreses
+			err := checkAgainstVenafiPolicy(b, data.req, data.role.VenafiCheckPolicy, cn, []string{}, emailAddresses, dnsNames)
+			// i think
+			if err != nil {
+				return errutil.UserError{Err: err.Error()}
 			}
 		}
 

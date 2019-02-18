@@ -12,10 +12,12 @@ import (
 	"strings"
 )
 
+const venafiPolicyPath = "venafi-policy/" //todo:move over constants here
+
 // This returns the list of queued for import to TPP certificates
 func pathVenafiPolicy(b *backend) *framework.Path {
 	ret := &framework.Path{
-		Pattern: "venafi-policy/" + framework.GenericNameRegex("name"),
+		Pattern: venafiPolicyPath + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -79,7 +81,7 @@ Example:
 
 func pathVenafiPolicyContent(b *backend) *framework.Path {
 	ret := &framework.Path{
-		Pattern: "venafi-policy/" + framework.GenericNameRegex("name") + "/policy",
+		Pattern: venafiPolicyPath + framework.GenericNameRegex("name") + "/policy",
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -103,7 +105,7 @@ func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.
 		return logical.ErrorResponse("Non config specified or wrong config path name"), nil
 	}
 
-	entry, err := req.Storage.Get(ctx, "venafi-policy/"+name+"/policy")
+	entry, err := req.Storage.Get(ctx, venafiPolicyPath+name+"/policy")
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +114,6 @@ func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.
 	}
 
 	var policy venafiPolicyEntry
-
 	if err := entry.DecodeJSON(&policy); err != nil {
 		log.Printf("error reading Venafi policy configuration: %s", err)
 		return nil, err
@@ -142,7 +143,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	if configEntry.Apikey == "" && (configEntry.TPPURL == "" || configEntry.TPPUser == "" || configEntry.TPPPassword == "") {
 		return logical.ErrorResponse("Invalid mode. apikey or tpp credentials required"), nil
 	}
-	jsonEntry, err := logical.StorageEntryJSON("venafi-policy/"+name, configEntry)
+	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+name, configEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -151,30 +152,30 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	}
 	log.Printf("Geting policy from zone %s", data.Get("zone").(string))
 	policy, err := b.getPolicyFromVenafi(ctx, req, data.Get("zone").(string), name)
-
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	//Form policy entry for storage
 	policyEntry := &venafiPolicyEntry{
-		SubjectCNRegexes: policy.SubjectCNRegexes,
-		SubjectORegexes:  policy.SubjectORegexes,
-		SubjectOURegexes: policy.SubjectOURegexes,
-		SubjectSTRegexes: policy.SubjectSTRegexes,
-		SubjectLRegexes:  policy.SubjectLRegexes,
-		SubjectCRegexes:  policy.SubjectCRegexes,
-		//TODO: parse and write key configuration
-		//KeyType: policy.AllowedKeyConfigurations[KeyType],
-		//KeySizes: policy.AllowedKeyConfigurations[KeySizes],
-		//KeyCurves: policy.AllowedKeyConfigurations[KeyCurves],
-		DnsSanRegExs:   policy.DnsSanRegExs,
-		IpSanRegExs:    policy.IpSanRegExs,
-		EmailSanRegExs: policy.EmailSanRegExs,
-		UriSanRegExs:   policy.UriSanRegExs,
-		UpnSanRegExs:   policy.UpnSanRegExs,
-		AllowWildcards: policy.AllowWildcards,
-		AllowKeyReuse:  policy.AllowKeyReuse,
+		SubjectCNRegexes:         policy.SubjectCNRegexes,
+		SubjectORegexes:          policy.SubjectORegexes,
+		SubjectOURegexes:         policy.SubjectOURegexes,
+		SubjectSTRegexes:         policy.SubjectSTRegexes,
+		SubjectLRegexes:          policy.SubjectLRegexes,
+		SubjectCRegexes:          policy.SubjectCRegexes,
+		AllowedKeyConfigurations: policy.AllowedKeyConfigurations,
+		DnsSanRegExs:             policy.DnsSanRegExs,
+		IpSanRegExs:              policy.IpSanRegExs,
+		EmailSanRegExs:           policy.EmailSanRegExs,
+		UriSanRegExs:             policy.UriSanRegExs,
+		UpnSanRegExs:             policy.UpnSanRegExs,
+		AllowWildcards:           policy.AllowWildcards,
+		AllowKeyReuse:            policy.AllowKeyReuse,
 	}
 
 	log.Printf("Saving policy into Vault storage")
-	jsonEntry, err = logical.StorageEntryJSON("venafi-policy/"+name+"/policy", policyEntry)
+	jsonEntry, err = logical.StorageEntryJSON(venafiPolicyPath+name+"/policy", policyEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -192,22 +193,20 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 
 func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface{}) {
 	return map[string]interface{}{
-		"subject_cn_regexes": policy.SubjectCNRegexes,
-		"subject_or_egexes":  policy.SubjectORegexes,
-		"subject_ou_regexes": policy.SubjectOURegexes,
-		"subject_st_regexes": policy.SubjectSTRegexes,
-		"subject_l_regexes":  policy.SubjectLRegexes,
-		"subject_c_regexes":  policy.SubjectCRegexes,
-		//"key_type": policy.KeyType,
-		//"key_sizes": policy.KeySizes,
-		//"key_curves": policy.KeyCurves,
-		"dns_san_regexes":   policy.DnsSanRegExs,
-		"ip_san_regexes":    policy.IpSanRegExs,
-		"email_san_regexes": policy.EmailSanRegExs,
-		"uri_san_regexes":   policy.UriSanRegExs,
-		"upn_san_regexes":   policy.UpnSanRegExs,
-		"allow_wildcards":   policy.AllowWildcards,
-		"allow_key_reuse":   policy.AllowKeyReuse,
+		"subject_cn_regexes":         policy.SubjectCNRegexes,
+		"subject_or_egexes":          policy.SubjectORegexes,
+		"subject_ou_regexes":         policy.SubjectOURegexes,
+		"subject_st_regexes":         policy.SubjectSTRegexes,
+		"subject_l_regexes":          policy.SubjectLRegexes,
+		"subject_c_regexes":          policy.SubjectCRegexes,
+		"allowed_key_configurations": policy.AllowedKeyConfigurations,
+		"dns_san_regexes":            policy.DnsSanRegExs,
+		"ip_san_regexes":             policy.IpSanRegExs,
+		"email_san_regexes":          policy.EmailSanRegExs,
+		"uri_san_regexes":            policy.UriSanRegExs,
+		"upn_san_regexes":            policy.UpnSanRegExs,
+		"allow_wildcards":            policy.AllowWildcards,
+		"allow_key_reuse":            policy.AllowKeyReuse,
 	}
 }
 
@@ -236,7 +235,7 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("Non config specified or wrong config path name"), nil
 	}
 
-	entry, err := req.Storage.Get(ctx, "venafi-policy/"+name)
+	entry, err := req.Storage.Get(ctx, venafiPolicyPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -279,22 +278,19 @@ func (b *backend) pathDeleteVenafiPolicy(ctx context.Context, req *logical.Reque
 	return nil, nil
 }
 
-func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
+func checkAgainstVenafiPolicy(b *backend, req *logical.Request, policyConfig, cn string, ipAddresses, email, sans []string) error {
 	ctx := context.Background()
-	var policyConfig string
-	if len(data.role.VenafiCheckPolicy) > 0 {
-		policyConfig = data.role.VenafiCheckPolicy
-	} else {
+	if policyConfig == "" {
 		policyConfig = "default"
 	}
 
-	entry, err := data.req.Storage.Get(ctx, "venafi-policy/"+policyConfig+"/policy")
+	entry, err := req.Storage.Get(ctx, venafiPolicyPath+policyConfig+"/policy")
 	if err != nil {
 		return err
 	}
 	if entry == nil {
-		if VenafiPolicyDenyAll {
-			if strings.Contains(data.req.Path,"root/generate")  {
+		if venafiPolicyDenyAll {
+			if strings.Contains(req.Path, "root/generate") {
 				//internal certificate won't output error response
 				log.Println("policy data is nil. You need configure Venafi policy to proceed")
 			}
@@ -304,7 +300,6 @@ func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
 		}
 	}
 
-	//TODO: parse Venafi policy
 	var policy venafiPolicyEntry
 
 	if err := entry.DecodeJSON(&policy); err != nil {
@@ -314,17 +309,9 @@ func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
 
 	log.Printf("Checking creation bundle against policy %s", policyConfig)
 
-	//TODO: Check data *dataBundle against Venafi policy
-	for _, r := range policy.SubjectCNRegexes {
-		cn_regex := r
-		cn_have := data.apiData.Get("common_name").(string)
-		match, err := regexp.MatchString(cn_regex, cn_have )
-		if err != nil {
-			return err
-		}
-		if !match {
-			return fmt.Errorf("common name %s doesn't match regexp %s", cn_regex, cn_have)
-		}
+	//TODO: Check C/OU/O/ST... and ipAddresses, email, sans against Venafi policy
+	if !checkStringByRegexp(cn, policy.SubjectCNRegexes) {
+		return fmt.Errorf("common name %s doesn't match regexps: %v", cn, policy.SubjectCNRegexes)
 	}
 
 	//TODO: in case of exception return errutil.UserError{}
@@ -335,8 +322,19 @@ func checkAgainstVenafiPolicy(b *backend, data *dataBundle) error {
 	return nil
 }
 
+func checkStringByRegexp(s string, regexs []string) (matched bool) {
+	var err error
+	for _, r := range regexs {
+		matched, err = regexp.MatchString(r, s)
+		if err != nil && matched {
+			return
+		}
+	}
+	return
+}
+
 func (b *backend) getPolicyConfig(ctx context.Context, s logical.Storage, n string) (*venafiPolicyConfigEntry, error) {
-	entry, err := s.Get(ctx, "venafi-policy/"+n)
+	entry, err := s.Get(ctx, venafiPolicyPath+n)
 	if err != nil {
 		return nil, err
 	}
@@ -363,22 +361,20 @@ type venafiPolicyConfigEntry struct {
 }
 
 type venafiPolicyEntry struct {
-	SubjectCNRegexes []string `json:"subject_cn_regexes"`
-	SubjectORegexes  []string `json:"subject_or_egexes"`
-	SubjectOURegexes []string `json:"subject_ou_regexes"`
-	SubjectSTRegexes []string `json:"subject_st_regexes"`
-	SubjectLRegexes  []string `json:"subject_l_regexes"`
-	SubjectCRegexes  []string `json:"subject_c_regexes"`
-	KeyType          []string `json:"key_type"`
-	KeySizes         []int    `json:"key_sizes"`
-	KeyCurves        []string `json:"key_curves"`
-	DnsSanRegExs     []string `json:"dns_san_regexes"`
-	IpSanRegExs      []string `json:"ip_san_regexes"`
-	EmailSanRegExs   []string `json:"email_san_regexes"`
-	UriSanRegExs     []string `json:"uri_san_regexes"`
-	UpnSanRegExs     []string `json:"upn_san_regexes"`
-	AllowWildcards   bool     `json:"allow_wildcards"`
-	AllowKeyReuse    bool     `json:"allow_key_reuse"`
+	SubjectCNRegexes         []string `json:"subject_cn_regexes"`
+	SubjectORegexes          []string `json:"subject_or_egexes"`
+	SubjectOURegexes         []string `json:"subject_ou_regexes"`
+	SubjectSTRegexes         []string `json:"subject_st_regexes"`
+	SubjectLRegexes          []string `json:"subject_l_regexes"`
+	SubjectCRegexes          []string `json:"subject_c_regexes"`
+	AllowedKeyConfigurations []endpoint.AllowedKeyConfiguration
+	DnsSanRegExs             []string `json:"dns_san_regexes"`
+	IpSanRegExs              []string `json:"ip_san_regexes"`
+	EmailSanRegExs           []string `json:"email_san_regexes"`
+	UriSanRegExs             []string `json:"uri_san_regexes"`
+	UpnSanRegExs             []string `json:"upn_san_regexes"`
+	AllowWildcards           bool     `json:"allow_wildcards"`
+	AllowKeyReuse            bool     `json:"allow_key_reuse"`
 }
 
 const pathVenafiPolicySyn = `help here`
