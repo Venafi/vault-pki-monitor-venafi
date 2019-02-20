@@ -19,7 +19,7 @@ else
 VERSION=`git describe --abbrev=0 --tags`
 endif
 
-MOUNT := vault-pki-monitor-venafi
+MOUNT := pki
 SHA256 := $$(shasum -a 256 "$(PLUGIN_PATH)" | cut -d' ' -f1)
 
 ROLE_OPTIONS := generate_lease=true store_by_cn="true" store_pkey="true" store_by_serial="true" ttl=1h max_ttl=1h
