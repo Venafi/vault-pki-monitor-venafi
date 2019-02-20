@@ -346,7 +346,7 @@ func checkStringByRegexp(s string, regexs []string) (matched bool) {
 	var err error
 	for _, r := range regexs {
 		matched, err = regexp.MatchString(r, s)
-		if err != nil && matched {
+		if err == nil && matched {
 			return true
 		}
 	}
