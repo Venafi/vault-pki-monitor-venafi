@@ -1,8 +1,8 @@
-//TODO: write get and save venafi policy here.
 package pki
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/hashicorp/vault/logical"
@@ -192,6 +192,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 }
 
 func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface{}) {
+	keyConfig, _ := json.Marshal(policy.AllowedKeyConfigurations)
 	return map[string]interface{}{
 		"subject_cn_regexes":         policy.SubjectCNRegexes,
 		"subject_or_egexes":          policy.SubjectORegexes,
@@ -199,7 +200,7 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 		"subject_st_regexes":         policy.SubjectSTRegexes,
 		"subject_l_regexes":          policy.SubjectLRegexes,
 		"subject_c_regexes":          policy.SubjectCRegexes,
-		"allowed_key_configurations": policy.AllowedKeyConfigurations,
+		"allowed_key_configurations": string(keyConfig),
 		"dns_san_regexes":            policy.DnsSanRegExs,
 		"ip_san_regexes":             policy.IpSanRegExs,
 		"email_san_regexes":          policy.EmailSanRegExs,
@@ -321,11 +322,6 @@ func checkAgainstVenafiPolicy(b *backend, req *logical.Request, policyConfig, cn
 	if !checkStringArrByRegexp(ipAddresses, policy.IpSanRegExs) {
 		return fmt.Errorf("IPs %v don`t match with regexps: %v", ipAddresses, policy.IpSanRegExs)
 	}
-	//TODO: in case of exception return errutil.UserError{}
-	//if "data-bundle" != "policy-checks" {
-	//	return errutil.UserError{Err: fmt.Sprintf(
-	//		"Not implemented yet")}
-	//}
 	return nil
 }
 
@@ -341,7 +337,6 @@ func checkStringByRegexp(s string, regexs []string) (matched bool) {
 }
 
 func checkStringArrByRegexp(ss []string, regexs []string) (matched bool) {
-	var err error
 	for _, s := range ss {
 		if checkStringByRegexp(s, regexs) {
 			return false
