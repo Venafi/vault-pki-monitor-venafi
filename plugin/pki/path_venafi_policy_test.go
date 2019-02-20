@@ -175,7 +175,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		Data:      rootData,
 	})
 	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to generate root, %#v", resp)
+		t.Fatalf("failed to generate internal root CA, %#v", resp)
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -218,20 +218,23 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
-	log.Println("issue wrong cert")
-	singleCN = rand + "-import." + "example.com"
-	certData = map[string]interface{}{
-		"common_name": singleCN,
-	}
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "issue/test-venafi-policy",
-		Storage:   storage,
-		Data:      certData,
-	})
+	if endpoint == "cloud" {
+		log.Println("issue wrong cert")
+		singleCN = rand + "-import." + "example.com"
+		certData = map[string]interface{}{
+			"common_name": singleCN,
+		}
+		resp, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "issue/test-venafi-policy",
+			Storage:   storage,
+			Data:      certData,
+		})
 
-	if resp.Error() == nil {
-		t.Fatalf("certificate issue should be denied by policy, %#v", resp)
+		if resp.Error() == nil {
+			t.Fatalf("certificate issue should be denied by policy, %#v", resp)
+		}
+
 	}
 
 	//TODO: issuer certificate which won't match policy
