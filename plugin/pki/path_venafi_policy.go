@@ -309,11 +309,18 @@ func checkAgainstVenafiPolicy(b *backend, req *logical.Request, policyConfig, cn
 
 	log.Printf("Checking creation bundle against policy %s", policyConfig)
 
-	//TODO: Check C/OU/O/ST... and ipAddresses, email, sans against Venafi policy
 	if !checkStringByRegexp(cn, policy.SubjectCNRegexes) {
 		return fmt.Errorf("common name %s doesn't match regexps: %v", cn, policy.SubjectCNRegexes)
 	}
-
+	if !checkStringArrByRegexp(email, policy.EmailSanRegExs) {
+		return fmt.Errorf("Emails %v don`t match with regexps: %v", email, policy.EmailSanRegExs)
+	}
+	if !checkStringArrByRegexp(sans, policy.DnsSanRegExs) {
+		return fmt.Errorf("DNS sans %v don`t match with regexps: %v", sans, policy.DnsSanRegExs)
+	}
+	if !checkStringArrByRegexp(ipAddresses, policy.IpSanRegExs) {
+		return fmt.Errorf("IPs %v don`t match with regexps: %v", ipAddresses, policy.IpSanRegExs)
+	}
 	//TODO: in case of exception return errutil.UserError{}
 	//if "data-bundle" != "policy-checks" {
 	//	return errutil.UserError{Err: fmt.Sprintf(
@@ -327,10 +334,20 @@ func checkStringByRegexp(s string, regexs []string) (matched bool) {
 	for _, r := range regexs {
 		matched, err = regexp.MatchString(r, s)
 		if err != nil && matched {
-			return
+			return true
 		}
 	}
 	return
+}
+
+func checkStringArrByRegexp(ss []string, regexs []string) (matched bool) {
+	var err error
+	for _, s := range ss {
+		if checkStringByRegexp(s, regexs) {
+			return false
+		}
+	}
+	return true
 }
 
 func (b *backend) getPolicyConfig(ctx context.Context, s logical.Storage, n string) (*venafiPolicyConfigEntry, error) {
