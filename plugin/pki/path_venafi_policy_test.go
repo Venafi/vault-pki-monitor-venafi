@@ -208,7 +208,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		Data:      rootData,
 	})
 	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to generate root, %#v", resp)
+		t.Fatalf("failed to generate internal root CA, %#v", resp)
 	}
 	if err != nil {
 		t.Fatal(err)

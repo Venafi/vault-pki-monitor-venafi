@@ -355,7 +355,7 @@ func checkStringByRegexp(s string, regexs []string) (matched bool) {
 
 func checkStringArrByRegexp(ss []string, regexs []string) (matched bool) {
 	for _, s := range ss {
-		if checkStringByRegexp(s, regexs) {
+		if !checkStringByRegexp(s, regexs) {
 			return false
 		}
 	}
