@@ -55,8 +55,7 @@ func TestBackend_VenafiPolicyCloud(t *testing.T) {
 }
 
 func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData map[string]interface{}, rand string, domain string, endpoint string) {
-	var want interface{}
-	var have interface{}
+
 	// create the backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
@@ -107,22 +106,6 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		log.Println(key, ":", value)
 	}
 
-	if endpoint == "tpp" {
-		want = ".*"
-		have = resp.Data["subject_cn_regexes"].([]string)[0]
-		if have != want {
-			t.Fatalf("subject_cn_regexes want %s but have %s", want, have)
-		}
-	} else if endpoint == "cloud" {
-		want = `[\w-]*\.vfidev\.(com|net)`
-		have = resp.Data["subject_cn_regexes"].([]string)[0]
-		if have != want {
-			t.Fatalf("subject_cn_regexes want %s but have %s", want, have)
-		}
-	} else {
-		t.Fatalf("Frong endpoint: %s", endpoint)
-	}
-
 	log.Println("Read saved policy configuration")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -167,22 +150,6 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	//TODO: Add test when getting policy content by invalid path (default1 for example).
 	//should get logical.ErrorResponse("policy data is nil. Look like it doesn't exists.")
 
-	if endpoint == "tpp" {
-		want = ".*"
-		have = resp.Data["subject_cn_regexes"].([]string)[0]
-		if have != want {
-			t.Fatalf("subject_cn_regexes want %s but have %s", want, have)
-		}
-	} else if endpoint == "cloud" {
-		want = `[\w-]*\.vfidev\.(com|net)`
-		have = resp.Data["subject_cn_regexes"].([]string)[0]
-		if have != want {
-			t.Fatalf("subject_cn_regexes want %s but have %s", want, have)
-		}
-	} else {
-		t.Fatalf("Wrong endpoint: %s", endpoint)
-	}
-
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test-venafi-policy",
@@ -197,7 +164,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	}
 
 	rootData = map[string]interface{}{
-		"common_name": "ca."+domain,
+		"common_name": "ca." + domain,
 		"ttl":         "6h",
 	}
 
