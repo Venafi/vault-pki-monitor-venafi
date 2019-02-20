@@ -220,7 +220,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 
 	if endpoint == "cloud" {
 		log.Println("issue wrong cert")
-		singleCN = rand + "-import." + "example.com"
+		singleCN = rand + "-import." + "wrong.wrong"
 		certData = map[string]interface{}{
 			"common_name": singleCN,
 		}
