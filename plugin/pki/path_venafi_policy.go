@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -192,7 +193,23 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 }
 
 func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface{}) {
-	keyConfig, _ := json.Marshal(policy.AllowedKeyConfigurations)
+	type printKeyConfig struct {
+		KeyType   string
+		KeySizes  []int    `json:",omitempty"`
+		KeyCurves []string `json:",omitempty"`
+	}
+	keyConfigs := make([]string, len(policy.AllowedKeyConfigurations))
+	for i, akc := range policy.AllowedKeyConfigurations {
+		kc := printKeyConfig{akc.KeyType.String(), akc.KeySizes, nil}
+		if akc.KeyType == certificate.KeyTypeECDSA {
+			kc.KeyCurves = make([]string, len(akc.KeyCurves))
+			for i, c := range akc.KeyCurves {
+				kc.KeyCurves[i] = c.String()
+			}
+		}
+		kb, _ := json.Marshal(kc)
+		keyConfigs[i] = string(kb)
+	}
 	return map[string]interface{}{
 		"subject_cn_regexes":         policy.SubjectCNRegexes,
 		"subject_or_egexes":          policy.SubjectORegexes,
@@ -200,7 +217,7 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 		"subject_st_regexes":         policy.SubjectSTRegexes,
 		"subject_l_regexes":          policy.SubjectLRegexes,
 		"subject_c_regexes":          policy.SubjectCRegexes,
-		"allowed_key_configurations": string(keyConfig),
+		"allowed_key_configurations": keyConfigs,
 		"dns_san_regexes":            policy.DnsSanRegExs,
 		"ip_san_regexes":             policy.IpSanRegExs,
 		"email_san_regexes":          policy.EmailSanRegExs,
