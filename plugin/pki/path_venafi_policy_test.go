@@ -264,14 +264,98 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to list policies, %#v", resp)
 	}
+
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	keys := resp.Data["keys"]
 	log.Printf("Policy list is:\n %v", keys)
+
+
+	log.Println("Deleting Venafi policy second")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "venafi-policy/second",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to delete policy, %#v", resp)
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Println("Listing Venafi policies")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "venafi-policy/",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to list policies, %#v", resp)
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keys = resp.Data["keys"]
+	log.Printf("Policy list is:\n %v", keys)
+
+	log.Println("Deleting Venafi policy default")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "venafi-policy/default",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to delete policy, %#v", resp)
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Println("Listing Venafi policies")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "venafi-policy/",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to list policies, %#v", resp)
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keys = resp.Data["keys"]
+	log.Printf("Policy list is:\n %v", keys)
+
+	log.Println("Trying to sign certificate with deleted policy")
+	singleCN = rand + "-import-deleted-policy." + domain
+	certData = map[string]interface{}{
+		"common_name": singleCN,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/test-venafi-policy",
+		Storage:   storage,
+		Data:      certData,
+	})
+	if resp == nil {
+		t.Fatalf("Error should be generated in response")
+	}
+	if resp.Error() == nil {
+		t.Fatalf("Should fail to generate certificate after deleting policy")
+	}
 
 	//TODO: issuer certificate which won't match policy
 	//TODO: test acceptance More than one Venafi policy can be applied to the Vault but any given certificate request is only checked against one
 	//TODO: need integration test with using import monitor after signing.
+
 
 }

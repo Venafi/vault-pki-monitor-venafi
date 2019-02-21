@@ -300,8 +300,16 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 	}, nil
 }
 
+func (b *backend) pathDeleteVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	err := req.Storage.Delete(ctx, venafiPolicyPath+data.Get("name").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
-	//TODO: list policies
 	policies, err := req.Storage.List(ctx, venafiPolicyPath)
 	var entries []string
 	if err != nil {
@@ -322,10 +330,6 @@ func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathDeleteVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
-	//TODO: delete policy
-	return nil, nil
-}
 
 func checkAgainstVenafiPolicy(b *backend, req *logical.Request, policyConfig, cn string, ipAddresses, email, sans []string) error {
 	ctx := context.Background()
