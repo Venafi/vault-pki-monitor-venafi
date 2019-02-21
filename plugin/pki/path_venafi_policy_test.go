@@ -41,7 +41,7 @@ func TestBackend_VenafiPolicyCloud(t *testing.T) {
 		"apikey":    os.Getenv("CLOUDAPIKEY"),
 		"zone":      os.Getenv("CLOUDZONE"),
 	}
-	domain = "example.com"
+	domain = "vfidev.com"
 	// create a role entry with default policy
 	roleData := map[string]interface{}{
 		"allowed_domains":    domain,
