@@ -91,6 +91,7 @@ func pathVenafiPolicyContent(b *backend) *framework.Path {
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.pathReadVenafiPolicyContent,
+			//TODO: add logical.UpdateOperation which will update Venafi
 		},
 
 		HelpSynopsis:    pathVenafiPolicySyn,
@@ -287,7 +288,7 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
-	//TODO: list policies if we will decide to implement multiple policies per plugin
+	//TODO: list policies
 	return nil, nil
 }
 

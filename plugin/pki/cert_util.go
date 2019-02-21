@@ -820,7 +820,6 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		if venafiPolciyCheck {
 			//Calling Venafi policy check before performing any checks
 			log.Println("Checking creation bundle against Venafi policy")
-			//todo: add ip addreses
 			err := checkAgainstVenafiPolicy(b, data.req, data.role.VenafiCheckPolicy, cn, []string{}, emailAddresses, dnsNames)
 			// i think
 			if err != nil {

@@ -81,7 +81,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatalf("Error should be generated in response")
 	}
 	if resp.Error() == nil {
-		t.Fatalf("Should failt to generate root before configuring policy")
+		t.Fatalf("Should fail to generate root before configuring policy")
 	}
 
 	//Write Venafi policy configuration
@@ -238,5 +238,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	}
 
 	//TODO: issuer certificate which won't match policy
+	//TODO: test acceptance More than one Venafi policy can be applied to the Vault but any given certificate request is only checked against one
+	//TODO: need integration test with using import monitor after signing.
 
 }
