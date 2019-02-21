@@ -255,6 +255,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatalf("after write policy should be on output, but response is nil: %#v", resp)
 	}
 
+
 	log.Println("Listing Venafi policies")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
@@ -273,37 +274,6 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	log.Printf("Policy list is:\n %v", keys)
 
 
-	log.Println("Deleting Venafi policy second")
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.DeleteOperation,
-		Path:      "venafi-policy/second",
-		Storage:   storage,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to delete policy, %#v", resp)
-	}
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	log.Println("Listing Venafi policies")
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.ListOperation,
-		Path:      "venafi-policy/",
-		Storage:   storage,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to list policies, %#v", resp)
-	}
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	keys = resp.Data["keys"]
-	log.Printf("Policy list is:\n %v", keys)
-
 	log.Println("Deleting Venafi policy default")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.DeleteOperation,
@@ -318,6 +288,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
+
 	log.Println("Listing Venafi policies")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
@@ -334,6 +305,78 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 
 	keys = resp.Data["keys"]
 	log.Printf("Policy list is:\n %v", keys)
+
+
+
+	log.Println("Creating PKI role for policy second")
+	roleData["venafi_check_policy"] = "second"
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test-venafi-second-policy",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+
+
+	log.Println("Issuing certificate for policy second")
+	singleCN = rand + "-import-second-policy." + domain
+	certData = map[string]interface{}{
+		"common_name": singleCN,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/test-venafi-second-policy",
+		Storage:   storage,
+		Data:      certData,
+	})
+
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to issue a cert, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+
+	log.Println("Deleting Venafi policy second")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "venafi-policy/second",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to delete policy, %#v", resp)
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+
+	log.Println("Listing Venafi policies")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "venafi-policy/",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to list policies, %#v", resp)
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keys = resp.Data["keys"]
+	log.Printf("Policy list is:\n %v", keys)
+
 
 	log.Println("Trying to sign certificate with deleted policy")
 	singleCN = rand + "-import-deleted-policy." + domain
@@ -354,7 +397,6 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	}
 
 	//TODO: issuer certificate which won't match policy
-	//TODO: test acceptance More than one Venafi policy can be applied to the Vault but any given certificate request is only checked against one
 	//TODO: need integration test with using import monitor after signing.
 
 
