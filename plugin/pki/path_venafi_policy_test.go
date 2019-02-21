@@ -84,7 +84,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatalf("Should fail to generate root before configuring policy")
 	}
 
-	//Write Venafi policy configuration
+	log.Println("Writing Venafi policy configuration")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "venafi-policy/default",
@@ -98,7 +98,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 	if resp == nil {
-
+		t.Fatalf("after write policy should be on output, but response is nil: %#v", resp)
 	}
 
 	log.Println("After write policy should be on output")
@@ -200,7 +200,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
-	log.Println("issue pproper cert")
+	log.Println("issue proper cert")
 	singleCN := rand + "-import." + domain
 	certData := map[string]interface{}{
 		"common_name": singleCN,
@@ -236,6 +236,39 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		}
 
 	}
+
+
+	log.Println("Writing second Venafi policy configuration")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "venafi-policy/second",
+		Storage:   storage,
+		Data:      policyData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to configure venafi policy, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatalf("after write policy should be on output, but response is nil: %#v", resp)
+	}
+
+	log.Println("Listing Venafi policies")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "venafi-policy/",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to list policies, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys := resp.Data["keys"]
+	log.Printf("Policy list is:\n %v", keys)
 
 	//TODO: issuer certificate which won't match policy
 	//TODO: test acceptance More than one Venafi policy can be applied to the Vault but any given certificate request is only checked against one
