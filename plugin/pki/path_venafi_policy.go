@@ -301,7 +301,19 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) pathDeleteVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, venafiPolicyPath+data.Get("name").(string))
+	var err error
+	name := data.Get("name").(string)
+	rawEntry, err := req.Storage.List(ctx, venafiPolicyPath+name+"/")
+	//Deleting all content of the policy
+	for _, e := range rawEntry {
+		err = req.Storage.Delete(ctx, venafiPolicyPath+name+"/"+e)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	//Deleting policy path
+	err = req.Storage.Delete(ctx, venafiPolicyPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -309,23 +321,18 @@ func (b *backend) pathDeleteVenafiPolicy(ctx context.Context, req *logical.Reque
 	return nil, nil
 }
 
-func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
+func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	policies, err := req.Storage.List(ctx, venafiPolicyPath)
 	var entries []string
 	if err != nil {
 		return nil, err
 	}
 	for _, policy := range policies {
-		log.Printf("Getting entry %s", policy)
-		rawEntry, err := req.Storage.List(ctx, venafiPolicyPath+policy)
-		if err != nil {
-			return nil, err
+		//Removing from policy list repeated policy name with / at the end
+		if !strings.Contains(policy, "/") {
+			entries = append(entries, policy)
 		}
-		var entry []string
-		for _, e := range rawEntry {
-			entry = append(entry, fmt.Sprintf("%s: %s", policy, e))
-		}
-		entries = append(entries, entry...)
+
 	}
 	return logical.ListResponse(entries), nil
 }
