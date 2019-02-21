@@ -305,6 +305,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 
 	keys = resp.Data["keys"]
 	log.Printf("Policy list is:\n %v", keys)
+	//TODO: check that keys is list of [default second]
 
 
 
@@ -376,6 +377,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 
 	keys = resp.Data["keys"]
 	log.Printf("Policy list is:\n %v", keys)
+	//TODO: check that keys is list of [second]
 
 
 	log.Println("Trying to sign certificate with deleted policy")
