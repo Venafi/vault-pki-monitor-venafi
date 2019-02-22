@@ -148,8 +148,26 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		log.Println(key, ":", value)
 	}
 
-	//TODO: Add test when getting policy content by invalid path (default1 for example).
-	//should get logical.ErrorResponse("policy data is nil. Look like it doesn't exists.")
+	log.Println("Read Venafi policy content from wrong path")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "venafi-policy/wrong-path/policy",
+		Storage:   storage,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Data["error"] != "policy data is nil. Looks like it doesn't exists."  {
+		t.Fatalf("should faile to read venafi policy from venafi-policy/wrong-path/policy, %#v", resp)
+	}
+
+	for key, value := range resp.Data {
+		log.Println(key, ":", value)
+	}
+
+
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -388,7 +406,5 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	if resp.Error() == nil {
 		t.Fatalf("Should fail to generate certificate after deleting policy")
 	}
-
-	//TODO: need integration test with using import monitor after signing.
 
 }
