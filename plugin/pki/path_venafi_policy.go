@@ -90,7 +90,8 @@ func pathVenafiPolicyContent(b *backend) *framework.Path {
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.pathReadVenafiPolicyContent,
-			//TODO: add logical.UpdateOperation which will update Venafi
+			//TODO: add logical.UpdateOperation which will get policy update from Venafi
+			logical.UpdateOperation: b.pathUpdateVenafiPolicyContent,
 		},
 
 		HelpSynopsis:    pathVenafiPolicySyn,
@@ -142,6 +143,26 @@ func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.
 	}, nil
 }
 
+
+func (b *backend) pathUpdateVenafiPolicyContent(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	name := data.Get("name").(string)
+
+	policy, err := b.getPolicyFromVenafi(ctx, req, name)
+	if err != nil {
+		return nil, err
+	}
+
+	policyEntry, err := savePolicyEntry(policy, name, ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	respData := formPolicyRespData(*policyEntry)
+	return &logical.Response{
+		Data: respData,
+	}, nil
+}
+
 func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, err error) {
 	name := data.Get("name").(string)
 
@@ -166,13 +187,23 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 	log.Printf("Geting policy from zone %s", data.Get("zone").(string))
-	policy, err := b.getPolicyFromVenafi(ctx, req, data.Get("zone").(string), name)
+	policy, err := b.getPolicyFromVenafi(ctx, req, name)
 	if err != nil {
-		log.Println(err)
-		return
+		return nil, err
 	}
+	policyEntry, err := savePolicyEntry(policy, name, ctx, req)
+	//Send policy to the user output
+	respData := formPolicyRespData(*policyEntry)
+
+	return &logical.Response{
+		Data: respData,
+	}, nil
+}
+
+func savePolicyEntry(policy *endpoint.Policy, name string,ctx context.Context, req *logical.Request) (policyEntry *venafiPolicyEntry, err error) {
+
 	//Form policy entry for storage
-	policyEntry := &venafiPolicyEntry{
+	policyEntry = &venafiPolicyEntry{
 		SubjectCNRegexes:         policy.SubjectCNRegexes,
 		SubjectORegexes:          policy.SubjectORegexes,
 		SubjectOURegexes:         policy.SubjectOURegexes,
@@ -190,7 +221,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	}
 
 	log.Printf("Saving policy into Vault storage")
-	jsonEntry, err = logical.StorageEntryJSON(venafiPolicyPath+name+"/policy", policyEntry)
+	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+name+"/policy", policyEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -198,12 +229,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	//Send policy to the user output
-	respData := formPolicyRespData(*policyEntry)
-
-	return &logical.Response{
-		Data: respData,
-	}, nil
+	return policyEntry, nil
 }
 
 func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface{}) {
@@ -242,8 +268,7 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 	}
 }
 
-func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request, zone string, policyConfig string) (policy *endpoint.Policy, err error) {
-
+func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request, policyConfig string) (policy *endpoint.Policy, err error) {
 	log.Printf("Creating Venafi client")
 	cl, err := b.ClientVenafi(ctx, req.Storage, req, policyConfig, "policy")
 	if err != nil {
@@ -251,6 +276,13 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request,
 	}
 
 	log.Printf("Getting policy from Venafi endpoint")
+	zone, err := b.getPolicyConfigZone(ctx, req.Storage, policyConfig)
+	if err != nil {
+		return nil, err
+	}
+	if policy == nil {
+		return nil, fmt.Errorf("unknown policy %v", policy)
+	}
 	policy, err = cl.ReadPolicyConfiguration(zone)
 	if err != nil {
 		return policy, err
@@ -418,6 +450,23 @@ func (b *backend) getPolicyConfig(ctx context.Context, s logical.Storage, n stri
 		return nil, err
 	}
 	return &result, nil
+}
+
+func (b *backend) getPolicyConfigZone(ctx context.Context, s logical.Storage, n string) (string, error) {
+	entry, err := s.Get(ctx, venafiPolicyPath+n)
+	if err != nil {
+		return "", err
+	}
+	if entry == nil {
+		return "", nil
+	}
+
+	var result venafiPolicyConfigEntry
+	if err := entry.DecodeJSON(&result); err != nil {
+		return "", err
+	}
+	zone := result.Zone
+	return zone, nil
 }
 
 type venafiPolicyConfigEntry struct {
