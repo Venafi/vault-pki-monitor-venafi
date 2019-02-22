@@ -71,7 +71,6 @@ Example:
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathUpdateVenafiPolicy,
 			logical.ReadOperation:   b.pathReadVenafiPolicy,
-			logical.ListOperation:   b.pathListVenafiPolicy,
 			logical.DeleteOperation: b.pathDeleteVenafiPolicy,
 		},
 
@@ -92,6 +91,7 @@ func pathVenafiPolicyContent(b *backend) *framework.Path {
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.pathReadVenafiPolicyContent,
+			//TODO: add logical.UpdateOperation which will update Venafi
 		},
 
 		HelpSynopsis:    pathVenafiPolicySyn,
@@ -99,6 +99,20 @@ func pathVenafiPolicyContent(b *backend) *framework.Path {
 	}
 	return ret
 }
+
+func pathVenafiPolicyList(b *backend) *framework.Path {
+	ret := &framework.Path{
+		Pattern: venafiPolicyPath,
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathListVenafiPolicy,
+		},
+
+		HelpSynopsis:    pathImportQueueSyn,
+		HelpDescription: pathImportQueueDesc,
+	}
+	return ret
+}
+
 func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	log.Printf("Trying to read policy for config %s", name)
@@ -288,8 +302,25 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
-	//TODO: list policies if we will decide to implement multiple policies per plugin
-	return nil, nil
+	//TODO: list policies
+	policies, err := req.Storage.List(ctx, venafiPolicyPath)
+	var entries []string
+	if err != nil {
+		return nil, err
+	}
+	for _, policy := range policies {
+		log.Printf("Getting entry %s", policy)
+		rawEntry, err := req.Storage.List(ctx, venafiPolicyPath+policy)
+		if err != nil {
+			return nil, err
+		}
+		var entry []string
+		for _, e := range rawEntry {
+			entry = append(entry, fmt.Sprintf("%s: %s", policy, e))
+		}
+		entries = append(entries, entry...)
+	}
+	return logical.ListResponse(entries), nil
 }
 
 func (b *backend) pathDeleteVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {

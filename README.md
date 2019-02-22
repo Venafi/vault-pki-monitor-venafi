@@ -195,6 +195,7 @@ Policy check is configured in venafi-policy path, you can restrict this path for
         allow_subdomains=true
     ```
 
+<!-- TODO: show example of separating permissions between InfoSec and DevOps -->
 
 ## Developer Quickstart (Linux only)
 
