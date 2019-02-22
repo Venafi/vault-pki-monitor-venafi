@@ -280,12 +280,13 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request,
 	if err != nil {
 		return nil, err
 	}
-	if policy == nil {
-		return nil, fmt.Errorf("unknown policy %v", policy)
-	}
+
 	policy, err = cl.ReadPolicyConfiguration(zone)
 	if err != nil {
 		return policy, err
+	}
+	if policy == nil {
+		return nil, fmt.Errorf("expected policy but got nil from Venafi endpoint %v", policy)
 	}
 
 	return policy, nil
