@@ -14,6 +14,7 @@ import (
 )
 
 const venafiPolicyPath = "venafi-policy/" //todo:move over constants here
+const defaultVenafiPolicyName = "default"
 
 // This returns the list of queued for import to TPP certificates
 func pathVenafiPolicy(b *backend) *framework.Path {
@@ -299,7 +300,7 @@ func (b *backend) pathDeleteVenafiPolicy(ctx context.Context, req *logical.Reque
 func checkAgainstVenafiPolicy(b *backend, req *logical.Request, policyConfig, cn string, ipAddresses, email, sans []string) error {
 	ctx := context.Background()
 	if policyConfig == "" {
-		policyConfig = "default"
+		policyConfig = defaultVenafiPolicyName
 	}
 
 	entry, err := req.Storage.Get(ctx, venafiPolicyPath+policyConfig+"/policy")
