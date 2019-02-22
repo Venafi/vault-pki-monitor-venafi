@@ -66,7 +66,7 @@ func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logi
 			return nil, err
 		}
 		if policy == nil {
-			return nil, fmt.Errorf("unknown policy %v", policy)
+			return nil, fmt.Errorf("expected policy but got nil from Vault storage %v", policy)
 		}
 
 		log.Printf("Using policy: %s", configName)

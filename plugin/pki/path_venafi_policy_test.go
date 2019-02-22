@@ -5,12 +5,13 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"log"
 	"os"
+	"strings"
 	"testing"
 )
 
 func TestBackend_VenafiPolicyTPP(t *testing.T) {
 	rand := randSeq(9)
-	domain := "example.com"
+	domain := "vfidev.com"
 	// Configure Venafi default policy
 	policyData := map[string]interface{}{
 		"tpp_url":           os.Getenv("TPPURL"),
@@ -41,7 +42,7 @@ func TestBackend_VenafiPolicyCloud(t *testing.T) {
 		"apikey":    os.Getenv("CLOUDAPIKEY"),
 		"zone":      os.Getenv("CLOUDZONE"),
 	}
-	domain = "example.com"
+	domain = "vfidev.com"
 	// create a role entry with default policy
 	roleData := map[string]interface{}{
 		"allowed_domains":    domain,
@@ -147,8 +148,26 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		log.Println(key, ":", value)
 	}
 
-	//TODO: Add test when getting policy content by invalid path (default1 for example).
-	//should get logical.ErrorResponse("policy data is nil. Look like it doesn't exists.")
+	log.Println("Read Venafi policy content from wrong path")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "venafi-policy/wrong-path/policy",
+		Storage:   storage,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Data["error"] != "policy data is nil. Looks like it doesn't exists."  {
+		t.Fatalf("should faile to read venafi policy from venafi-policy/wrong-path/policy, %#v", resp)
+	}
+
+	for key, value := range resp.Data {
+		log.Println(key, ":", value)
+	}
+
+
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -218,25 +237,25 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
-	if endpoint == "cloud" {
-		log.Println("issue wrong cert")
-		singleCN = rand + "-import." + "wrong.wrong"
-		certData = map[string]interface{}{
-			"common_name": singleCN,
-		}
-		resp, err = b.HandleRequest(context.Background(), &logical.Request{
-			Operation: logical.UpdateOperation,
-			Path:      "issue/test-venafi-policy",
-			Storage:   storage,
-			Data:      certData,
-		})
-
-		if resp.Error() == nil {
-			t.Fatalf("certificate issue should be denied by policy, %#v", resp)
-		}
-
+	log.Println("issue wrong cert")
+	singleCN = rand + "-import." + "wrong.wrong"
+	certData = map[string]interface{}{
+		"common_name": singleCN,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/test-venafi-policy",
+		Storage:   storage,
+		Data:      certData,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if  !strings.Contains(resp.Data["error"].(string), "doesn't match regexps") {
+		t.Fatalf("certificate issue should be denied by policy, %#v", resp)
 	}
 
+	//TODO: add test with wrong key types
 
 	log.Println("Writing second Venafi policy configuration")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -264,14 +283,128 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to list policies, %#v", resp)
 	}
+
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	keys := resp.Data["keys"]
 	log.Printf("Policy list is:\n %v", keys)
 
-	//TODO: issuer certificate which won't match policy
-	//TODO: test acceptance More than one Venafi policy can be applied to the Vault but any given certificate request is only checked against one
-	//TODO: need integration test with using import monitor after signing.
+	log.Println("Deleting Venafi policy default")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "venafi-policy/default",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to delete policy, %#v", resp)
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Println("Listing Venafi policies")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "venafi-policy/",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to list policies, %#v", resp)
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keys = resp.Data["keys"]
+	log.Printf("Policy list is:\n %v", keys)
+	//TODO: check that keys is list of [default second]
+
+	log.Println("Creating PKI role for policy second")
+	roleData["venafi_check_policy"] = "second"
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test-venafi-second-policy",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Println("Issuing certificate for policy second")
+	singleCN = rand + "-import-second-policy." + domain
+	certData = map[string]interface{}{
+		"common_name": singleCN,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/test-venafi-second-policy",
+		Storage:   storage,
+		Data:      certData,
+	})
+
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to issue a cert, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Println("Deleting Venafi policy second")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "venafi-policy/second",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to delete policy, %#v", resp)
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Println("Listing Venafi policies")
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "venafi-policy/",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to list policies, %#v", resp)
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keys = resp.Data["keys"]
+	log.Printf("Policy list is:\n %v", keys)
+	//TODO: check that keys is list of [second]
+
+	log.Println("Trying to sign certificate with deleted policy")
+	singleCN = rand + "-import-deleted-policy." + domain
+	certData = map[string]interface{}{
+		"common_name": singleCN,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/test-venafi-policy",
+		Storage:   storage,
+		Data:      certData,
+	})
+	if resp == nil {
+		t.Fatalf("Error should be generated in response")
+	}
+	if resp.Error() == nil {
+		t.Fatalf("Should fail to generate certificate after deleting policy")
+	}
 
 }
