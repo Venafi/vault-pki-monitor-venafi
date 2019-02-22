@@ -5,12 +5,13 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"log"
 	"os"
+	"strings"
 	"testing"
 )
 
 func TestBackend_VenafiPolicyTPP(t *testing.T) {
 	rand := randSeq(9)
-	domain := "example.com"
+	domain := "vfidev.com"
 	// Configure Venafi default policy
 	policyData := map[string]interface{}{
 		"tpp_url":           os.Getenv("TPPURL"),
@@ -218,25 +219,25 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
-	if endpoint == "cloud" {
-		log.Println("issue wrong cert")
-		singleCN = rand + "-import." + "wrong.wrong"
-		certData = map[string]interface{}{
-			"common_name": singleCN,
-		}
-		resp, err = b.HandleRequest(context.Background(), &logical.Request{
-			Operation: logical.UpdateOperation,
-			Path:      "issue/test-venafi-policy",
-			Storage:   storage,
-			Data:      certData,
-		})
-
-		if resp.Error() == nil {
-			t.Fatalf("certificate issue should be denied by policy, %#v", resp)
-		}
-
+	log.Println("issue wrong cert")
+	singleCN = rand + "-import." + "wrong.wrong"
+	certData = map[string]interface{}{
+		"common_name": singleCN,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/test-venafi-policy",
+		Storage:   storage,
+		Data:      certData,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if  !strings.Contains(resp.Data["error"].(string), "doesn't match regexps") {
+		t.Fatalf("certificate issue should be denied by policy, %#v", resp)
 	}
 
+	//TODO: add test with wrong key types
 
 	log.Println("Writing second Venafi policy configuration")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -255,7 +256,6 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatalf("after write policy should be on output, but response is nil: %#v", resp)
 	}
 
-
 	log.Println("Listing Venafi policies")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
@@ -273,7 +273,6 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	keys := resp.Data["keys"]
 	log.Printf("Policy list is:\n %v", keys)
 
-
 	log.Println("Deleting Venafi policy default")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.DeleteOperation,
@@ -287,7 +286,6 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	if err != nil {
 		t.Fatal(err)
 	}
-
 
 	log.Println("Listing Venafi policies")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -307,8 +305,6 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	log.Printf("Policy list is:\n %v", keys)
 	//TODO: check that keys is list of [default second]
 
-
-
 	log.Println("Creating PKI role for policy second")
 	roleData["venafi_check_policy"] = "second"
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -323,8 +319,6 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	if err != nil {
 		t.Fatal(err)
 	}
-
-
 
 	log.Println("Issuing certificate for policy second")
 	singleCN = rand + "-import-second-policy." + domain
@@ -345,7 +339,6 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
-
 	log.Println("Deleting Venafi policy second")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.DeleteOperation,
@@ -359,7 +352,6 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	if err != nil {
 		t.Fatal(err)
 	}
-
 
 	log.Println("Listing Venafi policies")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -379,7 +371,6 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	log.Printf("Policy list is:\n %v", keys)
 	//TODO: check that keys is list of [second]
 
-
 	log.Println("Trying to sign certificate with deleted policy")
 	singleCN = rand + "-import-deleted-policy." + domain
 	certData = map[string]interface{}{
@@ -398,8 +389,6 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatalf("Should fail to generate certificate after deleting policy")
 	}
 
-	//TODO: issuer certificate which won't match policy
 	//TODO: need integration test with using import monitor after signing.
-
 
 }
