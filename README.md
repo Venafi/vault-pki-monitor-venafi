@@ -221,7 +221,8 @@ After starting demo server you will need to export VAULT_TOKEN with Root token a
         "zone" = "DevOps\\Vault Monitor"
       }
     }
-    EOF    
+    EOF
+        
     ```
     
 1.  Create a policy from file:
