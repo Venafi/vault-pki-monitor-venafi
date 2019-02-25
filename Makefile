@@ -32,7 +32,7 @@ TRUST_BUNDLE := /opt/venafi/bundle.pem
 VAULT_CONT := $$(docker-compose ps |grep Up|grep vault_1|awk '{print $$1}')
 DOCKER_CMD := docker exec -it $(VAULT_CONT)
 VAULT_CMD := $(DOCKER_CMD) vault
-SHA256_DOCKER_CMD := sha256sum "/vault_plugin/venafi-pki-backend" | cut -d' ' -f1
+SHA256_DOCKER_CMD := sha256sum "/vault_plugin/$(PLUGIN_NAME)" | cut -d' ' -f1
 
 ### Exporting variables for demo and tests
 .EXPORT_ALL_VARIABLES:
