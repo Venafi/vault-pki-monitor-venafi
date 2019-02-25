@@ -1,0 +1,40 @@
+version: '2'
+services:
+
+  consul:
+    image: "consul:1.1.0"
+    hostname: "consul"
+    command: "agent -dev -client 0.0.0.0"
+    ports:
+    - "8400:8400"
+    - "8500:8500"
+    - "8600:53/udp"
+
+  vault:
+    depends_on:
+    - consul
+    #   Venafi plugin image
+    #image: venafi/vault-pki-monitor-venafi:build
+    build: .
+    hostname: "vault"
+    links:
+    - "consul:consul"
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+      TRUST_BUNDLE: /opt/venafi/bundle.pem
+    ports:
+    - "8200:8200"
+    extra_hosts:
+    - "ha-tpp1.sqlha.com:192.168.6.23"
+    volumes:
+    #    If you want to use trust bundle file option
+    - /opt/venafi/bundle.pem:/opt/venafi/bundle.pem
+    entrypoint: /scripts/wait-for-it.sh -t 20 -h consul -p 8500 -s -- vault server -config=/config/vault-config-with-consul.hcl -log-level=debug
+
+#TODO: this is a workaround to avoid internal network conflict, need to find a better solution when netwrok will not be in docker-compose file.
+networks:
+  default:
+    ipam:
+      driver: default
+      config:
+      - subnet: "192.168.84.1/24"
