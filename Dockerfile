@@ -17,7 +17,7 @@ VOLUME /vault/logs
 # state in there
 VOLUME /vault/file
 
-ADD pkg/dist/vault-pki-monitor-venafi /vault_plugin/vault-pki-monitor-venafi
+ADD pkg/bin/vault-pki-monitor-venafi /vault_plugin/vault-pki-monitor-venafi
 
 #Add helper scripts
 ADD scripts /scripts

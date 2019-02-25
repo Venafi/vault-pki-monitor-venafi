@@ -207,7 +207,7 @@ After starting demo server you will need to export VAULT_TOKEN with Root token a
     export VAULT_ADDR=http://127.0.0.1:8200
     ```
 
-1.  Download linux binary of the plugin into pkg/dist folder or build it using `make dev_build` command
+1.  Download linux binary of the plugin into pkg/bin folder or build it using `make dev_build` command
 
 1.  Ceate a policy for DevOps where he allowed to do anything with PKI backend 
     but venafi-policy can be configured to only one particular Venafi Platfrom and zone:
@@ -242,6 +242,8 @@ After starting demo server you will need to export VAULT_TOKEN with Root token a
     ```bash
     export VAULT_TOKEN=<enter devops token here>
     ```
+1. Create a test zone on you Venafi Platform or Cloud and allow ony example.com domain there
+     
 1. Configure venafi policy with devops user (you can try to change zone or tpp_url parameter to make sure
 that restrictions are working):
     ```bash
@@ -253,6 +255,38 @@ that restrictions are working):
             trust_bundle_file="/opt/venafi/bundle.pem"
     ```
 
+    You should see policy on the output.
+    
+1. Try to sign internal CA with wrong domain:
+    ```
+    vault write pki/root/generate/internal common_name="vault.google.com" ttl=8760h
+    ```
+    
+    You should see error
+    
+1. Sing CA with allowed domain:
+    ```
+    vault write pki/root/generate/internal common_name="vault.example.com" ttl=8760h
+    ```
+
+1. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `pki` backend:
+    ```
+    vault write pki/roles/venafi-policy \
+        generate_lease=true store_by_cn=true store_pkey=true store_by_serial=true ttl=1h max_ttl=1h \
+        allowed_domains=venafi.com,example.com \
+        allow_subdomains=true
+    ```
+    
+1. Enroll wrong certificate:
+    ```
+    vault write pki/issue/venafi-policy common_name="test.venafi.com" alt_names="test-1.venafi.com,test-2.venafi.com"
+    ```
+    
+1. Enroll normal certificate:
+    ```
+    vault write pki/issue/venafi-policy common_name="test.example.com" alt_names="test-1.example.com,test-2.example.com"
+    ```    
+    
 ## Developer Quickstart (Linux only)
 
 1. Export your Venafi Platform configuration variables:
