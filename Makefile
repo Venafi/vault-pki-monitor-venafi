@@ -22,7 +22,7 @@ endif
 #test demo vars
 IMPORT_DOMAIN := import.example.com
 IMPORT_ROLE := import
-MOUNT := venafi-pki
+MOUNT := pki
 RANDOM_SITE_EXP := $$(head /dev/urandom | docker run --rm -i busybox tr -dc a-z0-9 | head -c 5 ; echo '')
 ROLE_OPTIONS := generate_lease=true store_by_cn="true" store_pkey="true" store_by_serial="true" ttl=1h max_ttl=1h
 SHA256 := $$(shasum -a 256 "$(PLUGIN_PATH)" | cut -d' ' -f1)
@@ -138,7 +138,7 @@ ifeq ($(VAULT_VERSION),v0.10.3)
 endif
 
 docker_server_up:
-	docker-compose up -d
+	docker-compose up -d --build
 	@echo "Run: docker-compose logs"
 	@echo "to see the logs"
 	@echo "Run: docker exec -it cault_vault_1 sh"

@@ -56,12 +56,12 @@ It is not common for the Venafi Platform's REST API (WebSDK) to be secured using
 
 8. Enable the secrets backend for the `vault-pki-monitor-venafi` plugin:
     ```
-    vault secrets enable -path=venafi-pki -plugin-name=vault-pki-monitor-venafi plugin
+    vault secrets enable -path=pki -plugin-name=vault-pki-monitor-venafi plugin
     ```
 
-9. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `venafi-pki` backend making sure the `tpp_import` option is enabled:
+9. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `pki` backend making sure the `tpp_import` option is enabled:
     ```
-    vault write venafi-pki/roles/vault-monitor \
+    vault write pki/roles/vault-monitor \
         tpp_import=true \
         tpp_url="https://tpp.venafi.example:443/vedsdk" \
         tpp_user="local:admin" \
@@ -88,12 +88,12 @@ The following options are supported (note: this list can also be viewed from the
 
 10. Initialize the Vault PKI certificate authority:
     ```
-    vault write venafi-pki/root/generate/internal common_name="Vault Test Root CA" ttl=8760h
+    vault write pki/root/generate/internal common_name="Vault Test Root CA" ttl=8760h
     ```
 
 11. Enroll a certificate using the CA:
     ```
-    vault write venafi-pki/issue/vault-monitor common_name="test.example.com" alt_names="test-1.example.com,test-2.example.com"
+    vault write pki/issue/vault-monitor common_name="test.example.com" alt_names="test-1.example.com,test-2.example.com"
     ```
 
 12. Check the Vault log and you should see something like this:
@@ -113,12 +113,12 @@ The following options are supported (note: this list can also be viewed from the
 ## Import Queue
 After a certificate has been signed it is added to the import queue. Processing of certificates in the queue begins automatically and will run continuously from that point until the plugin exits.  You can also manually initiate import queue processing using the following command:
 ```
-vault read venafi-pki/import-queue/<ROLE_NAME>
+vault read pki/import-queue/<ROLE_NAME>
 ```
 
 At any time you can view the contents of the import queue by certificate serial number using the following command:
 ```
-vault list venafi-pki/import-queue
+vault list pki/import-queue
 ```
 
 ## Venafi Policy check (UNDER DEVELOPMENT)
@@ -182,7 +182,7 @@ Policy check is configured in venafi-policy path, you can restrict this path for
     ```
     1. Specify policy on role configuration:
     ```
-    vault write venafi-pki/roles/venafi \
+    vault write pki/roles/venafi \
         tpp_import=true \
         tpp_url="https://tpp.venafi.example:443/vedsdk" \
         tpp_user="local:admin" \
@@ -207,18 +207,20 @@ After starting demo server you will need to export VAULT_TOKEN with Root token a
     export VAULT_ADDR=http://127.0.0.1:8200
     ```
 
+1.  Download linux binary of the plugin into pkg/dist folder or build it using `make dev_build` command
+
 1.  Ceate a policy for DevOps where he allowed to do anything with PKI backend 
     but venafi-policy can be configured to only one particular Venafi Platfrom and zone:
     ```bash
     cat <<EOF> devops-policy.hcl
-    path "venafi-pki/*" {
+    path "pki/*" {
       capabilities = ["create", "read", "update", "delete", "list"]
     }
-    path "venafi-pki/venafi-policy/*" {
+    path "pki/venafi-policy/*" {
       capabilities = ["create", "read", "update", "delete", "list"]
       allowed_parameters = {
-        "tpp_url" = "https://tpp.venafi.example:443/vedsdk"
-        "zone" = "DevOps\\Vault Monitor"
+        "tpp_url" = ["https://tpp.venafi.example:443/vedsdk"]
+        "zone" = ["DevOps\\Vault Monitor"]
       }
     }
     EOF
@@ -226,15 +228,30 @@ After starting demo server you will need to export VAULT_TOKEN with Root token a
     ```
     
 1.  Create a policy from file:
-    ```
+    ```bash
     vault policy fmt devops-policy.hcl && \
     vault policy write devops-policy devops-policy.hcl
     ```
         
 1.  Create a token mapped to devops policy:
-    ```
+    ```bash
     vault token create -policy=devops-policy -display-name=devops
     ```  
+
+1. Copy token from Key and export it into VAULT_TOKEN variable is you de before with root.
+    ```bash
+    export VAULT_TOKEN=<enter devops token here>
+    ```
+1. Configure venafi policy with devops user (you can try to change zone or tpp_url parameter to make sure
+that restrictions are working):
+    ```bash
+    vault write pki/venafi-policy/default \
+            tpp_url="https://tpp.venafi.example:443/vedsdk" \
+            tpp_user="local:admin" \
+            tpp_password="password" \
+            zone="DevOps\\Vault Monitor" \
+            trust_bundle_file="/opt/venafi/bundle.pem"
+    ```
 
 ## Developer Quickstart (Linux only)
 
