@@ -22,7 +22,7 @@ endif
 #test demo vars
 IMPORT_DOMAIN := import.example.com
 IMPORT_ROLE := import
-MOUNT := pki
+MOUNT := venafi-pki
 RANDOM_SITE_EXP := $$(head /dev/urandom | docker run --rm -i busybox tr -dc a-z0-9 | head -c 5 ; echo '')
 ROLE_OPTIONS := generate_lease=true store_by_cn="true" store_pkey="true" store_by_serial="true" ttl=1h max_ttl=1h
 SHA256 := $$(shasum -a 256 "$(PLUGIN_PATH)" | cut -d' ' -f1)
