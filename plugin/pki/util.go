@@ -20,7 +20,7 @@ func parseExtKeyUsageParameter(unparsed []string) ([]x509.ExtKeyUsage, error) {
 	for _, s := range unparsed {
 		switch {
 		case oidRegexp.MatchString(s):
-			oid := asn1Parse(s)
+			oid, _ := stringToOid(s)
 			eku, ok := extKeyUsageFromOID(oid)
 			if !ok {
 				return nil, fmt.Errorf("unknow oid: %s", s)
@@ -92,16 +92,6 @@ func checkExtKeyUsage(eku x509.ExtKeyUsage) bool {
 		}
 	}
 	return false
-}
-
-func asn1Parse(s string) asn1.ObjectIdentifier {
-	intString := strings.Split(s, ".")
-	ints := make([]int, len(intString))
-	for i, is := range intString {
-		id, _ := strconv.Atoi(is)
-		ints[i] = id
-	}
-	return ints
 }
 
 func ekuParse(s string) (eku x509.ExtKeyUsage, err error) {

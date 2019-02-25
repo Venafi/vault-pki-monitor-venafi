@@ -386,7 +386,11 @@ func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request
 	return logical.ListResponse(entries), nil
 }
 
-func checkAgainstVenafiPolicy(b *backend, req *logical.Request, policyConfigPath, cn string, ipAddresses, email, sans []string) error {
+func checkAgainstVenafiPolicy(
+	b *backend,
+	req *logical.Request,
+	policyConfigPath, cn string,
+	ipAddresses, email, sans []string) error {
 
 	ctx := context.Background()
 	if policyConfigPath == "" {
