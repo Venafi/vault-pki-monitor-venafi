@@ -196,6 +196,45 @@ Policy check is configured in venafi-policy path, you can restrict this path for
     ```
 
 <!-- TODO: show example of separating permissions between InfoSec and DevOps -->
+## Venafi Policy usage scenario
+
+Following scenario assumes that you already started the Vault and mounted venafi plugin. If not you can use instructions from 
+quickstart or use demo scripts to start simple vault server with consul (not recommended for production). To start demo server
+run `make docker_server` command. 
+After starting demo server you will need to export VAULT_TOKEN with Root token and VAULT_ADDR variables
+    ```
+    export VAULT_TOKEN=<enter root token here>
+    export VAULT_ADDR=http://127.0.0.1:8200
+    ```
+
+1.  Ceate a policy for DevOps where he allowed to do anything with PKI backend 
+    but venafi-policy can be configured to only one particular Venafi Platfrom and zone:
+    ```bash
+    cat <<EOF> devops-policy.hcl
+    path "venafi-pki/*" {
+      capabilities = ["create", "read", "update", "delete", "list"]
+    }
+    path "venafi-pki/venafi-policy/*" {
+      capabilities = ["create", "read", "update", "delete", "list"]
+      allowed_parameters = {
+        "tpp_url" = "https://tpp.venafi.example:443/vedsdk"
+        "zone" = "DevOps\\Vault Monitor"
+      }
+    }
+    EOF
+        
+    ```
+    
+1.  Create a policy from file:
+    ```
+    vault policy fmt devops-policy.hcl && \
+    vault policy write devops-policy devops-policy.hcl
+    ```
+        
+1.  Create a token mapped to devops policy:
+    ```
+    vault token create -policy=devops-policy -display-name=devops
+    ```  
 
 ## Developer Quickstart (Linux only)
 

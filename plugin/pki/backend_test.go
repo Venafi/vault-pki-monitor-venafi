@@ -68,7 +68,7 @@ func TestPKI_RequireCN(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	createFakePolicies(client, nil)
+
 	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 	})

@@ -19,14 +19,20 @@ else
 VERSION=`git describe --abbrev=0 --tags`
 endif
 
-MOUNT := pki
-SHA256 := $$(shasum -a 256 "$(PLUGIN_PATH)" | cut -d' ' -f1)
-
-ROLE_OPTIONS := generate_lease=true store_by_cn="true" store_pkey="true" store_by_serial="true" ttl=1h max_ttl=1h
-IMPORT_ROLE := import
+#test demo vars
 IMPORT_DOMAIN := import.example.com
+IMPORT_ROLE := import
+MOUNT := venafi-pki
 RANDOM_SITE_EXP := $$(head /dev/urandom | docker run --rm -i busybox tr -dc a-z0-9 | head -c 5 ; echo '')
+ROLE_OPTIONS := generate_lease=true store_by_cn="true" store_pkey="true" store_by_serial="true" ttl=1h max_ttl=1h
+SHA256 := $$(shasum -a 256 "$(PLUGIN_PATH)" | cut -d' ' -f1)
 TRUST_BUNDLE := /opt/venafi/bundle.pem
+
+#Docker vars
+VAULT_CONT := $$(docker-compose ps |grep Up|grep vault_1|awk '{print $$1}')
+DOCKER_CMD := docker exec -it $(VAULT_CONT)
+VAULT_CMD := $(DOCKER_CMD) vault
+SHA256_DOCKER_CMD := sha256sum "/vault_plugin/$(PLUGIN_NAME)" | cut -d' ' -f1
 
 ### Exporting variables for demo and tests
 .EXPORT_ALL_VARIABLES:
@@ -122,3 +128,54 @@ collect_artifacts:
 	mv (PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe artifcats/$(PLUGIN_NAME)-$(VERSION)_windows.exe
 	mv (PLUGIN_DIR)/windows86/$(PLUGIN_NAME).ext artifcats/$(PLUGIN_NAME)-$(VERSION)_windows86.exe
 	cd artifcats; sha1sum * > hashsums.sha1
+
+#Docker server with consul
+docker_server_prepare:
+	@echo "Using vault client version $(VAULT_VERSION)"
+ifeq ($(VAULT_VERSION),v0.10.3)
+	@echo "Vault version v0.10.3 have bug which prevents plugin to work properly. Please update your vault client"
+	@exit 1
+endif
+
+docker_server_up:
+	docker-compose up -d
+	@echo "Run: docker-compose logs"
+	@echo "to see the logs"
+	@echo "Run: docker exec -it cault_vault_1 sh"
+	@echo "to login into vault container"
+	@echo "Waiting until server start"
+	sleep 10
+
+
+docker_server_init:
+	$(VAULT_CMD) operator init -key-shares=1 -key-threshold=1
+	@echo "To unseal the vault run:"
+	@echo "$(VAULT_CMD) operator unseal UNSEAL_KEY"
+
+docker_server_unseal:
+	@echo Enter unseal key:
+	$(VAULT_CMD) operator unseal
+
+docker_server_login:
+	@echo Enter root token:
+	$(VAULT_CMD) login
+
+docker_server_down:
+	docker-compose down --remove-orphans
+
+docker_server_logs:
+	docker-compose logs -f
+
+docker_server_sh:
+	$(DOCKER_CMD) sh
+
+docker_server: docker_server_prepare docker_server_down docker_server_up docker_server_init docker_server_unseal docker_server_login mount_docker
+	@echo "Vault started. To run make command export VAULT_TOKEN variable and run make with -e flag, for example:"
+	@echo "export VAULT_TOKEN=enter-root-token-here"
+	@echo "make cloud -e"
+
+mount_docker:
+	$(eval SHA256 := $(shell echo $$($(DOCKER_CMD) $(SHA256_DOCKER_CMD))))
+	$(VAULT_CMD) write sys/plugins/catalog/$(PLUGIN_NAME) sha_256="$$SHA256" command="$(PLUGIN_NAME)"
+	$(VAULT_CMD) secrets disable $(MOUNT) || echo "Secrets already disabled"
+	$(VAULT_CMD) secrets enable -path=$(MOUNT) -plugin-name=$(PLUGIN_NAME) plugin
