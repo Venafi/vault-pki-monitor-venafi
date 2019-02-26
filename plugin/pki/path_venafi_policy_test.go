@@ -253,16 +253,65 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 		t.Fatalf(msg_denied_by_policy, resp)
 	}
 
-	log.Println("Setting up role with wrong Organization")
-	roleData = map[string]interface{}{
-		"allowed_domains":    domain,
-		"allow_subdomains":   "true",
-		"max_ttl":            "4h",
-		"allow_bare_domains": true,
-		"generate_lease":     true,
-		"organization": "Evil Hacker Inc.",
+	wrong_params := map[string]string{
+		"organization": "Wrong Organization",
+		"ou": "Wrong Organization Unit",
+		"locality": "Wrong Locality",
+		"province": "Wrong State",
+		"country": "Wrong Country",
 	}
 
+	for key, value := range wrong_params {
+		log.Println("Setting up role with wrong", key)
+		wrongRoleData := map[string]interface{}{
+			"allowed_domains":    domain,
+			"allow_subdomains":   "true",
+			"max_ttl":            "4h",
+			"allow_bare_domains": true,
+			"generate_lease":     true,
+			key: value,
+		}
+
+		resp, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "roles/test-venafi-policy",
+			Storage:   storage,
+			Data:      wrongRoleData,
+		})
+
+		if resp != nil && resp.IsError() {
+			t.Fatalf("failed to create a role, %#v", resp)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		log.Println("issue cert with wrong", key)
+		singleCN = rand + "-policy." + domain
+		certData = map[string]interface{}{
+			"common_name": singleCN,
+		}
+
+		resp, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "issue/test-venafi-policy",
+			Storage:   storage,
+			Data:      certData,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err_msg, prsnt := resp.Data["error"]; prsnt {
+			if !strings.Contains(err_msg.(string), "doesn't match regexps") {
+				t.Fatalf(msg_denied_by_policy, resp)
+			}
+		} else {
+			t.Fatalf(msg_denied_by_policy, resp)
+		}
+	}
+
+	log.Println("Write normal parameters back")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test-venafi-policy",
@@ -270,36 +319,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 		Data:      roleData,
 	})
 
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to create a role, %#v", resp)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	log.Println("issue cert with wrong Organization")
-	singleCN = rand + "-policy." + domain
-	certData = map[string]interface{}{
-		"common_name": singleCN,
-	}
-
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "issue/test-venafi-policy",
-		Storage:   storage,
-		Data:      certData,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err_msg, prsnt := resp.Data["error"]; prsnt {
-		if !strings.Contains(err_msg.(string), "doesn't match regexps") {
-			t.Fatalf(msg_denied_by_policy, resp)
-		}
-	} else {
-		t.Fatalf(msg_denied_by_policy, resp)
-	}
 
 
 	//TODO: add test with wrong key types
