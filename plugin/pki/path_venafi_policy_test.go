@@ -23,16 +23,7 @@ func TestBackend_VenafiPolicyTPP(t *testing.T) {
 		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
 	}
 
-	// create a role entry with default policy
-	roleData := map[string]interface{}{
-		"allowed_domains":    domain,
-		"allow_subdomains":   "true",
-		"max_ttl":            "4h",
-		"allow_bare_domains": true,
-		"generate_lease":     true,
-	}
-
-	VenafiPolicyTests(t, policyData, roleData, rand, domain, "tpp")
+	VenafiPolicyTests(t, policyData, rand, domain, "tpp")
 }
 
 func TestBackend_VenafiPolicyCloud(t *testing.T) {
@@ -46,18 +37,11 @@ func TestBackend_VenafiPolicyCloud(t *testing.T) {
 	}
 	domain = "vfidev.com"
 	// create a role entry with default policy
-	roleData := map[string]interface{}{
-		"allowed_domains":    domain,
-		"allow_subdomains":   "true",
-		"max_ttl":            "4h",
-		"allow_bare_domains": true,
-		"generate_lease":     true,
-	}
 
-	VenafiPolicyTests(t, policyData, roleData, rand, domain, "cloud")
+	VenafiPolicyTests(t, policyData,rand, domain, "cloud")
 }
 
-func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData map[string]interface{}, rand string, domain string, endpoint string) {
+func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand string, domain string, endpoint string) {
 
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -169,6 +153,15 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		log.Println(key, ":", value)
 	}
 
+	log.Println("Setting up role")
+	roleData := map[string]interface{}{
+		"allowed_domains":    domain,
+		"allow_subdomains":   "true",
+		"max_ttl":            "4h",
+		"allow_bare_domains": true,
+		"generate_lease":     true,
+	}
+
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test-venafi-policy",
@@ -260,12 +253,36 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatalf(msg_denied_by_policy, resp)
 	}
 
+	log.Println("Setting up role with wrong Organization")
+	roleData = map[string]interface{}{
+		"allowed_domains":    domain,
+		"allow_subdomains":   "true",
+		"max_ttl":            "4h",
+		"allow_bare_domains": true,
+		"generate_lease":     true,
+		"organization": "Evil Hacker Inc.",
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test-venafi-policy",
+		Storage:   storage,
+		Data:      roleData,
+	})
+
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	log.Println("issue cert with wrong Organization")
 	singleCN = rand + "-policy." + domain
 	certData = map[string]interface{}{
 		"common_name": singleCN,
-		"organization": "Evil Hacker Inc.",
 	}
+
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "issue/test-venafi-policy",

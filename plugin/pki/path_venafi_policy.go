@@ -415,6 +415,7 @@ func checkAgainstVenafiPolicy(
 	}
 
 	var policy venafiPolicyEntry
+	//TODO: looks like we need to check against data.csr because we also have path /sign (func pathSign) which is using CSR.
 
 	if err := entry.DecodeJSON(&policy); err != nil {
 		log.Printf("error reading Venafi policy configuration: %s", err)
@@ -435,22 +436,36 @@ func checkAgainstVenafiPolicy(
 		return fmt.Errorf("common name %s doesn't match regexps: %v", cn, policy.SubjectCNRegexes)
 	}
 	if !checkStringArrByRegexp(email, policy.EmailSanRegExs) {
-		return fmt.Errorf("Emails %v don`t match with regexps: %v", email, policy.EmailSanRegExs)
+		return fmt.Errorf("Emails %v doesn't match regexps: %v", email, policy.EmailSanRegExs)
 	}
 	if !checkStringArrByRegexp(sans, policy.DnsSanRegExs) {
-		return fmt.Errorf("DNS sans %v don`t match with regexps: %v", sans, policy.DnsSanRegExs)
+		return fmt.Errorf("DNS sans %v doesn't match regexps: %v", sans, policy.DnsSanRegExs)
 	}
 	if !checkStringArrByRegexp(ipAddresses, policy.IpSanRegExs) {
-		return fmt.Errorf("IPs %v don`t match with regexps: %v", ipAddresses, policy.IpSanRegExs)
+		return fmt.Errorf("IPs %v doesn't match regexps: %v", ipAddresses, policy.IpSanRegExs)
 	}
-	//TODO: check against subject_or_regexes
-	if !checkStringArrByRegexp(role.Organization, policy.SubjectORegexes) {
-		return fmt.Errorf("Organization %v don`t match with regexps: %v", role.Organization, policy.SubjectORegexes)
+	//TODO: currently we're checking against role Organization, but it's not clear how O is set. Maube we should pass data.csr
+	//	and check agains data.csr.Subject.Organization. Also this check won't help agains path sign because they use CSR there.
+	if !checkStringArrByRegexp(role.Organization, policy.SubjectOURegexes) {
+		return fmt.Errorf("Organization unit %v doesn't match regexps: %v", role.Organization, policy.SubjectOURegexes)
 	}
-	//TODO: check against subject_ou_regexes
-	//TODO: check against subject_c_regexes
+
+	if !checkStringArrByRegexp(role.OU, policy.SubjectORegexes) {
+		return fmt.Errorf("Organization Unit %v doesn't match regexps: %v", role.Organization, policy.SubjectORegexes)
+	}
+
+	if !checkStringArrByRegexp(role.Country, policy.SubjectCRegexes) {
+		return fmt.Errorf("Country %v doesn't match regexps: %v", role.Country, policy.SubjectCRegexes)
+	}
 	//TODO: check against subject_l_regexes
+	if !checkStringArrByRegexp(role.Locality, policy.SubjectLRegexes) {
+		return fmt.Errorf("Location %v doesn't match regexps: %v", role.Locality, policy.SubjectLRegexes)
+	}
 	//TODO: check against subject_st_regexes
+	if !checkStringArrByRegexp(role.Province, policy.SubjectSTRegexes) {
+		return fmt.Errorf("State (Province) %v doesn't match regexps: %v", role.Locality, policy.SubjectLRegexes)
+	}
+
 	//TODO: check against upn_san_regexes
 	//TODO: check against uri_san_regexes
 	//TODO: check key, check extkeyusage
