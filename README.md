@@ -292,8 +292,16 @@ that restrictions are working):
     
 1. Enroll wrong certificate using CSR sign:
     ```
-    openssl req -new -newkey rsa:2048 -nodes -out test_wrong_wrong.csr -keyout test_wrong_wrong.key -subj "/C=US/ST=Wrong/L=Wrong/O=Wrong/OU=Wrong/CN=test.wrong.wrong"
+    openssl req -new -newkey rsa:2048 -nodes -out test_wrong_wrong.csr -keyout test_wrong_wrong.key -subj "/C=/ST=/L=/O=/OU=/CN=test.wrong.wrong"
+    vault write pki/sign/venafi-policy csr=@test_wrong_wrong.csr
     ```    
+
+1. Enroll normal certificate:
+    ```
+    openssl req -new -newkey rsa:2048 -nodes -out test_example_com.csr -keyout test_example_com.key -subj "/C=/ST=/L=/O=/CN=test.example.com"
+    vault write pki/sign/venafi-policy csr=@test_example_com.csr
+    ```
+
 ## Developer Quickstart (Linux only)
 
 1. Export your Venafi Platform configuration variables:
