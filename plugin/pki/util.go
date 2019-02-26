@@ -17,6 +17,7 @@ func parseExtKeyUsageParameter(unparsed []string) ([]x509.ExtKeyUsage, error) {
 	extKeyUsages := make([]x509.ExtKeyUsage, 0, len(unparsed))
 	oidRegexp := regexp.MustCompile(`(\d+\.)+\d`)
 	idRegexp := regexp.MustCompile(`\d+`)
+	stringRegexp := regexp.MustCompile(`[a-z]+`)
 	for _, s := range unparsed {
 		switch {
 		case oidRegexp.MatchString(s):
@@ -30,6 +31,12 @@ func parseExtKeyUsageParameter(unparsed []string) ([]x509.ExtKeyUsage, error) {
 			eku, err := ekuParse(s)
 			if err != nil {
 				return nil, err
+			}
+			extKeyUsages = append(extKeyUsages, eku)
+		case stringRegexp.MatchString(s):
+			eku, known := findEkuByName(s)
+			if !known {
+				return nil, fmt.Errorf("unknown eku: %s", s)
 			}
 			extKeyUsages = append(extKeyUsages, eku)
 		default:
@@ -59,41 +66,51 @@ var (
 var extKeyUsageOIDs = []struct {
 	extKeyUsage x509.ExtKeyUsage
 	oid         asn1.ObjectIdentifier
+	name        string
 }{
-	{x509.ExtKeyUsageAny, oidExtKeyUsageAny},
-	{x509.ExtKeyUsageServerAuth, oidExtKeyUsageServerAuth},
-	{x509.ExtKeyUsageClientAuth, oidExtKeyUsageClientAuth},
-	{x509.ExtKeyUsageCodeSigning, oidExtKeyUsageCodeSigning},
-	{x509.ExtKeyUsageEmailProtection, oidExtKeyUsageEmailProtection},
-	{x509.ExtKeyUsageIPSECEndSystem, oidExtKeyUsageIPSECEndSystem},
-	{x509.ExtKeyUsageIPSECTunnel, oidExtKeyUsageIPSECTunnel},
-	{x509.ExtKeyUsageIPSECUser, oidExtKeyUsageIPSECUser},
-	{x509.ExtKeyUsageTimeStamping, oidExtKeyUsageTimeStamping},
-	{x509.ExtKeyUsageOCSPSigning, oidExtKeyUsageOCSPSigning},
-	{x509.ExtKeyUsageMicrosoftServerGatedCrypto, oidExtKeyUsageMicrosoftServerGatedCrypto},
-	{x509.ExtKeyUsageNetscapeServerGatedCrypto, oidExtKeyUsageNetscapeServerGatedCrypto},
-	{x509.ExtKeyUsageMicrosoftCommercialCodeSigning, oidExtKeyUsageMicrosoftCommercialCodeSigning},
-	{x509.ExtKeyUsageMicrosoftKernelCodeSigning, oidExtKeyUsageMicrosoftKernelCodeSigning},
+	{x509.ExtKeyUsageAny, oidExtKeyUsageAny, "any"},
+	{x509.ExtKeyUsageServerAuth, oidExtKeyUsageServerAuth, "serverauth"},
+	{x509.ExtKeyUsageClientAuth, oidExtKeyUsageClientAuth, "clientauth"},
+	{x509.ExtKeyUsageCodeSigning, oidExtKeyUsageCodeSigning, "codesigning"},
+	{x509.ExtKeyUsageEmailProtection, oidExtKeyUsageEmailProtection, "emailprotection"},
+	{x509.ExtKeyUsageIPSECEndSystem, oidExtKeyUsageIPSECEndSystem, "ipsecendsystem"},
+	{x509.ExtKeyUsageIPSECTunnel, oidExtKeyUsageIPSECTunnel, "ipsectunnel"},
+	{x509.ExtKeyUsageIPSECUser, oidExtKeyUsageIPSECUser, "ipsecuser"},
+	{x509.ExtKeyUsageTimeStamping, oidExtKeyUsageTimeStamping, "timestamping"},
+	{x509.ExtKeyUsageOCSPSigning, oidExtKeyUsageOCSPSigning, "ocspsigning"},
+	{x509.ExtKeyUsageMicrosoftServerGatedCrypto, oidExtKeyUsageMicrosoftServerGatedCrypto, "microsoftservergatedcrypto"},
+	{x509.ExtKeyUsageNetscapeServerGatedCrypto, oidExtKeyUsageNetscapeServerGatedCrypto, "netscapeservergatedcrypto"},
+	{x509.ExtKeyUsageMicrosoftCommercialCodeSigning, oidExtKeyUsageMicrosoftCommercialCodeSigning, "microsoftcommercialcodesigning"},
+	{x509.ExtKeyUsageMicrosoftKernelCodeSigning, oidExtKeyUsageMicrosoftKernelCodeSigning, "microsoftkernelcodesigning"},
 }
 
 func extKeyUsageFromOID(oid asn1.ObjectIdentifier) (eku x509.ExtKeyUsage, ok bool) {
-	for _, pair := range extKeyUsageOIDs {
-		if oid.Equal(pair.oid) {
-			return pair.extKeyUsage, true
+	for _, triplet := range extKeyUsageOIDs {
+		if oid.Equal(triplet.oid) {
+			return triplet.extKeyUsage, true
 		}
 	}
 	return
 }
 
 func checkExtKeyUsage(eku x509.ExtKeyUsage) bool {
-	for _, pair := range extKeyUsageOIDs {
-		if pair.extKeyUsage == eku {
+	for _, triplet := range extKeyUsageOIDs {
+		if triplet.extKeyUsage == eku {
 			return true
 		}
 	}
 	return false
 }
 
+func findEkuByName(name string) (x509.ExtKeyUsage, bool) {
+	name = strings.ToLower(name)
+	for _, triplet := range extKeyUsageOIDs {
+		if triplet.name == name {
+			return triplet.extKeyUsage, true
+		}
+	}
+	return 0, false
+}
 func ekuParse(s string) (eku x509.ExtKeyUsage, err error) {
 	i, _ := strconv.Atoi(s)
 	eku = x509.ExtKeyUsage(i)
@@ -102,4 +119,26 @@ func ekuParse(s string) (eku x509.ExtKeyUsage, err error) {
 	}
 	err = fmt.Errorf("unknow eku: %s", s)
 	return
+}
+
+func ekuInEkuSlice(i x509.ExtKeyUsage, s []x509.ExtKeyUsage) bool {
+	for _, j := range s {
+		if j == i {
+			return true
+		}
+	}
+	return false
+}
+func compareEkuList(a, b []x509.ExtKeyUsage) bool {
+	for _, i := range a {
+		if !ekuInEkuSlice(i, b) {
+			return false
+		}
+	}
+	for _, i := range b {
+		if !ekuInEkuSlice(i, a) {
+			return false
+		}
+	}
+	return true
 }
