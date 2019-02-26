@@ -387,7 +387,6 @@ func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request
 }
 
 func checkAgainstVenafiPolicy(
-	b *backend,
 	req *logical.Request,
 	role *roleEntry,
 	csr *x509.CertificateRequest,
