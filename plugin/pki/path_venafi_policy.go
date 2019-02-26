@@ -483,6 +483,7 @@ func checkAgainstVenafiPolicy(
 		if !checkStringArrByRegexp(csr.Subject.Province, policy.SubjectSTRegexes) {
 			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", role.Locality, policy.SubjectLRegexes)
 		}
+		//todo: csr check key type
 	} else {
 		log.Printf("Checking creation bundle against policy %s", policyConfigPath)
 		if !checkStringArrByRegexp(role.Organization, policy.SubjectOURegexes) {
@@ -504,15 +505,14 @@ func checkAgainstVenafiPolicy(
 		if !checkStringArrByRegexp(role.Province, policy.SubjectSTRegexes) {
 			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", role.Locality, policy.SubjectLRegexes)
 		}
+		if !checkKey(role.KeyType, role.KeyBits, policy.AllowedKeyConfigurations) {
+			return fmt.Errorf("key type not compatible vith Venafi policies")
+		}
 
 	}
 
 	//TODO: check against upn_san_regexes
 	//TODO: check against uri_san_regexes
-	//todo: add suuport csr
-	if !checkKey(role.KeyType, role.KeyBits, policy.AllowedKeyConfigurations) {
-		return fmt.Errorf("key type not compatible vith Venafi policies")
-	}
 
 	extKeyUsage, err := parseExtKeyUsageParameter(role.ExtKeyUsage)
 	if err != nil {
@@ -526,8 +526,21 @@ func checkAgainstVenafiPolicy(
 	return nil
 }
 
-func checkKey(keyType string, bitsize int, allowed []endpoint.AllowedKeyConfiguration) bool {
-	//todo: write
+func checkKey(keyType string, bitsize int, allowed []endpoint.AllowedKeyConfiguration) (valid bool) {
+	for _, allowedKey := range allowed {
+		if allowedKey.KeyType.String() == strings.ToUpper(keyType) {
+			switch allowedKey.KeyType {
+			case certificate.KeyTypeRSA:
+				//todo: check bitsize
+				return true
+			case certificate.KeyTypeECDSA:
+				//todo: check curve
+				return true
+			default:
+				return
+			}
+		}
+	}
 	return true
 }
 
