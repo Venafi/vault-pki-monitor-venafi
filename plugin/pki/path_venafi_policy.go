@@ -513,10 +513,12 @@ func checkAgainstVenafiPolicy(
 	if !checkKey(role.KeyType, role.KeyBits, policy.AllowedKeyConfigurations) {
 		return fmt.Errorf("key type not compatible vith Venafi policies")
 	}
+
 	extKeyUsage, err := parseExtKeyUsageParameter(role.ExtKeyUsage)
 	if err != nil {
 		return err
 	}
+	//todo: need skip this check for CA or adopt checking for ca
 	if !compareEkuList(extKeyUsage, policyConfig.ExtKeyUsage) {
 		return fmt.Errorf("different eku in Venafi policy config and role")
 	}

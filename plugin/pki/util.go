@@ -121,7 +121,24 @@ func ekuParse(s string) (eku x509.ExtKeyUsage, err error) {
 	return
 }
 
+func ekuInEkuSlice(i x509.ExtKeyUsage, s []x509.ExtKeyUsage) bool {
+	for _, j := range s {
+		if j == i {
+			return true
+		}
+	}
+	return false
+}
 func compareEkuList(a, b []x509.ExtKeyUsage) bool {
-	//todo: compare
+	for _, i := range a {
+		if !ekuInEkuSlice(i, b) {
+			return false
+		}
+	}
+	for _, i := range b {
+		if !ekuInEkuSlice(i, a) {
+			return false
+		}
+	}
 	return true
 }
