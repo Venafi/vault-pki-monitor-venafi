@@ -389,9 +389,10 @@ func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request
 func checkAgainstVenafiPolicy(
 	b *backend,
 	req *logical.Request,
-	policyConfigPath, cn string,
+	role *roleEntry, cn string,
 	ipAddresses, email, sans []string) error {
 
+	policyConfigPath := role.VenafiCheckPolicy
 	ctx := context.Background()
 	if policyConfigPath == "" {
 		policyConfigPath = defaultVenafiPolicyName
