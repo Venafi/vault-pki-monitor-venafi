@@ -465,7 +465,7 @@ func checkAgainstVenafiPolicy(
 		//}
 
 		if !checkStringArrByRegexp(csr.Subject.Organization, policy.SubjectOURegexes) {
-			return fmt.Errorf("Organization unit %v doesn't match regexps: %v", role.Organization, policy.SubjectOURegexes)
+			return fmt.Errorf("Organization %v doesn't match regexps: %v", role.Organization, policy.SubjectOURegexes)
 		}
 
 		if !checkStringArrByRegexp(csr.Subject.OrganizationalUnit, policy.SubjectORegexes) {
