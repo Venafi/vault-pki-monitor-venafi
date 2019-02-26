@@ -267,7 +267,7 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 	}
 	return map[string]interface{}{
 		"subject_cn_regexes":         policy.SubjectCNRegexes,
-		"subject_or_egexes":          policy.SubjectORegexes,
+		"subject_or_regexes":          policy.SubjectORegexes,
 		"subject_ou_regexes":         policy.SubjectOURegexes,
 		"subject_st_regexes":         policy.SubjectSTRegexes,
 		"subject_l_regexes":          policy.SubjectLRegexes,
@@ -443,7 +443,7 @@ func checkAgainstVenafiPolicy(
 	if !checkStringArrByRegexp(ipAddresses, policy.IpSanRegExs) {
 		return fmt.Errorf("IPs %v don`t match with regexps: %v", ipAddresses, policy.IpSanRegExs)
 	}
-	//TODO: check against subject_or_egexes
+	//TODO: check against subject_or_regexes
 	//TODO: check against subject_ou_regexes
 	//TODO: check against subject_c_regexes
 	//TODO: check against subject_l_regexes
@@ -521,7 +521,7 @@ type venafiPolicyConfigEntry struct {
 
 type venafiPolicyEntry struct {
 	SubjectCNRegexes         []string                           `json:"subject_cn_regexes"`
-	SubjectORegexes          []string                           `json:"subject_or_egexes"`
+	SubjectORegexes          []string                           `json:"subject_or_regexes"`
 	SubjectOURegexes         []string                           `json:"subject_ou_regexes"`
 	SubjectSTRegexes         []string                           `json:"subject_st_regexes"`
 	SubjectLRegexes          []string                           `json:"subject_l_regexes"`
