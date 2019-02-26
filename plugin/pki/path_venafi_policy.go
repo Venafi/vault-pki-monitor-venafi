@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"github.com/Venafi/vcert/pkg/certificate"
@@ -66,6 +67,15 @@ Example:
 			"cloud_url": {
 				Type:        framework.TypeString,
 				Description: `URL for Venafi Cloud. Set it only if you want to use non production Cloud`,
+			},
+			"ext_key_usage": {
+				Type:    framework.TypeCommaStringSlice,
+				Default: []string{},
+				Description: `A comma-separated string or list of extended key usages. Valid values can be found at
+https://golang.org/pkg/crypto/x509/#ExtKeyUsage
+-- simply drop the "ExtKeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -144,7 +154,6 @@ func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.
 	}, nil
 }
 
-
 func (b *backend) pathUpdateVenafiPolicyContent(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
@@ -177,6 +186,11 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		TPPUser:         data.Get("tpp_user").(string),
 		TrustBundleFile: data.Get("trust_bundle_file").(string),
 	}
+	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
+	configEntry.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
+	if err != nil {
+		return
+	}
 	if configEntry.Apikey == "" && (configEntry.TPPURL == "" || configEntry.TPPUser == "" || configEntry.TPPPassword == "") {
 		return logical.ErrorResponse("Invalid mode. apikey or tpp credentials required"), nil
 	}
@@ -201,7 +215,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	}, nil
 }
 
-func savePolicyEntry(policy *endpoint.Policy, name string,ctx context.Context, req *logical.Request) (policyEntry *venafiPolicyEntry, err error) {
+func savePolicyEntry(policy *endpoint.Policy, name string, ctx context.Context, req *logical.Request) (policyEntry *venafiPolicyEntry, err error) {
 
 	//Form policy entry for storage
 	policyEntry = &venafiPolicyEntry{
@@ -273,24 +287,25 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request,
 	log.Printf("Creating Venafi client")
 	cl, err := b.ClientVenafi(ctx, req.Storage, req, policyConfig, "policy")
 	if err != nil {
-		return policy, err
+		return
 	}
 
 	log.Printf("Getting policy from Venafi endpoint")
 	zone, err := b.getPolicyConfigZone(ctx, req.Storage, policyConfig)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	policy, err = cl.ReadPolicyConfiguration(zone)
 	if err != nil {
-		return policy, err
+		return
 	}
 	if policy == nil {
-		return nil, fmt.Errorf("expected policy but got nil from Venafi endpoint %v", policy)
+		err = fmt.Errorf("expected policy but got nil from Venafi endpoint %v", policy)
+		return
 	}
 
-	return policy, nil
+	return
 }
 
 func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
@@ -371,14 +386,18 @@ func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request
 	return logical.ListResponse(entries), nil
 }
 
+func checkAgainstVenafiPolicy(
+	b *backend,
+	req *logical.Request,
+	policyConfigPath, cn string,
+	ipAddresses, email, sans []string) error {
 
-func checkAgainstVenafiPolicy(b *backend, req *logical.Request, policyConfig, cn string, ipAddresses, email, sans []string) error {
 	ctx := context.Background()
-	if policyConfig == "" {
-		policyConfig = defaultVenafiPolicyName
+	if policyConfigPath == "" {
+		policyConfigPath = defaultVenafiPolicyName
 	}
 
-	entry, err := req.Storage.Get(ctx, venafiPolicyPath+policyConfig+"/policy")
+	entry, err := req.Storage.Get(ctx, venafiPolicyPath+policyConfigPath+"/policy")
 	if err != nil {
 		return err
 	}
@@ -400,8 +419,16 @@ func checkAgainstVenafiPolicy(b *backend, req *logical.Request, policyConfig, cn
 		log.Printf("error reading Venafi policy configuration: %s", err)
 		return err
 	}
-
-	log.Printf("Checking creation bundle against policy %s", policyConfig)
+	entry, err = req.Storage.Get(ctx, venafiPolicyPath+policyConfigPath)
+	if err != nil {
+		return err
+	}
+	var policyConfig venafiPolicyConfigEntry
+	if err := entry.DecodeJSON(&policyConfig); err != nil {
+		log.Printf("error reading Venafi policy configuration: %s", err)
+		return err
+	}
+	log.Printf("Checking creation bundle against policy %s", policyConfigPath)
 
 	if !checkStringByRegexp(cn, policy.SubjectCNRegexes) {
 		return fmt.Errorf("common name %s doesn't match regexps: %v", cn, policy.SubjectCNRegexes)
@@ -415,6 +442,7 @@ func checkAgainstVenafiPolicy(b *backend, req *logical.Request, policyConfig, cn
 	if !checkStringArrByRegexp(ipAddresses, policy.IpSanRegExs) {
 		return fmt.Errorf("IPs %v don`t match with regexps: %v", ipAddresses, policy.IpSanRegExs)
 	}
+	//todo: check key, check extkeyusage
 	return nil
 }
 
@@ -472,31 +500,32 @@ func (b *backend) getPolicyConfigZone(ctx context.Context, s logical.Storage, n 
 }
 
 type venafiPolicyConfigEntry struct {
-	TPPURL          string `json:"tpp_url"`
-	Zone            string `json:"zone"`
-	TPPPassword     string `json:"tpp_password"`
-	TPPUser         string `json:"tpp_user"`
-	TPPImport       bool   `json:"tpp_import"`
-	TrustBundleFile string `json:"trust_bundle_file"`
-	Apikey          string `json:"apikey"`
-	CloudURL        string `json:"cloud_url"`
+	TPPURL          string             `json:"tpp_url"`
+	Zone            string             `json:"zone"`
+	TPPPassword     string             `json:"tpp_password"`
+	TPPUser         string             `json:"tpp_user"`
+	TPPImport       bool               `json:"tpp_import"`
+	TrustBundleFile string             `json:"trust_bundle_file"`
+	Apikey          string             `json:"apikey"`
+	CloudURL        string             `json:"cloud_url"`
+	ExtKeyUsage     []x509.ExtKeyUsage `json:"ext_key_usage"`
 }
 
 type venafiPolicyEntry struct {
-	SubjectCNRegexes         []string `json:"subject_cn_regexes"`
-	SubjectORegexes          []string `json:"subject_or_egexes"`
-	SubjectOURegexes         []string `json:"subject_ou_regexes"`
-	SubjectSTRegexes         []string `json:"subject_st_regexes"`
-	SubjectLRegexes          []string `json:"subject_l_regexes"`
-	SubjectCRegexes          []string `json:"subject_c_regexes"`
-	AllowedKeyConfigurations []endpoint.AllowedKeyConfiguration
-	DnsSanRegExs             []string `json:"dns_san_regexes"`
-	IpSanRegExs              []string `json:"ip_san_regexes"`
-	EmailSanRegExs           []string `json:"email_san_regexes"`
-	UriSanRegExs             []string `json:"uri_san_regexes"`
-	UpnSanRegExs             []string `json:"upn_san_regexes"`
-	AllowWildcards           bool     `json:"allow_wildcards"`
-	AllowKeyReuse            bool     `json:"allow_key_reuse"`
+	SubjectCNRegexes         []string                           `json:"subject_cn_regexes"`
+	SubjectORegexes          []string                           `json:"subject_or_egexes"`
+	SubjectOURegexes         []string                           `json:"subject_ou_regexes"`
+	SubjectSTRegexes         []string                           `json:"subject_st_regexes"`
+	SubjectLRegexes          []string                           `json:"subject_l_regexes"`
+	SubjectCRegexes          []string                           `json:"subject_c_regexes"`
+	AllowedKeyConfigurations []endpoint.AllowedKeyConfiguration `json:"allowed_key_configurations"`
+	DnsSanRegExs             []string                           `json:"dns_san_regexes"`
+	IpSanRegExs              []string                           `json:"ip_san_regexes"`
+	EmailSanRegExs           []string                           `json:"email_san_regexes"`
+	UriSanRegExs             []string                           `json:"uri_san_regexes"`
+	UpnSanRegExs             []string                           `json:"upn_san_regexes"`
+	AllowWildcards           bool                               `json:"allow_wildcards"`
+	AllowKeyReuse            bool                               `json:"allow_key_reuse"`
 }
 
 const pathVenafiPolicySyn = `help here`

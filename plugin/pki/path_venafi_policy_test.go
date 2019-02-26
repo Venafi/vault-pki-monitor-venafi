@@ -159,15 +159,13 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
-	if resp.Data["error"] != "policy data is nil. Looks like it doesn't exists."  {
+	if resp.Data["error"] != "policy data is nil. Looks like it doesn't exists." {
 		t.Fatalf("should faile to read venafi policy from venafi-policy/wrong-path/policy, %#v", resp)
 	}
 
 	for key, value := range resp.Data {
 		log.Println(key, ":", value)
 	}
-
-
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -251,7 +249,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	if err != nil {
 		t.Fatal(err)
 	}
-	if  !strings.Contains(resp.Data["error"].(string), "doesn't match regexps") {
+	if !strings.Contains(resp.Data["error"].(string), "doesn't match regexps") {
 		t.Fatalf("certificate issue should be denied by policy, %#v", resp)
 	}
 
