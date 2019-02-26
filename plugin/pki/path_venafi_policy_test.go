@@ -9,6 +9,8 @@ import (
 	"testing"
 )
 
+const msg_denied_by_policy  = "certificate issue should be denied by policy, %#v"
+
 func TestBackend_VenafiPolicyTPP(t *testing.T) {
 	rand := randSeq(9)
 	domain := "vfidev.com"
@@ -218,7 +220,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	}
 
 	log.Println("issue proper cert")
-	singleCN := rand + "-import." + domain
+	singleCN := rand + "-policy." + domain
 	certData := map[string]interface{}{
 		"common_name": singleCN,
 	}
@@ -235,7 +237,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 		t.Fatal(err)
 	}
 
-	log.Println("issue wrong cert")
+	log.Println("issue cert with wrong CN")
 	singleCN = rand + "-import." + "wrong.wrong"
 	certData = map[string]interface{}{
 		"common_name": singleCN,
@@ -249,9 +251,39 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, roleData
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(resp.Data["error"].(string), "doesn't match regexps") {
-		t.Fatalf("certificate issue should be denied by policy, %#v", resp)
+
+	if err_msg, prsnt := resp.Data["error"]; prsnt {
+		if !strings.Contains(err_msg.(string), "doesn't match regexps") {
+			t.Fatalf(msg_denied_by_policy, resp)
+		}
+	} else {
+		t.Fatalf(msg_denied_by_policy, resp)
 	}
+
+	log.Println("issue cert with wrong Organization")
+	singleCN = rand + "-policy." + domain
+	certData = map[string]interface{}{
+		"common_name": singleCN,
+		"organization": "Evil Hacker Inc.",
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/test-venafi-policy",
+		Storage:   storage,
+		Data:      certData,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err_msg, prsnt := resp.Data["error"]; prsnt {
+		if !strings.Contains(err_msg.(string), "doesn't match regexps") {
+			t.Fatalf(msg_denied_by_policy, resp)
+		}
+	} else {
+		t.Fatalf(msg_denied_by_policy, resp)
+	}
+
 
 	//TODO: add test with wrong key types
 

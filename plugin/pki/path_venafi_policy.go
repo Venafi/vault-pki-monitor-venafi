@@ -444,6 +444,9 @@ func checkAgainstVenafiPolicy(
 		return fmt.Errorf("IPs %v don`t match with regexps: %v", ipAddresses, policy.IpSanRegExs)
 	}
 	//TODO: check against subject_or_regexes
+	if !checkStringArrByRegexp(role.Organization, policy.SubjectORegexes) {
+		return fmt.Errorf("Organization %v don`t match with regexps: %v", role.Organization, policy.SubjectORegexes)
+	}
 	//TODO: check against subject_ou_regexes
 	//TODO: check against subject_c_regexes
 	//TODO: check against subject_l_regexes
