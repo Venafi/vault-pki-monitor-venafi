@@ -221,6 +221,9 @@ After starting demo server you will need to export VAULT_TOKEN with Root token a
       allowed_parameters = {
         "tpp_url" = ["https://tpp.venafi.example:443/vedsdk"]
         "zone" = ["DevOps\\Vault Monitor"]
+        "tpp_user" = []
+        "tpp_password" = []
+        "trust_bundle_file" = []
       }
     }
     EOF
