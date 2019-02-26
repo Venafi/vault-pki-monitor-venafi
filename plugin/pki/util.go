@@ -17,6 +17,7 @@ func parseExtKeyUsageParameter(unparsed []string) ([]x509.ExtKeyUsage, error) {
 	extKeyUsages := make([]x509.ExtKeyUsage, 0, len(unparsed))
 	oidRegexp := regexp.MustCompile(`(\d+\.)+\d`)
 	idRegexp := regexp.MustCompile(`\d+`)
+	stringRegexp := regexp.MustCompile(`[a-z]+`)
 	for _, s := range unparsed {
 		switch {
 		case oidRegexp.MatchString(s):
@@ -30,6 +31,12 @@ func parseExtKeyUsageParameter(unparsed []string) ([]x509.ExtKeyUsage, error) {
 			eku, err := ekuParse(s)
 			if err != nil {
 				return nil, err
+			}
+			extKeyUsages = append(extKeyUsages, eku)
+		case stringRegexp.MatchString(s):
+			eku, known := findEkuByName(s)
+			if !known {
+				return nil, fmt.Errorf("unknown eku: %s", s)
 			}
 			extKeyUsages = append(extKeyUsages, eku)
 		default:
@@ -95,19 +102,6 @@ func checkExtKeyUsage(eku x509.ExtKeyUsage) bool {
 	return false
 }
 
-func convertStringsSliceToEKUslice(ekusStrings []string) (ekus []x509.ExtKeyUsage, err error) {
-	ekus = make([]x509.ExtKeyUsage, len(ekusStrings))
-	for i, s := range ekusStrings {
-		eku, known := findEkuByName(s)
-		if !known {
-			err = fmt.Errorf("unknown eku: %s", s)
-			return
-		}
-		ekus[i] = eku
-	}
-	return
-}
-
 func findEkuByName(name string) (x509.ExtKeyUsage, bool) {
 	name = strings.ToLower(name)
 	for _, triplet := range extKeyUsageOIDs {
@@ -125,4 +119,9 @@ func ekuParse(s string) (eku x509.ExtKeyUsage, err error) {
 	}
 	err = fmt.Errorf("unknow eku: %s", s)
 	return
+}
+
+func compareEkuList(a, b []x509.ExtKeyUsage) bool {
+	//todo: compare
+	return true
 }

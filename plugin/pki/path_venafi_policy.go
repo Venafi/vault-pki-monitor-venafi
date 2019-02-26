@@ -267,7 +267,7 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 	}
 	return map[string]interface{}{
 		"subject_cn_regexes":         policy.SubjectCNRegexes,
-		"subject_or_regexes":          policy.SubjectORegexes,
+		"subject_or_regexes":         policy.SubjectORegexes,
 		"subject_ou_regexes":         policy.SubjectOURegexes,
 		"subject_st_regexes":         policy.SubjectSTRegexes,
 		"subject_l_regexes":          policy.SubjectLRegexes,
@@ -509,8 +509,24 @@ func checkAgainstVenafiPolicy(
 
 	//TODO: check against upn_san_regexes
 	//TODO: check against uri_san_regexes
-	//TODO: check key, check extkeyusage
+	//todo: add suuport csr
+	if !checkKey(role.KeyType, role.KeyBits, policy.AllowedKeyConfigurations) {
+		return fmt.Errorf("key type not compatible vith Venafi policies")
+	}
+	extKeyUsage, err := parseExtKeyUsageParameter(role.ExtKeyUsage)
+	if err != nil {
+		return err
+	}
+	if !compareEkuList(extKeyUsage, policyConfig.ExtKeyUsage) {
+		return fmt.Errorf("different eku in Venafi policy config and role")
+	}
+
 	return nil
+}
+
+func checkKey(keyType string, bitsize int, allowed []endpoint.AllowedKeyConfiguration) bool {
+	//todo: write
+	return true
 }
 
 func checkStringByRegexp(s string, regexs []string) (matched bool) {
