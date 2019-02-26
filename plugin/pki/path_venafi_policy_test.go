@@ -319,7 +319,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 		Data:      roleData,
 	})
 
-
+	//TODO: add tests for CSR
 
 
 	//TODO: add test with wrong key types
