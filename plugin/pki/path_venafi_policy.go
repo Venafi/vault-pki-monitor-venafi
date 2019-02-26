@@ -443,7 +443,14 @@ func checkAgainstVenafiPolicy(
 	if !checkStringArrByRegexp(ipAddresses, policy.IpSanRegExs) {
 		return fmt.Errorf("IPs %v don`t match with regexps: %v", ipAddresses, policy.IpSanRegExs)
 	}
-	//todo: check key, check extkeyusage
+	//TODO: check against subject_or_egexes
+	//TODO: check against subject_ou_regexes
+	//TODO: check against subject_c_regexes
+	//TODO: check against subject_l_regexes
+	//TODO: check against subject_st_regexes
+	//TODO: check against upn_san_regexes
+	//TODO: check against uri_san_regexes
+	//TODO: check key, check extkeyusage
 	return nil
 }
 
