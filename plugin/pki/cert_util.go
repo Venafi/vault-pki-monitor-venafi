@@ -559,7 +559,7 @@ func generateCert(ctx context.Context,
 		return nil, errutil.UserError{Err: "RSA keys < 2048 bits are unsafe and not supported"}
 	}
 
-	err := generateCreationBundle(b, data)
+	err := generateCreationBundle(b, data, isCA)
 	if err != nil {
 		return nil, err
 	}
@@ -605,7 +605,7 @@ func generateCert(ctx context.Context,
 // N.B.: This is only meant to be used for generating intermediate CAs.
 // It skips some sanity checks.
 func generateIntermediateCSR(b *backend, data *dataBundle) (*certutil.ParsedCSRBundle, error) {
-	err := generateCreationBundle(b, data)
+	err := generateCreationBundle(b, data, true)
 	if err != nil {
 		return nil, err
 	}
@@ -711,7 +711,7 @@ func signCert(b *backend,
 
 	data.csr = csr
 
-	err = generateCreationBundle(b, data)
+	err = generateCreationBundle(b, data, isCA)
 	if err != nil {
 		return nil, err
 	}
@@ -737,7 +737,7 @@ func signCert(b *backend,
 // generateCreationBundle is a shared function that reads parameters supplied
 // from the various endpoints and generates a creationParameters with the
 // parameters that can be used to issue or sign
-func generateCreationBundle(b *backend, data *dataBundle) error {
+func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
 
 	// Read in names -- CN, DNS and email addresses
 	var cn string
