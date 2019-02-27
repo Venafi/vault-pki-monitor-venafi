@@ -447,7 +447,6 @@ func checkAgainstVenafiPolicy(
 		return fmt.Errorf("IPs %v doesn't match regexps: %v", ipAddresses, policy.IpSanRegExs)
 	}
 
-	//TODO: check against data.csr because we also have path /sign (func pathSign) which is using CSR.
 	if csr != nil {
 		log.Printf("Checking CSR against policy %s", policyConfigPath)
 
