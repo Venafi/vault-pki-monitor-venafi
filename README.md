@@ -68,7 +68,7 @@ It is not common for the Venafi Platform's REST API (WebSDK) to be secured using
         tpp_password="password" \
         zone="DevOps\\Vault Monitor" \
         trust_bundle_file="/opt/venafi/bundle.pem" \
-        generate_lease=true store_by_cn=true store_pkey=true store_by_serial=true ttl=1h max_ttl=1h \
+        generate_lease=true ttl=1h max_ttl=1h \
         allowed_domains=example.com \
         allow_subdomains=true
     ```
@@ -275,7 +275,7 @@ that restrictions are working):
 1. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `pki` backend:
     ```
     vault write pki/roles/venafi-policy \
-        generate_lease=true store_by_cn=true store_pkey=true store_by_serial=true ttl=1h max_ttl=1h \
+        generate_lease=true ttl=1h max_ttl=1h \
         allowed_domains=venafi.com,example.com \
         allow_subdomains=true
     ```
@@ -301,6 +301,10 @@ that restrictions are working):
     openssl req -new -newkey rsa:2048 -nodes -out test_example_com.csr -keyout test_example_com.key -subj "/C=/ST=/L=/O=/CN=test.example.com"
     vault write pki/sign/venafi-policy csr=@test_example_com.csr
     ```
+
+### See it at asciinema:
+
+[![asciicast](https://asciinema.org/a/T6DKJ1gu2B2s22AIglJCsxTkd.svg)](https://asciinema.org/a/T6DKJ1gu2B2s22AIglJCsxTkd)
 
 ## Developer Quickstart (Linux only)
 

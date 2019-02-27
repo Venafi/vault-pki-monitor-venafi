@@ -24,7 +24,7 @@ IMPORT_DOMAIN := import.example.com
 IMPORT_ROLE := import
 MOUNT := pki
 RANDOM_SITE_EXP := $$(head /dev/urandom | docker run --rm -i busybox tr -dc a-z0-9 | head -c 5 ; echo '')
-ROLE_OPTIONS := generate_lease=true store_by_cn="true" store_pkey="true" store_by_serial="true" ttl=1h max_ttl=1h
+ROLE_OPTIONS := generate_lease=true ttl=1h max_ttl=1h
 SHA256 := $$(shasum -a 256 "$(PLUGIN_PATH)" | cut -d' ' -f1)
 TRUST_BUNDLE := /opt/venafi/bundle.pem
 
@@ -80,6 +80,8 @@ build:
 
 dev_build:
 	env CGO_ENABLED=0 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/$(PLUGIN_NAME) || exit 1
+	sha1sum pkg/bin/vault-pki-monitor-venafi > pkg/bin/vault-pki-monitor-venafi.sha1
+
 
 compress:
 	mkdir -p $(DIST_DIR)
