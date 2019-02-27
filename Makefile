@@ -79,7 +79,7 @@ build:
 	chmod +x $(PLUGIN_DIR)/*
 
 dev_build:
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/$(PLUGIN_NAME) || exit 1
+	env CGO_ENABLED=0 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/$(PLUGIN_NAME) || exit 1
 
 compress:
 	mkdir -p $(DIST_DIR)
