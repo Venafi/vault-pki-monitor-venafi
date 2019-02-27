@@ -10,6 +10,37 @@ import (
 )
 
 const msg_denied_by_policy  = "certificate issue should be denied by policy, %#v"
+const wrong_csr  = `-----BEGIN CERTIFICATE REQUEST-----
+MIICYDCCAUgCAQAwGzEZMBcGA1UEAwwQdGVzdC53cm9uZy53cm9uZzCCASIwDQYJ
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBALjZph++4eMekq0gQyCHr9sU3vF7hu6C
+9j+BpAGHIuaIcfTSPV6JeZVgmUy5aDb0vAx4s76oXsM9VWpdTz7oU70S4wZCrKl9
+1gbZpGkt+BnqLjgUe6OXj8CAQi10oxDcj9o08Iln1l5CrsHc2HdrRIULcdc+R3L3
+4wVJg8x1FbbnLn1WB1h3KVJk1f831H7I7tp1AxqYbtjsTb8VzX8ub1537bWzIwf0
+8Taixa4Rrd8DjpttI3A4PzyprbfKfHXPCYpLg/KFRF7N1sVTPeByQ78qM93pXeeV
+W5+mhFptKCY2nv723ZPD45GYutjWLUQq0VSXbpAOH/Ph/HXnliXHtMUCAwEAAaAA
+MA0GCSqGSIb3DQEBCwUAA4IBAQCRgyRmDtrBoUXYF5y7vgyZyO79+1MzKlwS+5wt
+IAgwIF2z+uyr7zo3bmNy9TaFDX8scdFcfdiHqeAEjvjD+qSD9I5PC71cTgoAKWUF
+IVzizZVziVOTfNXllNwr/zfFzD7biKiTIG+81ZOOw+UtD7/aSeGMrj55S+RIXkPa
+E4zs31QF9oVpfbi2BubneCU808ShsWIrSzjbiLZ/D/IHDFuoX7tbdZSmVU+mlx/r
+9LEUz2Cmyq58JRJ78KtRUYDtCulYjhz0NWW8tcG+95K750rd02v1UkZSKulyWf8/
+0OPEbiZxi54VpqfWOC5x0YwUCmvktKm4X0/JbX6ISxRvnx7z
+-----END CERTIFICATE REQUEST-----
+`
+const allowed_csr = `-----BEGIN CERTIFICATE REQUEST-----
+MIICXzCCAUcCAQAwGjEYMBYGA1UEAwwPdGVzdC52ZmlkZXYuY29tMIIBIjANBgkq
+hkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqySVqq6bxR6FlWDGefAx6esiwdipOp9t
+v5Obvkxaquv0q6DR8pJ+uK64Xh1XAjJw8vOMtW4OBScIgxd0dw76jCDC2JyJlfy3
+qjOkcKkdfrCN5bhvKkguOhk0dB9XWT2eB7+EbCm/fS95jObamlfOzUOp6zlzjIlx
+G9C7yvw4AgX0Pi9Oe4pYN53ruVYrgMDRYxidVUV1auAOE/vnqrblU+Mx8ZHObVYU
+u8VHmDAIJi23IvvXI/tQe7zju1oiuS+r7T7V75O1oRdlP0V2aEb+XX7CvlvycESo
+UJ8pDhfLIgoP1ZhyyYo1tNXnLUIsb43eqX/b+4NiWuDQRALWSPDfHQIDAQABoAAw
+DQYJKoZIhvcNAQELBQADggEBAFgVI4OhFL3YP7dqg89xxxIrG8MrZ/iTEYrmc1ft
+yB0aaxSiRSnkJc9/Xv8zgKFi0s/LNEtVWD9Ul8B5rDrWFeEzflpOeU42ZbFMuL2O
+ptHPY2MzRktK64PIosuN4v70THrNKzv3XeBxgLC+YSvOp/I/LNaEHiej1bTUdWeO
+MY7kWDap0TjMpC3st9a/41Q8ZPL4L0MEFBOaeWyNrE18/c701zgnqdTHojehmhgT
+2t1L19Z9OcBNjvfpr1WcDPeMT82ctJ7Kkbd8uIY6chHE6PJlnsY60K6LtY8OHz1B
+BVySC7P2vJN2wkY3uC5isgZqVzln/t3veiLG6Vj8nPWtyoo=
+-----END CERTIFICATE REQUEST-----`
 
 func TestBackend_VenafiPolicyTPP(t *testing.T) {
 	rand := randSeq(9)
@@ -320,7 +351,51 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 	})
 
 	//TODO: add tests for CSR
+	log.Println("Testing wrong CSR signing")
+	certData = map[string]interface{}{
+		"csr": wrong_csr,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "sign/test-venafi-policy",
+		Storage:   storage,
+		Data:      certData,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
+	if err_msg, prsnt := resp.Data["error"]; prsnt {
+		if !strings.Contains(err_msg.(string), "doesn't match regexps") {
+			t.Fatalf(msg_denied_by_policy, resp)
+		}
+	} else {
+		t.Fatalf(msg_denied_by_policy, resp)
+	}
+
+	log.Println("Testing proper CSR signing")
+	certData = map[string]interface{}{
+		"csr": allowed_csr,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "sign/test-venafi-policy",
+		Storage:   storage,
+		Data:      certData,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to issue a cert, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Data["certificate"] == nil {
+		t.Fatalf("certificate field shouldn't be nil, %#v", resp)
+	}
 
 	//TODO: add test with wrong key types
 
