@@ -2,6 +2,8 @@ package pki
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
@@ -74,8 +76,7 @@ Example:
 				Description: `A comma-separated string or list of extended key usages. Valid values can be found at
 https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 -- simply drop the "ExtKeyUsage" part of the name.
-To remove all key usages from being set, set
-this value to an empty list.`,
+Also you can use constants from this module (like 1, 5,8) direct or use OIDs (like 1.3.6.1.5.5.7.3.4)`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -389,6 +390,7 @@ func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request
 func checkAgainstVenafiPolicy(
 	req *logical.Request,
 	role *roleEntry,
+	isCA bool,
 	csr *x509.CertificateRequest,
 	cn string,
 	ipAddresses, email, sans []string) error {
@@ -482,7 +484,23 @@ func checkAgainstVenafiPolicy(
 		if !checkStringArrByRegexp(csr.Subject.Province, policy.SubjectSTRegexes) {
 			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", role.Locality, policy.SubjectLRegexes)
 		}
-		//todo: csr check key type
+		keyValid := true
+		if csr.PublicKeyAlgorithm == x509.RSA {
+			pubkey, ok := csr.PublicKey.(*rsa.PublicKey)
+			if ok {
+				keyValid = checkKey("rsa", pubkey.Size(), "", policy.AllowedKeyConfigurations)
+			} else {
+				log.Println("invalid key in csr")
+			}
+		} else if csr.PublicKeyAlgorithm == x509.ECDSA {
+			pubkey, ok := csr.PublicKey.(*ecdsa.PublicKey)
+			if ok {
+				keyValid = checkKey("ecdsa", 0, pubkey.Curve.Params().Name, policy.AllowedKeyConfigurations)
+			}
+		}
+		if !keyValid {
+			return fmt.Errorf("key type not compatible vith Venafi policies")
+		}
 	} else {
 		log.Printf("Checking creation bundle against policy %s", policyConfigPath)
 		if !checkStringArrByRegexp(role.Organization, policy.SubjectOURegexes) {
@@ -504,7 +522,7 @@ func checkAgainstVenafiPolicy(
 		if !checkStringArrByRegexp(role.Province, policy.SubjectSTRegexes) {
 			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", role.Locality, policy.SubjectLRegexes)
 		}
-		if !checkKey(role.KeyType, role.KeyBits, policy.AllowedKeyConfigurations) {
+		if !checkKey(role.KeyType, role.KeyBits, "", policy.AllowedKeyConfigurations) {
 			return fmt.Errorf("key type not compatible vith Venafi policies")
 		}
 
@@ -517,15 +535,17 @@ func checkAgainstVenafiPolicy(
 	if err != nil {
 		return err
 	}
-	//todo: need skip this check for CA or adopt checking for ca
-	if !compareEkuList(extKeyUsage, policyConfig.ExtKeyUsage) {
-		return fmt.Errorf("different eku in Venafi policy config and role")
+	if !isCA { //todo: some eku may be specified for CA
+
+		if !compareEkuList(extKeyUsage, policyConfig.ExtKeyUsage) {
+			return fmt.Errorf("different eku in Venafi policy config and role")
+		}
 	}
 
 	return nil
 }
 
-func checkKey(keyType string, bitsize int, allowed []endpoint.AllowedKeyConfiguration) (valid bool) {
+func checkKey(keyType string, bitsize int, curve string, allowed []endpoint.AllowedKeyConfiguration) (valid bool) {
 	for _, allowedKey := range allowed {
 		if allowedKey.KeyType.String() == strings.ToUpper(keyType) {
 			switch allowedKey.KeyType {
