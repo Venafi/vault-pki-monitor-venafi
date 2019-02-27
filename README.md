@@ -308,6 +308,8 @@ that restrictions are working):
 
 ## Developer Quickstart (Linux only)
 
+1. We supportiong Go versions from 1.11
+
 1. Export your Venafi Platform configuration variables:
     ```
     export TPPUSER=<WebSDK User for Venafi Platform, e.g. "admin">
@@ -319,8 +321,8 @@ that restrictions are working):
     * Use double-quotes if there are spaces in the policy folder name: `export TPPZONE="Vault Import"`
     * Double escape backslashes (4 total) if you have nested policy folders: `export TPPZONE="DevOps\\\\Vault Import"`
 
-2. Run `make dev_server` to start Vault server.
+1. Run `make dev_server` to start Vault server.
 
-3. Run `make dev` to build and enable the `vault-pki-monitor-venafi` plugin.
+1. Run `make dev` to build and enable the `vault-pki-monitor-venafi` plugin.
 
-4. Run `make import` to sign a random certificate and import it to the Venafi Platform.
+1. Run `make import` to sign a random certificate and import it to the Venafi Platform.
