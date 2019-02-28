@@ -459,10 +459,13 @@ func checkAgainstVenafiPolicy(
 		if !checkStringArrByRegexp(csr.DNSNames, policy.DnsSanRegExs) {
 			return fmt.Errorf("DNS sans %v doesn't match regexps: %v", sans, policy.DnsSanRegExs)
 		}
-		//TODO: parse IP to string
-		//if !checkStringArrByRegexp(csr.IPAddresses, policy.IpSanRegExs) {
-		//	return fmt.Errorf("IPs %v doesn't match regexps: %v", ipAddresses, policy.IpSanRegExs)
-		//}
+		ips := make([]string, len(csr.IPAddresses))
+		for i, ip := range csr.IPAddresses {
+			ips[i] = ip.String()
+		}
+		if !checkStringArrByRegexp(ips, policy.IpSanRegExs) {
+			return fmt.Errorf("IPs %v doesn't match regexps: %v", ipAddresses, policy.IpSanRegExs)
+		}
 
 		if !checkStringArrByRegexp(csr.Subject.Organization, policy.SubjectOURegexes) {
 			return fmt.Errorf("Organization %v doesn't match regexps: %v", role.Organization, policy.SubjectOURegexes)
@@ -549,8 +552,7 @@ func checkKey(keyType string, bitsize int, curve string, allowed []endpoint.Allo
 		if allowedKey.KeyType.String() == strings.ToUpper(keyType) {
 			switch allowedKey.KeyType {
 			case certificate.KeyTypeRSA:
-				//todo: check bitsize
-				return true
+				return intInSlice(bitsize, allowedKey.KeySizes)
 			case certificate.KeyTypeECDSA:
 				//todo: check curve
 				return true
@@ -559,7 +561,7 @@ func checkKey(keyType string, bitsize int, curve string, allowed []endpoint.Allo
 			}
 		}
 	}
-	return true
+	return
 }
 
 func checkStringByRegexp(s string, regexs []string) (matched bool) {
