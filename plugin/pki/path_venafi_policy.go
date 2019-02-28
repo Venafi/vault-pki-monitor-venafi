@@ -432,25 +432,11 @@ func checkAgainstVenafiPolicy(
 		log.Printf("error reading Venafi policy configuration: %s", err)
 		return err
 	}
-	log.Printf("Checking creation bundle against policy %s", policyConfigPath)
-
-	if !checkStringByRegexp(cn, policy.SubjectCNRegexes) {
-		return fmt.Errorf("common name %s doesn't match regexps: %v", cn, policy.SubjectCNRegexes)
-	}
-	if !checkStringArrByRegexp(email, policy.EmailSanRegExs) {
-		return fmt.Errorf("Emails %v doesn't match regexps: %v", email, policy.EmailSanRegExs)
-	}
-	if !checkStringArrByRegexp(sans, policy.DnsSanRegExs) {
-		return fmt.Errorf("DNS sans %v doesn't match regexps: %v", sans, policy.DnsSanRegExs)
-	}
-	if !checkStringArrByRegexp(ipAddresses, policy.IpSanRegExs) {
-		return fmt.Errorf("IPs %v doesn't match regexps: %v", ipAddresses, policy.IpSanRegExs)
-	}
 
 	if csr != nil {
 		log.Printf("Checking CSR against policy %s", policyConfigPath)
 
-		if !checkStringByRegexp(csr.Subject.CommonName, policy.SubjectCNRegexes) {
+		if !isCA && !checkStringByRegexp(csr.Subject.CommonName, policy.SubjectCNRegexes) {
 			return fmt.Errorf("common name %s doesn't match regexps: %v", cn, policy.SubjectCNRegexes)
 		}
 		if !checkStringArrByRegexp(csr.EmailAddresses, policy.EmailSanRegExs) {
@@ -505,6 +491,20 @@ func checkAgainstVenafiPolicy(
 		}
 	} else {
 		log.Printf("Checking creation bundle against policy %s", policyConfigPath)
+
+		if !isCA && !checkStringByRegexp(cn, policy.SubjectCNRegexes) {
+			return fmt.Errorf("common name %s doesn't match regexps: %v", cn, policy.SubjectCNRegexes)
+		}
+		if !checkStringArrByRegexp(email, policy.EmailSanRegExs) {
+			return fmt.Errorf("Emails %v doesn't match regexps: %v", email, policy.EmailSanRegExs)
+		}
+		if !checkStringArrByRegexp(sans, policy.DnsSanRegExs) {
+			return fmt.Errorf("DNS sans %v doesn't match regexps: %v", sans, policy.DnsSanRegExs)
+		}
+		if !checkStringArrByRegexp(ipAddresses, policy.IpSanRegExs) {
+			return fmt.Errorf("IPs %v doesn't match regexps: %v", ipAddresses, policy.IpSanRegExs)
+		}
+
 		if !checkStringArrByRegexp(role.Organization, policy.SubjectOURegexes) {
 			return fmt.Errorf("Organization unit %v doesn't match regexps: %v", role.Organization, policy.SubjectOURegexes)
 		}
