@@ -476,7 +476,7 @@ func checkAgainstVenafiPolicy(
 		if csr.PublicKeyAlgorithm == x509.RSA {
 			pubkey, ok := csr.PublicKey.(*rsa.PublicKey)
 			if ok {
-				keyValid = checkKey("rsa", pubkey.Size(), "", policy.AllowedKeyConfigurations)
+				keyValid = checkKey("rsa", pubkey.Size()*8, "", policy.AllowedKeyConfigurations)
 			} else {
 				log.Println("invalid key in csr")
 			}
