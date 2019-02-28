@@ -32,27 +32,7 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	policyData := map[string]interface{}{
-		"tpp_url":           os.Getenv("TPPURL"),
-		"tpp_user":          os.Getenv("TPPUSER"),
-		"tpp_password":      os.Getenv("TPPPASSWORD"),
-		"zone":              os.Getenv("TPPZONE"),
-		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-	}
-
-	log.Println("Writing Venafi policy configuration")
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "venafi-policy/default",
-		Storage:   storage,
-		Data:      policyData,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to configure venafi policy, %#v", resp)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
+	writePolicy(b, storage, writePolicyStep.Data, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -60,7 +40,7 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 		"ttl":         "6h",
 	}
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/generate/internal",
 		Storage:   storage,
@@ -103,7 +83,7 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 		"tpp_url":            os.Getenv("TPPURL"),
 		"tpp_user":           os.Getenv("TPPUSER"),
 		"tpp_password":       os.Getenv("TPPPASSWORD"),
-		"zone":               os.Getenv("TPPZONE"),
+		"zone":               os.Getenv("TPPALLALLOWZONE"),
 		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
 		"tpp_import_timeout": 2,
 		"tpp_import_workers": 2,
@@ -152,7 +132,7 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 		Credentials: &endpoint.Authentication{
 			User:     os.Getenv("TPPUSER"),
 			Password: os.Getenv("TPPPASSWORD")},
-		Zone:       os.Getenv("TPPZONE"),
+		Zone:       os.Getenv("TPPALLALLOWZONE"),
 		LogVerbose: true,
 	}
 
@@ -196,27 +176,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	policyData := map[string]interface{}{
-		"tpp_url":           os.Getenv("TPPURL"),
-		"tpp_user":          os.Getenv("TPPUSER"),
-		"tpp_password":      os.Getenv("TPPPASSWORD"),
-		"zone":              os.Getenv("TPPZONE"),
-		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-	}
-
-	log.Println("Writing Venafi policy configuration")
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "venafi-policy/default",
-		Storage:   storage,
-		Data:      policyData,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to configure venafi policy, %#v", resp)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
+	writePolicy(b, storage, writePolicyStep.Data, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -224,7 +184,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		"ttl":         "6h",
 	}
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/generate/internal",
 		Storage:   storage,
@@ -267,7 +227,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		"tpp_url":            os.Getenv("TPPURL"),
 		"tpp_user":           os.Getenv("TPPUSER"),
 		"tpp_password":       os.Getenv("TPPPASSWORD"),
-		"zone":               os.Getenv("TPPZONE"),
+		"zone":               os.Getenv("TPPALLALLOWZONE"),
 		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
 		"tpp_import_timeout": 1,
 		"tpp_import_workers": 2,
@@ -319,7 +279,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 			Credentials: &endpoint.Authentication{
 				User:     os.Getenv("TPPUSER"),
 				Password: os.Getenv("TPPPASSWORD")},
-			Zone:       os.Getenv("TPPZONE"),
+			Zone:       os.Getenv("TPPALLALLOWZONE"),
 			LogVerbose: true,
 		}
 
@@ -367,27 +327,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	policyData := map[string]interface{}{
-		"tpp_url":           os.Getenv("TPPURL"),
-		"tpp_user":          os.Getenv("TPPUSER"),
-		"tpp_password":      os.Getenv("TPPPASSWORD"),
-		"zone":              os.Getenv("TPPZONE"),
-		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-	}
-
-	log.Println("Writing Venafi policy configuration")
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "venafi-policy/default",
-		Storage:   storage,
-		Data:      policyData,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to configure venafi policy, %#v", resp)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
+	writePolicy(b, storage, writePolicyStep.Data, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -395,7 +335,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		"ttl":         "6h",
 	}
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/generate/internal",
 		Storage:   storage,
@@ -438,7 +378,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		"tpp_url":            os.Getenv("TPPURL"),
 		"tpp_user":           os.Getenv("TPPUSER"),
 		"tpp_password":       os.Getenv("TPPPASSWORD"),
-		"zone":               os.Getenv("TPPZONE"),
+		"zone":               os.Getenv("TPPALLALLOWZONE"),
 		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
 		"tpp_import_timeout": 2,
 		"tpp_import_workers": 5,

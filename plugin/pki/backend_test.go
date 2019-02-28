@@ -68,6 +68,7 @@ func TestPKI_RequireCN(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicyToClient(client, t)
 
 	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
@@ -152,7 +153,7 @@ func TestBackend_CSRValues(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps:          []logicaltest.TestStep{},
+		Steps:          []logicaltest.TestStep{writePolicyStep},
 	}
 
 	intdata := map[string]interface{}{}
@@ -179,7 +180,7 @@ func TestBackend_URLsCRUD(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps:          []logicaltest.TestStep{},
+		Steps:          []logicaltest.TestStep{writePolicyStep},
 	}
 
 	intdata := map[string]interface{}{}
@@ -209,7 +210,7 @@ func TestBackend_RSARoles(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{
+		Steps: []logicaltest.TestStep{writePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -250,7 +251,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{
+		Steps: []logicaltest.TestStep{writePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -291,7 +292,7 @@ func TestBackend_ECRoles(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{
+		Steps: []logicaltest.TestStep{writePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -332,7 +333,7 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{
+		Steps: []logicaltest.TestStep{writePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -1434,7 +1435,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	writePolicy(b, storage, writePolicyStep.Data, t)
 	// generate root
 	rootData := map[string]interface{}{
 		"common_name": "test.com",
@@ -1561,6 +1562,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicy(b, storage, writePolicyStep.Data, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -1759,6 +1761,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicyToClient(client, t)
 
 	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
@@ -1869,6 +1872,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicyToClient(client, t)
 
 	// Direct issuing from root
 	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
@@ -1941,6 +1945,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicy(b, storage, writePolicyStep.Data, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -2139,6 +2144,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicyToClient(client, t)
 
 	var resp *api.Secret
 	var certStr string
@@ -2358,6 +2364,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicyToClient(client, t)
 
 	var resp *api.Secret
 	var certStr string
@@ -2481,6 +2488,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicyToClient(client, t)
 
 	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",

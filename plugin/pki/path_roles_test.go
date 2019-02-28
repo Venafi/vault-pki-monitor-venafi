@@ -10,6 +10,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+//todo: loo
 func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -560,6 +561,7 @@ func TestPki_RoleNoStore(t *testing.T) {
 		"allowed_domains": "myvault.com",
 		"ttl":             "5h",
 	}
+	writePolicy(b, storage, writePolicyStep.Data, t)
 
 	roleReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -663,6 +665,7 @@ func TestPki_CertsLease(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
+	writePolicy(b, storage, writePolicyStep.Data, t)
 
 	caData := map[string]interface{}{
 		"common_name": "myvault.com",

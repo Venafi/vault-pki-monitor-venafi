@@ -549,7 +549,9 @@ func checkAgainstVenafiPolicy(
 
 func checkKey(keyType string, bitsize int, curve string, allowed []endpoint.AllowedKeyConfiguration) (valid bool) {
 	for _, allowedKey := range allowed {
-		if allowedKey.KeyType.String() == strings.ToUpper(keyType) {
+		var kt certificate.KeyType
+		kt.Set(keyType)
+		if allowedKey.KeyType == kt {
 			switch allowedKey.KeyType {
 			case certificate.KeyTypeRSA:
 				return intInSlice(bitsize, allowedKey.KeySizes)
