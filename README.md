@@ -68,7 +68,7 @@ It is not common for the Venafi Platform's REST API (WebSDK) to be secured using
         tpp_password="password" \
         zone="DevOps\\Vault Monitor" \
         trust_bundle_file="/opt/venafi/bundle.pem" \
-        generate_lease=true store_by_cn=true store_pkey=true store_by_serial=true ttl=1h max_ttl=1h \
+        generate_lease=true ttl=1h max_ttl=1h \
         allowed_domains=example.com \
         allow_subdomains=true
     ```
@@ -275,7 +275,7 @@ that restrictions are working):
 1. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `pki` backend:
     ```
     vault write pki/roles/venafi-policy \
-        generate_lease=true store_by_cn=true store_pkey=true store_by_serial=true ttl=1h max_ttl=1h \
+        generate_lease=true ttl=1h max_ttl=1h \
         allowed_domains=venafi.com,example.com \
         allow_subdomains=true
     ```
@@ -302,7 +302,13 @@ that restrictions are working):
     vault write pki/sign/venafi-policy csr=@test_example_com.csr
     ```
 
+### See it at asciinema:
+
+[![asciicast](https://asciinema.org/a/T6DKJ1gu2B2s22AIglJCsxTkd.svg)](https://asciinema.org/a/T6DKJ1gu2B2s22AIglJCsxTkd)
+
 ## Developer Quickstart (Linux only)
+
+1. We supportiong Go versions from 1.11
 
 1. Export your Venafi Platform configuration variables:
     ```
@@ -315,8 +321,8 @@ that restrictions are working):
     * Use double-quotes if there are spaces in the policy folder name: `export TPPZONE="Vault Import"`
     * Double escape backslashes (4 total) if you have nested policy folders: `export TPPZONE="DevOps\\\\Vault Import"`
 
-2. Run `make dev_server` to start Vault server.
+1. Run `make dev_server` to start Vault server.
 
-3. Run `make dev` to build and enable the `vault-pki-monitor-venafi` plugin.
+1. Run `make dev` to build and enable the `vault-pki-monitor-venafi` plugin.
 
-4. Run `make import` to sign a random certificate and import it to the Venafi Platform.
+1. Run `make import` to sign a random certificate and import it to the Venafi Platform.
