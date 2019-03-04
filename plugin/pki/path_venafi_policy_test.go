@@ -56,7 +56,7 @@ jM0aRZ4bdyObnjtOEUFktgRNNA==
 -----END CERTIFICATE REQUEST-----
 `
 
-var writePolicyStep = logicaltest.TestStep{
+var venafiCreateSimplePolicyStep = logicaltest.TestStep{
 	Operation: logical.UpdateOperation,
 	Path:      venafiPolicyPath + defaultVenafiPolicyName,
 	Data: map[string]interface{}{
@@ -74,7 +74,7 @@ func makeVenafiCloudConfig() (domain string, policyData map[string]interface{}) 
 	policyData = map[string]interface{}{
 		"cloud_url": os.Getenv("CLOUDURL"),
 		"apikey":    os.Getenv("CLOUDAPIKEY"),
-		"zone":      os.Getenv("CLOUDZONE"),
+		"zone":      os.Getenv("CLOUDRESTRICTEDZONE"),
 	}
 	return
 }
@@ -86,7 +86,7 @@ func makeVenafiTPPConfig() (domain string, policyData map[string]interface{}) {
 		"tpp_url":           os.Getenv("TPPURL"),
 		"tpp_user":          os.Getenv("TPPUSER"),
 		"tpp_password":      os.Getenv("TPPPASSWORD"),
-		"zone":              os.Getenv("TPPZONE"),
+		"zone":              os.Getenv("TPPRESTRICTEDZONE"),
 		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
 	}
 	return
@@ -235,8 +235,8 @@ func writePolicy(b *backend, storage logical.Storage, policyData map[string]inte
 	return resp
 }
 
-func writePolicyToClient(client *api.Client, t *testing.T) {
-	_, err := client.Logical().Write("pki/"+venafiPolicyPath+defaultVenafiPolicyName, writePolicyStep.Data)
+func writePolicyToClient(mountPoint string, client *api.Client, t *testing.T) {
+	_, err := client.Logical().Write(mountPoint+"/"+venafiPolicyPath+defaultVenafiPolicyName, venafiCreateSimplePolicyStep.Data)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -32,7 +32,7 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	writePolicy(b, storage, writePolicyStep.Data, t)
+	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -176,7 +176,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	writePolicy(b, storage, writePolicyStep.Data, t)
+	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -327,7 +327,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	writePolicy(b, storage, writePolicyStep.Data, t)
+	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
 
 	// generate root
 	rootData := map[string]interface{}{
