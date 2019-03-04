@@ -2,15 +2,17 @@ package pki
 
 import (
 	"context"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/logical"
+	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"log"
 	"os"
 	"strings"
 	"testing"
 )
 
-const msg_denied_by_policy  = "certificate issue should be denied by policy, %#v"
-const wrong_csr  = `-----BEGIN CERTIFICATE REQUEST-----
+const msg_denied_by_policy = "certificate issue should be denied by policy, %#v"
+const wrong_csr = `-----BEGIN CERTIFICATE REQUEST-----
 MIICYDCCAUgCAQAwGzEZMBcGA1UEAwwQdGVzdC53cm9uZy53cm9uZzCCASIwDQYJ
 KoZIhvcNAQEBBQADggEPADCCAQoCggEBALjZph++4eMekq0gQyCHr9sU3vF7hu6C
 9j+BpAGHIuaIcfTSPV6JeZVgmUy5aDb0vAx4s76oXsM9VWpdTz7oU70S4wZCrKl9
@@ -54,54 +56,69 @@ jM0aRZ4bdyObnjtOEUFktgRNNA==
 -----END CERTIFICATE REQUEST-----
 `
 
-func TestBackend_VenafiPolicyTPP(t *testing.T) {
-	rand := randSeq(9)
-	domain := "vfidev.com"
+var writePolicyStep = logicaltest.TestStep{
+	Operation: logical.UpdateOperation,
+	Path:      venafiPolicyPath + defaultVenafiPolicyName,
+	Data: map[string]interface{}{
+		"tpp_url":           os.Getenv("TPPURL"),
+		"tpp_user":          os.Getenv("TPPUSER"),
+		"tpp_password":      os.Getenv("TPPPASSWORD"),
+		"zone":              os.Getenv("TPPALLALLOWZONE"),
+		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+	},
+}
+
+func makeVenafiCloudConfig() (domain string, policyData map[string]interface{}) {
+	domain = "vfidev.com"
 	// Configure Venafi default policy
-	policyData := map[string]interface{}{
+	policyData = map[string]interface{}{
+		"cloud_url": os.Getenv("CLOUDURL"),
+		"apikey":    os.Getenv("CLOUDAPIKEY"),
+		"zone":      os.Getenv("CLOUDZONE"),
+	}
+	return
+}
+
+func makeVenafiTPPConfig() (domain string, policyData map[string]interface{}) {
+	domain = "vfidev.com"
+	// Configure Venafi default policy
+	policyData = map[string]interface{}{
 		"tpp_url":           os.Getenv("TPPURL"),
 		"tpp_user":          os.Getenv("TPPUSER"),
 		"tpp_password":      os.Getenv("TPPPASSWORD"),
 		"zone":              os.Getenv("TPPZONE"),
 		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
 	}
-
-	VenafiPolicyTests(t, policyData, rand, domain, "tpp")
+	return
 }
 
-func TestBackend_VenafiPolicyCloud(t *testing.T) {
-	rand := randSeq(9)
-	domain := "vfidev.com"
-	// Configure Venafi default policy
-	policyData := map[string]interface{}{
-		"cloud_url": os.Getenv("CLOUDURL"),
-		"apikey":    os.Getenv("CLOUDAPIKEY"),
-		"zone":      os.Getenv("CLOUDZONE"),
-	}
-	domain = "vfidev.com"
-	// create a role entry with default policy
-
-	VenafiPolicyTests(t, policyData,rand, domain, "cloud")
+func TestVenafiPolicyCloud(t *testing.T) {
+	domain, policyData := makeVenafiCloudConfig()
+	venafiPolicyTests(t, policyData, domain)
 }
 
-func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand string, domain string, endpoint string) {
+func TestVenafiPolicyTPP(t *testing.T) {
+	domain, policyData := makeVenafiTPPConfig()
+	venafiPolicyTests(t, policyData, domain)
+}
 
-	// create the backend
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
+func TestVenafiPolicyCloudSignBeforeConfigure(t *testing.T) {
+	domain, _ := makeVenafiCloudConfig()
+	venafiPolicyTestSignBeforeConfigure(t, domain)
+}
 
-	b := Backend(config)
-	err := b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
+func TestVenafiPolicyTPPSignBeforeConfigure(t *testing.T) {
+	domain, _ := makeVenafiCloudConfig()
+	venafiPolicyTestSignBeforeConfigure(t, domain)
+}
 
+func venafiPolicyTestSignBeforeConfigure(t *testing.T, domain string) {
+	b, storage := createBackendWithStorage(t)
 	rootData := map[string]interface{}{
 		"common_name": domain,
 		"ttl":         "6h",
 	}
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+	resp, _ := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/generate/internal",
 		Storage:   storage,
@@ -113,23 +130,23 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 	if resp.Error() == nil {
 		t.Fatalf("Should fail to generate root before configuring policy")
 	}
+}
 
-	log.Println("Writing Venafi policy configuration")
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "venafi-policy/default",
-		Storage:   storage,
-		Data:      policyData,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to configure venafi policy, %#v", resp)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatalf("after write policy should be on output, but response is nil: %#v", resp)
-	}
+func TestVenafiPolicyCloudWriteAndReadPolicy(t *testing.T) {
+	_, policyData := makeVenafiCloudConfig()
+	venafiPolicyWriteAndReadTest(t, policyData)
+}
+
+func TestVenafiPolicyTPPWriteAndReadPolicy(t *testing.T) {
+	_, policyData := makeVenafiCloudConfig()
+	venafiPolicyWriteAndReadTest(t, policyData)
+}
+
+func venafiPolicyWriteAndReadTest(t *testing.T, policyData map[string]interface{}) {
+	// create the backend
+	b, storage := createBackendWithStorage(t)
+
+	resp := writePolicy(b, storage, policyData, t)
 
 	log.Println("After write policy should be on output")
 	for key, value := range resp.Data {
@@ -137,14 +154,14 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 	}
 
 	log.Println("Read saved policy configuration")
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "venafi-policy/default",
+		Path:      venafiPolicyPath + defaultVenafiPolicyName,
 		Storage:   storage,
 	})
 
 	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to read venafi policy from venafi-policy/default/policy, %#v", resp)
+		t.Fatalf("failed to read venafi policy from "+venafiPolicyPath+defaultVenafiPolicyName+"/policy, %#v", resp)
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -162,12 +179,12 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 	log.Println("Read saved Venafi policy content")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "venafi-policy/default/policy",
+		Path:      venafiPolicyPath + defaultVenafiPolicyName + "/policy",
 		Storage:   storage,
 	})
 
 	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to read venafi policy from venafi-policy/default/policy, %#v", resp)
+		t.Fatalf("failed to read venafi policy from "+venafiPolicyPath+defaultVenafiPolicyName+"policy, %#v", resp)
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -180,7 +197,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 	log.Println("Read Venafi policy content from wrong path")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "venafi-policy/wrong-path/policy",
+		Path:      venafiPolicyPath + "wrong-path/policy",
 		Storage:   storage,
 	})
 
@@ -189,12 +206,47 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 	}
 
 	if resp.Data["error"] != "policy data is nil. Looks like it doesn't exists." {
-		t.Fatalf("should faile to read venafi policy from venafi-policy/wrong-path/policy, %#v", resp)
+		t.Fatalf("should faile to read venafi policy from "+venafiPolicyPath+"wrong-path/policy, %#v", resp)
 	}
 
 	for key, value := range resp.Data {
 		log.Println(key, ":", value)
 	}
+
+}
+
+func writePolicy(b *backend, storage logical.Storage, policyData map[string]interface{}, t *testing.T) *logical.Response {
+	log.Println("Writing Venafi policy configuration")
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      venafiPolicyPath + defaultVenafiPolicyName,
+		Storage:   storage,
+		Data:      policyData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to configure venafi policy, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatalf("after write policy should be on output, but response is nil: %#v", resp)
+	}
+	return resp
+}
+
+func writePolicyToClient(client *api.Client, t *testing.T) {
+	_, err := client.Logical().Write("pki/"+venafiPolicyPath+defaultVenafiPolicyName, writePolicyStep.Data)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain string) {
+	// create the backend
+	rand := randSeq(9)
+	b, storage := createBackendWithStorage(t)
+	writePolicy(b, storage, policyData, t)
 
 	log.Println("Setting up role")
 	roleData := map[string]interface{}{
@@ -205,7 +257,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 		"generate_lease":     true,
 	}
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test-venafi-policy",
 		Storage:   storage,
@@ -218,7 +270,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 		t.Fatal(err)
 	}
 
-	rootData = map[string]interface{}{
+	rootData := map[string]interface{}{
 		"common_name": "ca." + domain,
 		"ttl":         "6h",
 	}
@@ -298,10 +350,10 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 
 	wrong_params := map[string]string{
 		"organization": "Wrong Organization",
-		"ou": "Wrong Organization Unit",
-		"locality": "Wrong Locality",
-		"province": "Wrong State",
-		"country": "Wrong Country",
+		"ou":           "Wrong Organization Unit",
+		"locality":     "Wrong Locality",
+		"province":     "Wrong State",
+		"country":      "Wrong Country",
 	}
 
 	for key, value := range wrong_params {
@@ -312,7 +364,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 			"max_ttl":            "4h",
 			"allow_bare_domains": true,
 			"generate_lease":     true,
-			key: value,
+			key:                  value,
 		}
 
 		resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -414,7 +466,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 	log.Println("Writing second Venafi policy configuration")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "venafi-policy/second",
+		Path:      venafiPolicyPath + "second",
 		Storage:   storage,
 		Data:      policyData,
 	})
@@ -431,7 +483,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 	log.Println("Listing Venafi policies")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
-		Path:      "venafi-policy/",
+		Path:      venafiPolicyPath,
 		Storage:   storage,
 	})
 	if resp != nil && resp.IsError() {
@@ -448,7 +500,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 	log.Println("Deleting Venafi policy default")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.DeleteOperation,
-		Path:      "venafi-policy/default",
+		Path:      venafiPolicyPath + defaultVenafiPolicyName,
 		Storage:   storage,
 	})
 	if resp != nil && resp.IsError() {
@@ -462,7 +514,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 	log.Println("Listing Venafi policies")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
-		Path:      "venafi-policy/",
+		Path:      venafiPolicyPath,
 		Storage:   storage,
 	})
 	if resp != nil && resp.IsError() {
@@ -514,7 +566,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 	log.Println("Deleting Venafi policy second")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.DeleteOperation,
-		Path:      "venafi-policy/second",
+		Path:      venafiPolicyPath + "second",
 		Storage:   storage,
 	})
 	if resp != nil && resp.IsError() {
@@ -528,7 +580,7 @@ func VenafiPolicyTests(t *testing.T, policyData map[string]interface{}, rand str
 	log.Println("Listing Venafi policies")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ListOperation,
-		Path:      "venafi-policy/",
+		Path:      venafiPolicyPath,
 		Storage:   storage,
 	})
 	if resp != nil && resp.IsError() {
