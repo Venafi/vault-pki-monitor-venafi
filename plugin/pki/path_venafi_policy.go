@@ -102,7 +102,6 @@ func pathVenafiPolicyContent(b *backend) *framework.Path {
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.pathReadVenafiPolicyContent,
-			//TODO: add logical.UpdateOperation which will get policy update from Venafi
 			logical.UpdateOperation: b.pathUpdateVenafiPolicyContent,
 		},
 
