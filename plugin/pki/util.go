@@ -205,7 +205,7 @@ func checkStringArrByRegexp(ss []string, regexs []string) (matched bool) {
 			return false
 		}
 	}
-	return false
+	return true
 }
 
 func ecdsaCurvesSizesToName(bitLen int) string {
