@@ -512,11 +512,11 @@ func checkAgainstVenafiPolicy(
 		}
 
 		if !checkStringArrByRegexp(role.Organization, policy.SubjectORegexes, false) {
-			return fmt.Errorf("Organization unit %v doesn't match regexps: %v", role.Organization, policy.SubjectOURegexes)
+			return fmt.Errorf("Organization %v doesn't match regexps: %v", role.Organization, policy.SubjectORegexes)
 		}
 
 		if !checkStringArrByRegexp(role.OU, policy.SubjectOURegexes, false) {
-			return fmt.Errorf("Organization Unit %v doesn't match regexps: %v", role.Organization, policy.SubjectORegexes)
+			return fmt.Errorf("Organization Unit %v doesn't match regexps: %v", role.OU, policy.SubjectOURegexes)
 		}
 
 		if !checkStringArrByRegexp(role.Country, policy.SubjectCRegexes, false) {
