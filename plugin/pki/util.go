@@ -196,7 +196,10 @@ func checkStringByRegexp(s string, regexs []string) (matched bool) {
 	return
 }
 
-func checkStringArrByRegexp(ss []string, regexs []string) (matched bool) {
+func checkStringArrByRegexp(ss []string, regexs []string, optional bool) (matched bool) {
+	if optional && len(ss) == 0 {
+		return true
+	}
 	if len(ss) == 0 {
 		ss = []string{""}
 	}
