@@ -439,43 +439,43 @@ func checkAgainstVenafiPolicy(
 		if !isCA && !checkStringByRegexp(csr.Subject.CommonName, policy.SubjectCNRegexes) {
 			return fmt.Errorf("common name %s doesn't match regexps: %v", cn, policy.SubjectCNRegexes)
 		}
-		if !checkStringArrByRegexp(csr.EmailAddresses, policy.EmailSanRegExs) {
+		if !checkStringArrByRegexp(csr.EmailAddresses, policy.EmailSanRegExs, true) {
 			return fmt.Errorf("Emails %v doesn't match regexps: %v", email, policy.EmailSanRegExs)
 		}
-		if !checkStringArrByRegexp(csr.DNSNames, policy.DnsSanRegExs) {
+		if !checkStringArrByRegexp(csr.DNSNames, policy.DnsSanRegExs, true) {
 			return fmt.Errorf("DNS sans %v doesn't match regexps: %v", csr.DNSNames, policy.DnsSanRegExs)
 		}
 		ips := make([]string, len(csr.IPAddresses))
 		for i, ip := range csr.IPAddresses {
 			ips[i] = ip.String()
 		}
-		if !checkStringArrByRegexp(ips, policy.IpSanRegExs) {
+		if !checkStringArrByRegexp(ips, policy.IpSanRegExs, true) {
 			return fmt.Errorf("IPs %v doesn't match regexps: %v", ipAddresses, policy.IpSanRegExs)
 		}
 		uris := make([]string, len(csr.URIs))
 		for i, uri := range csr.URIs {
 			uris[i] = uri.String()
 		}
-		if !checkStringArrByRegexp(uris, policy.UriSanRegExs) {
+		if !checkStringArrByRegexp(uris, policy.UriSanRegExs, true) {
 			return fmt.Errorf("URIs %v doesn't match regexps: %v", uris, policy.UriSanRegExs)
 		}
-		if !checkStringArrByRegexp(csr.Subject.Organization, policy.SubjectORegexes) {
+		if !checkStringArrByRegexp(csr.Subject.Organization, policy.SubjectORegexes, false) {
 			return fmt.Errorf("Organization %v doesn't match regexps: %v", role.Organization, policy.SubjectORegexes)
 		}
 
-		if !checkStringArrByRegexp(csr.Subject.OrganizationalUnit, policy.SubjectOURegexes) {
+		if !checkStringArrByRegexp(csr.Subject.OrganizationalUnit, policy.SubjectOURegexes, false) {
 			return fmt.Errorf("Organization Unit %v doesn't match regexps: %v", csr.Subject.OrganizationalUnit, policy.SubjectOURegexes)
 		}
 
-		if !checkStringArrByRegexp(csr.Subject.Country, policy.SubjectCRegexes) {
+		if !checkStringArrByRegexp(csr.Subject.Country, policy.SubjectCRegexes, false) {
 			return fmt.Errorf("Country %v doesn't match regexps: %v", csr.Subject.Country, policy.SubjectCRegexes)
 		}
 
-		if !checkStringArrByRegexp(csr.Subject.Locality, policy.SubjectLRegexes) {
+		if !checkStringArrByRegexp(csr.Subject.Locality, policy.SubjectLRegexes, false) {
 			return fmt.Errorf("Location %v doesn't match regexps: %v", csr.Subject.Locality, policy.SubjectLRegexes)
 		}
 
-		if !checkStringArrByRegexp(csr.Subject.Province, policy.SubjectSTRegexes) {
+		if !checkStringArrByRegexp(csr.Subject.Province, policy.SubjectSTRegexes, false) {
 			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", csr.Subject.Province, policy.SubjectSTRegexes)
 		}
 		keyValid := true
@@ -501,33 +501,33 @@ func checkAgainstVenafiPolicy(
 		if !isCA && !checkStringByRegexp(cn, policy.SubjectCNRegexes) {
 			return fmt.Errorf("common name %s doesn't match regexps: %v", cn, policy.SubjectCNRegexes)
 		}
-		if !checkStringArrByRegexp(email, policy.EmailSanRegExs) {
+		if !checkStringArrByRegexp(email, policy.EmailSanRegExs, true) {
 			return fmt.Errorf("Emails %v doesn't match regexps: %v", email, policy.EmailSanRegExs)
 		}
-		if !checkStringArrByRegexp(sans, policy.DnsSanRegExs) {
+		if !checkStringArrByRegexp(sans, policy.DnsSanRegExs, true) {
 			return fmt.Errorf("DNS sans %v doesn't match regexps: %v", sans, policy.DnsSanRegExs)
 		}
-		if !checkStringArrByRegexp(ipAddresses, policy.IpSanRegExs) {
+		if !checkStringArrByRegexp(ipAddresses, policy.IpSanRegExs, true) {
 			return fmt.Errorf("IPs %v doesn't match regexps: %v", ipAddresses, policy.IpSanRegExs)
 		}
 
-		if !checkStringArrByRegexp(role.Organization, policy.SubjectORegexes) {
+		if !checkStringArrByRegexp(role.Organization, policy.SubjectORegexes, false) {
 			return fmt.Errorf("Organization unit %v doesn't match regexps: %v", role.Organization, policy.SubjectOURegexes)
 		}
 
-		if !checkStringArrByRegexp(role.OU, policy.SubjectOURegexes) {
+		if !checkStringArrByRegexp(role.OU, policy.SubjectOURegexes, false) {
 			return fmt.Errorf("Organization Unit %v doesn't match regexps: %v", role.Organization, policy.SubjectORegexes)
 		}
 
-		if !checkStringArrByRegexp(role.Country, policy.SubjectCRegexes) {
+		if !checkStringArrByRegexp(role.Country, policy.SubjectCRegexes, false) {
 			return fmt.Errorf("Country %v doesn't match regexps: %v", role.Country, policy.SubjectCRegexes)
 		}
 
-		if !checkStringArrByRegexp(role.Locality, policy.SubjectLRegexes) {
+		if !checkStringArrByRegexp(role.Locality, policy.SubjectLRegexes, false) {
 			return fmt.Errorf("Location %v doesn't match regexps: %v", role.Locality, policy.SubjectLRegexes)
 		}
 
-		if !checkStringArrByRegexp(role.Province, policy.SubjectSTRegexes) {
+		if !checkStringArrByRegexp(role.Province, policy.SubjectSTRegexes, false) {
 			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", role.Locality, policy.SubjectSTRegexes)
 		}
 		if !checkKey(role.KeyType, role.KeyBits, ecdsaCurvesSizesToName(role.KeyBits), policy.AllowedKeyConfigurations) {
