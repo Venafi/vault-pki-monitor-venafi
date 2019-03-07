@@ -18,6 +18,7 @@ func Test_checkStringArrByRegexp(t *testing.T) {
 		{[]string{"US"}, []string{`.*`}, true},
 		{[]string{"US", "RU"}, []string{`US`, `RU`}, true},
 		{[]string{"US", "GB"}, []string{`US`, `RU`}, false},
+		{[]string{"test.vfidev.com"}, []string{`.*\.vfidev\.com`}, true},
 	}
 	for _, c := range cases {
 		if checkStringArrByRegexp(c.values, c.regexps) != c.match {
