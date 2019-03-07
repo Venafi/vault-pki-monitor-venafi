@@ -511,11 +511,11 @@ func checkAgainstVenafiPolicy(
 			return fmt.Errorf("IPs %v doesn't match regexps: %v", ipAddresses, policy.IpSanRegExs)
 		}
 
-		if !checkStringArrByRegexp(role.Organization, policy.SubjectOURegexes) {
+		if !checkStringArrByRegexp(role.Organization, policy.SubjectORegexes) {
 			return fmt.Errorf("Organization unit %v doesn't match regexps: %v", role.Organization, policy.SubjectOURegexes)
 		}
 
-		if !checkStringArrByRegexp(role.OU, policy.SubjectORegexes) {
+		if !checkStringArrByRegexp(role.OU, policy.SubjectOURegexes) {
 			return fmt.Errorf("Organization Unit %v doesn't match regexps: %v", role.Organization, policy.SubjectORegexes)
 		}
 
@@ -528,7 +528,7 @@ func checkAgainstVenafiPolicy(
 		}
 
 		if !checkStringArrByRegexp(role.Province, policy.SubjectSTRegexes) {
-			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", role.Locality, policy.SubjectLRegexes)
+			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", role.Locality, policy.SubjectSTRegexes)
 		}
 		if !checkKey(role.KeyType, role.KeyBits, ecdsaCurvesSizesToName(role.KeyBits), policy.AllowedKeyConfigurations) {
 			return fmt.Errorf("key type not compatible vith Venafi policies")
