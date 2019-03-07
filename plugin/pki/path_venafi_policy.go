@@ -12,11 +12,10 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"log"
-	"regexp"
 	"strings"
 )
 
-const venafiPolicyPath = "venafi-policy/" //todo:move over constants here
+const venafiPolicyPath = "venafi-policy/"
 const defaultVenafiPolicyName = "default"
 
 // This returns the list of queued for import to TPP certificates
@@ -101,7 +100,7 @@ func pathVenafiPolicyContent(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathReadVenafiPolicyContent,
+			logical.ReadOperation:   b.pathReadVenafiPolicyContent,
 			logical.UpdateOperation: b.pathUpdateVenafiPolicyContent,
 		},
 
@@ -393,7 +392,7 @@ func checkAgainstVenafiPolicy(
 	csr *x509.CertificateRequest,
 	cn string,
 	ipAddresses, email, sans []string) error {
-
+	//todo: skip checks for ca
 	policyConfigPath := role.VenafiCheckPolicy
 	ctx := context.Background()
 	if policyConfigPath == "" {
@@ -451,7 +450,13 @@ func checkAgainstVenafiPolicy(
 		if !checkStringArrByRegexp(ips, policy.IpSanRegExs) {
 			return fmt.Errorf("IPs %v doesn't match regexps: %v", ipAddresses, policy.IpSanRegExs)
 		}
-
+		uris := make([]string, len(csr.URIs))
+		for i, uri := range csr.URIs {
+			uris[i] = uri.String()
+		}
+		if !checkStringArrByRegexp(uris, policy.UriSanRegExs) {
+			return fmt.Errorf("URIs %v doesn't match regexps: %v", uris, policy.UriSanRegExs)
+		}
 		if !checkStringArrByRegexp(csr.Subject.Organization, policy.SubjectOURegexes) {
 			return fmt.Errorf("Organization %v doesn't match regexps: %v", role.Organization, policy.SubjectOURegexes)
 		}
@@ -523,66 +528,25 @@ func checkAgainstVenafiPolicy(
 		if !checkStringArrByRegexp(role.Province, policy.SubjectSTRegexes) {
 			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", role.Locality, policy.SubjectLRegexes)
 		}
-		if !checkKey(role.KeyType, role.KeyBits, "", policy.AllowedKeyConfigurations) {
+		if !checkKey(role.KeyType, role.KeyBits, ecdsaCurvesSizesToName(role.KeyBits), policy.AllowedKeyConfigurations) {
 			return fmt.Errorf("key type not compatible vith Venafi policies")
 		}
 
 	}
 
 	//TODO: check against upn_san_regexes
-	//TODO: check against uri_san_regexes
 
 	extKeyUsage, err := parseExtKeyUsageParameter(role.ExtKeyUsage)
 	if err != nil {
 		return err
 	}
-	if !isCA { //todo: some eku may be specified for CA
-
+	if !isCA {
 		if !compareEkuList(extKeyUsage, policyConfig.ExtKeyUsage) {
 			return fmt.Errorf("different eku in Venafi policy config and role")
 		}
 	}
 
 	return nil
-}
-
-func checkKey(keyType string, bitsize int, curve string, allowed []endpoint.AllowedKeyConfiguration) (valid bool) {
-	for _, allowedKey := range allowed {
-		var kt certificate.KeyType
-		kt.Set(keyType)
-		if allowedKey.KeyType == kt {
-			switch allowedKey.KeyType {
-			case certificate.KeyTypeRSA:
-				return intInSlice(bitsize, allowedKey.KeySizes)
-			case certificate.KeyTypeECDSA:
-				//todo: check curve
-				return true
-			default:
-				return
-			}
-		}
-	}
-	return
-}
-
-func checkStringByRegexp(s string, regexs []string) (matched bool) {
-	var err error
-	for _, r := range regexs {
-		matched, err = regexp.MatchString(r, s)
-		if err == nil && matched {
-			return true
-		}
-	}
-	return
-}
-
-func checkStringArrByRegexp(ss []string, regexs []string) (matched bool) {
-	for _, s := range ss {
-		if !checkStringByRegexp(s, regexs) {
-			return false
-		}
-	}
-	return true
 }
 
 func (b *backend) getPolicyConfig(ctx context.Context, s logical.Storage, n string) (*venafiPolicyConfigEntry, error) {
