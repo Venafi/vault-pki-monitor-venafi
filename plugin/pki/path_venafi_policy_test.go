@@ -77,6 +77,36 @@ H2IE+vUez839sw9RlLcjgw==
 -----END CERTIFICATE REQUEST-----
 `
 
+const allowed_empty_csr = `-----BEGIN CERTIFICATE REQUEST-----
+MIIEyTCCArECAQAwgYMxCzAJBgNVBAYTAlVTMQ0wCwYDVQQIDARVdGFoMRIwEAYD
+VQQHDAlTYWx0IExha2UxFDASBgNVBAoMC1ZlbmFmaSBJbmMuMRQwEgYDVQQLDAtJ
+bnRlZ3JhdGlvbjElMCMGA1UEAwwcdGVzdC1jc3ItMzIzMTMxMzEudmZpZGV2LmNv
+bTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBALsSuhL/AGryMUO+jrtM
+xYfp2vUlgIKu/uGfm+4ILGrtWlH/i5+aoT3I+blUPskDDMLhvG4lD4xT9urxcnJj
+2sO8hOPnSsTvMnAOLgi8OW2JMeeA74BsPi2lxXvW/392EAxPjxuMKULI0gm60vBi
+yFtS6wRinvEUDkSy8r8Z0a0zsqsRKt9VMgJy2tEmRYMT0xkfC8GkARhgKNCe7kHJ
+OjCS6MZgJSHekZBxKsLjblQFrHSCT0SrWJDLlHIwd9CL0uVkqe9UMfJ8Nm7WowXe
+BrDUHNSOUjZo8jjqCSnu9vVw/MR4paMssSKcyXSKQcsUJQBfoWBMGTCUZolA86TM
+U7DMxPorXm94ZfHiOa6qS5A20Z7VUvCp8BR3RF0b/5ntJwGULbMg5QBAZ6sF+rnm
+BN5xAyrGHYck2TqphyZRAFRs/yuVdQx+3wHykAqzzX7cYlzI3EhT/3yQu5VZNclq
+wxvCsT197s2VB8tcPxvAlBddKkLVY+hp4U5dxEDLxOf5+oryGx+6nOZdWlYKxxNZ
+7P83oOjp95+UCVeDGDwI7+8y7OwK8AF82HqbeDm6dliKNQ4tnN1ddzWabXfuzuYl
+OmdTiKDNR/gHUq2HaxekKHs39ToXyJg65+g3baEX5JM6KKmrXL2N8s6YiMMaF13m
+3SPa3pzGKNNLYcqdkEjRjlKBAgMBAAGgADANBgkqhkiG9w0BAQsFAAOCAgEAJ4RK
+9RrnI7AblRCYG5Rnyu/YvVkSu7gnp+04DeECntxv9FyP99aPgGPxlMzH11QFUwKZ
+Kn4XLz8559JGA8umcWT559hQ4XFpYoyzEvnf/vdA9NAmSr0ssMsoZ1DjR4l0rR2m
+Y+doP4CAqRh1rC6JDTMvo/WxwJRImgrnziyOwZba7mwDRNVIXWa70cFPfgb3fKro
+egPkp/Hqvho0Rvu3m3o5Y35UxKiMylZUX3pHdpKXVG2wxj0FgeOepd4cFSHrF85q
+uPhc12CDvv71wtxMcL8mmWizjpuGGBvDx0Tz8uJmaumNkIwZ+GGhqBsAPJI/YCy6
+44WYs9vRDCjHnIXIazJTc3kFwaDOJF3btCYQ6dG1dHh8lRLnfkYLOtKlJ2gbrUqB
+s44QoRhU5ZYUD1+8TYNWQtgceGjCTACsbxH4JKOG38NT4C/mv3ZsEC1yTfjxWRDH
+CqLGi3SbYFiUEk0WRWAbwe80HtcAVCFCa2G3C/FGS/qCiFIbE9op5Ab3NDWJGdSI
+gT230FFz4jsyW4395IiZ8UOoLXxBmnL382+hdB08aEdm4j/ZFeeButG0qb3XhUu3
+/atUO1Boht8DNna1DH/1uLW0ovAAKgX+v3LTi/vadErW/X3S7P/ZnbLY5pA7nEBg
+bOcvXbCN3l5HIY76e+6FbLGGCvNKcgNpSAAPYJg=
+-----END CERTIFICATE REQUEST-----
+`
+
 var venafiCreateSimplePolicyStep = logicaltest.TestStep{
 	Operation: logical.UpdateOperation,
 	Path:      venafiPolicyPath + defaultVenafiPolicyName,
@@ -466,6 +496,31 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 	log.Println("Testing proper CSR signing")
 	certData = map[string]interface{}{
 		"csr": allowed_csr,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "sign/test-venafi-policy",
+		Storage:   storage,
+		Data:      certData,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to issue a cert, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Data["certificate"] == nil {
+		t.Fatalf("certificate field shouldn't be nil, %#v", resp)
+	}
+
+
+	log.Println("Testing proper CSR without alt names")
+	certData = map[string]interface{}{
+		"csr": allowed_empty_csr,
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
