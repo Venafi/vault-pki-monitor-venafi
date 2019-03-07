@@ -392,7 +392,7 @@ func checkAgainstVenafiPolicy(
 	csr *x509.CertificateRequest,
 	cn string,
 	ipAddresses, email, sans []string) error {
-	//todo: skip checks for ca
+
 	policyConfigPath := role.VenafiCheckPolicy
 	ctx := context.Background()
 	if policyConfigPath == "" {
@@ -457,24 +457,25 @@ func checkAgainstVenafiPolicy(
 		if !checkStringArrByRegexp(uris, policy.UriSanRegExs) {
 			return fmt.Errorf("URIs %v doesn't match regexps: %v", uris, policy.UriSanRegExs)
 		}
-		if !checkStringArrByRegexp(csr.Subject.Organization, policy.SubjectOURegexes) {
-			return fmt.Errorf("Organization %v doesn't match regexps: %v", role.Organization, policy.SubjectOURegexes)
+		if !checkStringArrByRegexp(csr.Subject.Organization, policy.SubjectORegexes) {
+			return fmt.Errorf("Organization %v doesn't match regexps: %v", role.Organization, policy.SubjectORegexes)
 		}
 
-		if !checkStringArrByRegexp(csr.Subject.OrganizationalUnit, policy.SubjectORegexes) {
-			return fmt.Errorf("Organization Unit %v doesn't match regexps: %v", role.Organization, policy.SubjectORegexes)
+		if !checkStringArrByRegexp(csr.Subject.OrganizationalUnit, policy.SubjectOURegexes) {
+			return fmt.Errorf("Organization Unit %v doesn't match regexps: %v", csr.Subject.OrganizationalUnit, policy.SubjectOURegexes)
 		}
 
+		//TODO: fix this
 		if !checkStringArrByRegexp(csr.Subject.Country, policy.SubjectCRegexes) {
-			return fmt.Errorf("Country %v doesn't match regexps: %v", role.Country, policy.SubjectCRegexes)
+			return fmt.Errorf("Country %v doesn't match regexps: %v", csr.Subject.Country, policy.SubjectCRegexes)
 		}
 
 		if !checkStringArrByRegexp(csr.Subject.Locality, policy.SubjectLRegexes) {
-			return fmt.Errorf("Location %v doesn't match regexps: %v", role.Locality, policy.SubjectLRegexes)
+			return fmt.Errorf("Location %v doesn't match regexps: %v", csr.Subject.Locality, policy.SubjectLRegexes)
 		}
 
 		if !checkStringArrByRegexp(csr.Subject.Province, policy.SubjectSTRegexes) {
-			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", role.Locality, policy.SubjectLRegexes)
+			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", csr.Subject.Province, policy.SubjectSTRegexes)
 		}
 		keyValid := true
 		if csr.PublicKeyAlgorithm == x509.RSA {
