@@ -431,7 +431,9 @@ func checkAgainstVenafiPolicy(
 		return err
 	}
 
-	if csr != nil {
+	if isCA {
+		log.Printf("Skip all checks for CA")
+	} else if csr != nil {
 		log.Printf("Checking CSR against policy %s", policyConfigPath)
 
 		if !isCA && !checkStringByRegexp(csr.Subject.CommonName, policy.SubjectCNRegexes) {
@@ -457,8 +459,8 @@ func checkAgainstVenafiPolicy(
 		if !checkStringArrByRegexp(uris, policy.UriSanRegExs) {
 			return fmt.Errorf("URIs %v doesn't match regexps: %v", uris, policy.UriSanRegExs)
 		}
-		if !checkStringArrByRegexp(csr.Subject.Organization, policy.SubjectOURegexes) {
-			return fmt.Errorf("Organization %v doesn't match regexps: %v", role.Organization, policy.SubjectOURegexes)
+		if !checkStringArrByRegexp(csr.Subject.Organization, policy.SubjectORegexes) {
+			return fmt.Errorf("Organization %v doesn't match regexps: %v", role.Organization, policy.SubjectORegexes)
 		}
 
 		if !checkStringArrByRegexp(csr.Subject.OrganizationalUnit, policy.SubjectOURegexes) {

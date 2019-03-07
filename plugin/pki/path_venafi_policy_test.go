@@ -138,7 +138,7 @@ func TestVenafiPolicyCloudWriteAndReadPolicy(t *testing.T) {
 }
 
 func TestVenafiPolicyTPPWriteAndReadPolicy(t *testing.T) {
-	_, policyData := makeVenafiCloudConfig()
+	_, policyData := makeVenafiTPPConfig()
 	venafiPolicyWriteAndReadTest(t, policyData)
 }
 
