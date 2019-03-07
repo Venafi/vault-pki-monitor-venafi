@@ -443,7 +443,7 @@ func checkAgainstVenafiPolicy(
 			return fmt.Errorf("Emails %v doesn't match regexps: %v", email, policy.EmailSanRegExs)
 		}
 		if !checkStringArrByRegexp(csr.DNSNames, policy.DnsSanRegExs) {
-			return fmt.Errorf("DNS sans %v doesn't match regexps: %v", sans, policy.DnsSanRegExs)
+			return fmt.Errorf("DNS sans %v doesn't match regexps: %v", csr.DNSNames, policy.DnsSanRegExs)
 		}
 		ips := make([]string, len(csr.IPAddresses))
 		for i, ip := range csr.IPAddresses {
