@@ -29,30 +29,35 @@ E4zs31QF9oVpfbi2BubneCU808ShsWIrSzjbiLZ/D/IHDFuoX7tbdZSmVU+mlx/r
 -----END CERTIFICATE REQUEST-----
 `
 const allowed_csr = `-----BEGIN CERTIFICATE REQUEST-----
-MIIEXzCCAkcCAQAwGjEYMBYGA1UEAwwPdGVzdC52ZmlkZXYuY29tMIICIjANBgkq
-hkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAv0UEj15pL44I/ljSWdlPJpwMr2IAaxM3
-tCzKHtISp18JyXSKvzbKSCusWhM3KZ9Z+d+qhXds+v8AWFvcf0O+DOA2ZOic1lK5
-PwtXKFLOJjXzG22rzAYb/7QUGNlhFgZd6Ur3QLhEDijNfmcXGDzZYsGpF4LXyaKG
-hvifMqe04U4TzRI9aErzXNWQLBGR+tN3f5FGB6gqS1xeZnoo4fd9KwCvksOBK8Jk
-4pkAcRe990ktpN2F0ZgbAg++lBqzTm6WUlREQbByx2j0g8KIDme4KzPcclyhT7NF
-ziVMRPstXkBJ5ep7FG3zr3bfaU0K6uw21aEWYyLPxhV//MMiiKbOUAEVFnrLV4I+
-7mbbW0+jKM/4TU1sq+2YI5h99gQYCh1fSXHc0gFu8/egqWvW1hvEZTWU5E6hN0MQ
-Qgrwl64flXyl1nUmrTtm7ru7O/88Qij/5gmyLkAhll/iMcaWfk/pw/kKYFJrGSc5
-Qv3yaDDV+ckjzwM18H1PkcgHAaiK3qs2MI720QP+qa8DuHMebIE7Po5LneKtYwxc
-B0QpuU4xyzxBwgT8ztPQvn9fKPbt/MLBQ+zqIzj1mdNni/ylqH8ssXi81pJp1+mX
-zbDArq1LXE/t6vJeyyzVpXjmfLQ3KpJ2pSlAZI1Pfpy4YE63jFQFABcW4Pij6cP/
-vBpXhcjT760CAwEAAaAAMA0GCSqGSIb3DQEBCwUAA4ICAQCiKRv41NybHGFPjYSi
-vEmYa8RIIWkoM66O59s9aoKxvaXMCdjQmDYsfHn6Nlx7P1xz4U8XRWVYT7t13aGo
-GFguvUS+HdthBXIUAMrnOB6ttrJfFasnA7/VqkPjd2nZYFJacoDaAOwuF4BEwfXn
-rLQIaAZkZ/oHaMulgCuAj8SjxjR4sonFcC3D1WoT6rpY+74LDjNg+vl6COJ+37Sc
-3xFjaoj+aJP5eegijQ0QEEPPKLSHo0dsnUPl2/YViZ2FGqfqi02HdFYj0BI4Eh3F
-O/Or2E7/gtvwdLNITgG1hPv+VqBJkpFfNBVUk4loxgXR3Qd5qsBwMO8EIF3h1YK8
-5rkXfokTTABEJNuGCv8rZi3MASLM1Z3kiexJrhQPeHV8xGpyhv9IPT6XUEZ7OaY2
-h+Q2csT7GBiIAb0KygU8bbK7koOTH1cX+dv8kXWiJcTW0fzstZsR2fw/ra1S4oxJ
-eB8YUXRem8xBJvBQfUM0sdJR9bao8xBiZ+jCejCkpg3MpMz/CthCijWcg9JFhabT
-hAtoeB7AX9LqxyYikVrjxf45UfcAzeIZgf81XJqVW0FgZLNxMSM99ySeVco/nGsJ
-JEwcoOowfcflK/mXRHsN65p1p/v9OWGFkwnFPeM56QpP68r8AluAN86sfb3JqpFn
-jM0aRZ4bdyObnjtOEUFktgRNNA==
+MIIFTDCCAzQCAQAwgaQxCzAJBgNVBAYTAlVTMQ0wCwYDVQQIDARVdGFoMRIwEAYD
+VQQHDAlTYWx0IExha2UxFDASBgNVBAoMC1ZlbmFmaSBJbmMuMRQwEgYDVQQLDAtJ
+bnRlZ3JhdGlvbjEfMB0GCSqGSIb3DQEJARYQZW1haWxAdmZpZGV2LmNvbTElMCMG
+A1UEAwwcdGVzdC1jc3ItMzIzMTMxMzEudmZpZGV2LmNvbTCCAiIwDQYJKoZIhvcN
+AQEBBQADggIPADCCAgoCggIBALGdS+40Lj1qWDMl9+hKiUtn2/PJzRA0yGSf8xAp
+3HAxm6iXWTMkHBmWdm22FhatXt+6qSb+k2el7jfHEyVesMaKqw91C3Ht9LVuXLK4
+xdb2QlKz/AaBMbh9kVUD//NrJM0VbNxflDMG8EWEpZeE9qUDMQQ8eB1fwBf824TP
+XskiIqzo5HkRWBHmxvvKL0NWCPG4gy33yTyNwH2MBA5xMb+584/TEQkEPQDl14gj
+1uR2B1Ndd8V0Yv/UCu1PjM3Nn2CrcN2/dQLTSNoMhLt/woxdxDiUOzumUPJ1vBVg
+fEjGA+EIq/IkDgSNz4h5dUhdnEiMxe2yIHNhrOeomIaTbiRPGaMV/0JLhNQin6ug
+y0ws3Tk8MwM0s+FLka62LFea7WbT5qTlkhvnJZdlbPD8j5h0+OamLmhB5jvTlJUW
+IPpC8fQx4wjYq0xX0R9FMd1YQInoEVwH6Hd57iv+aqGD90UkcfXKj8BvDD8WdRAI
+l4IAKHxLUtNRFAU+hv99kwX8KRIkHLiVJg6AhRhvSm84ClYi4OPEEvaw70gNwOAO
+JkpbOttmSALLVoVn30bdayW0m7UAfiWtI3Ax+okthdELfdHrPPZK7d0SCB3VCeGp
+ydQEjHwwttqEFFnkcpPMMZez7XW6MwJi1mneXvWoRzhX+4gt7OkahHEL6Lhj14nY
+d1rjAgMBAAGgYjBgBgkqhkiG9w0BCQ4xUzBRME8GA1UdEQRIMEaCIWFsdDEtdGVz
+dC1jc3ItMzIzMTMxMzEudmZpZGV2LmNvbYIhYWx0Mi10ZXN0LWNzci0zMjMxMzEz
+MS52ZmlkZXYuY29tMA0GCSqGSIb3DQEBCwUAA4ICAQAwt3Jc78Z1j7fjxQrsBl8m
+ofuqwjqbbtLPu9uYbW9ZHdKwq7zpKShT942UZckzPiQKxy8bXVQ1MDrEzpfJKOpp
+1tAqvn9pN3B3qxYKZOjzEmZgdAT57NiZSziN2vSY89aF28Ppz8ZUOFsiOvwuFBvQ
+LLQopJ6mJEvMlv8+7CCQzumeIVRnxBjqqXnfJCBW9Dwcf1pAnsQv7RFf4XwU86dY
+8GyLtpsq4wOJqzjbReCSjIJydqE/12QLOgzpT8a4Z1Srh6ZHfxWzIiAUQvrE4hHM
+Exs0kkcJkUutlwMeaPACZkg3Tigqc72Y6YUeruBhEST5ypRrZGJJGHJLqpEHSPBb
+w9B20cUctGxUQ4h1ogNCrz5XWjM+Khv+k5rkPhTQo0OnVglTkSzWV9FLufgUyu3E
+O/KCByFbOckP56UxGFvVReJREPqa3Ib3QvTgIi810fe5SSmunpRCYBnKeqq4IVi5
+4kXQNuHvV2wntJyIfEWZub7eXnHqP6OBndbo/0y26wYwKFRAgZDshIyPQUe01YIF
+Gr6H0CHR3dU7Py0S49pAA+Jc93up5w056w5zhmjiv5c2N7m44VYJuxpwqfwtFxFF
+WNHMdQt0cab08o2FGdJ3gtN4Fp1Fq+BRkgnST3ZISozd6nZXLuejXWjC+jNDvU/e
+H2IE+vUez839sw9RlLcjgw==
 -----END CERTIFICATE REQUEST-----
 `
 
@@ -138,7 +143,7 @@ func TestVenafiPolicyCloudWriteAndReadPolicy(t *testing.T) {
 }
 
 func TestVenafiPolicyTPPWriteAndReadPolicy(t *testing.T) {
-	_, policyData := makeVenafiCloudConfig()
+	_, policyData := makeVenafiTPPConfig()
 	venafiPolicyWriteAndReadTest(t, policyData)
 }
 
@@ -250,6 +255,11 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 
 	log.Println("Setting up role")
 	roleData := map[string]interface{}{
+		"organization": "Venafi Inc.",
+		"ou":           "Integration",
+		"locality":     "Salt Lake",
+		"province":     "Utah",
+		"country":      "US",
 		"allowed_domains":    domain,
 		"allow_subdomains":   "true",
 		"max_ttl":            "4h",
