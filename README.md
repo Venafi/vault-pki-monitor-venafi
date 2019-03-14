@@ -274,7 +274,7 @@ that restrictions are working):
 
 1. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `pki` backend:
     ```
-    vault write pki/roles/venafi-policy \
+    vault write pki/roles/venafi-role \
         generate_lease=true ttl=1h max_ttl=1h \
         allowed_domains=venafi.com,example.com \
         allow_subdomains=true
@@ -301,6 +301,45 @@ that restrictions are working):
     openssl req -new -newkey rsa:2048 -nodes -out test_example_com.csr -keyout test_example_com.key -subj "/C=/ST=/L=/O=/CN=test.example.com"
     vault write pki/sign/venafi-policy csr=@test_example_com.csr
     ```
+
+<!--TODO: add delete policy to usage scenario-->
+
+1. Delete the policy:
+    ```
+    vault delete pki/venafi-policy/default
+    ```
+    
+1. Try to enroll certificate again:
+    ```
+    vault write pki/sign/venafi-policy csr=@test_example_com.csr
+    ```
+    It will fail
+    
+1. Create second policy:
+    ```bash
+    vault write pki/venafi-policy/second \
+                tpp_url="https://tpp.venafi.example:443/vedsdk" \
+                tpp_user="local:admin" \
+                tpp_password="password" \
+                zone="DevOps\\Vault Monitor" \
+                trust_bundle_file="/opt/venafi/bundle.pem"
+    ```    
+    
+1. Reconfigure the role to use seond policy instead of default:
+    ```bash
+    vault write pki/roles/venafi-role \
+            generate_lease=true ttl=1h max_ttl=1h \
+            allowed_domains=venafi.com,example.com \
+            allow_subdomains=true
+            venafi_check_policy=second
+    ```    
+1. Try to enroll certificate again:
+    ```
+    vault write pki/sign/venafi-policy csr=@test_example_com.csr
+    ```
+    Now it should work.
+        
+
 
 ### See it at asciinema:
 

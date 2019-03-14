@@ -293,6 +293,9 @@ func writePolicyToClient(mountPoint string, client *api.Client, t *testing.T) {
 	}
 }
 
+//TODO: add test with empty organization
+//TODO: add test for CA with emoty organization
+//TODO: add test for CA with SANs
 func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain string) {
 	// create the backend
 	rand := randSeq(9)
@@ -327,8 +330,13 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 	}
 
 	rootData := map[string]interface{}{
-		"common_name": "ca." + domain,
-		"ttl":         "6h",
+		"common_name":  "ca.some.domain",
+		"organization": "Venafi Inc.",
+		"ou":           "Integration",
+		"locality":     "Salt Lake",
+		"province":     "Utah",
+		"country":      "US",
+		"ttl":          "6h",
 	}
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{

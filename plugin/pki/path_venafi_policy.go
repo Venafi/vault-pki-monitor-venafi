@@ -431,13 +431,14 @@ func checkAgainstVenafiPolicy(
 		return err
 	}
 
-	if isCA {
-		log.Printf("Skip all checks for CA")
-	} else if csr != nil {
+	if csr != nil {
 		log.Printf("Checking CSR against policy %s", policyConfigPath)
 		if isCA {
 			if len(csr.EmailAddresses) != 0 || len(csr.DNSNames) != 0 || len(csr.IPAddresses) != 0 || len(csr.URIs) != 0 {
-				return fmt.Errorf("CA doesn`t allowed to have any SANs: %v, %v, %v, %v", csr.EmailAddresses, csr.DNSNames, csr.IPAddresses, csr.URIs)
+				//workaround for setting SAN if CA have normal domain in CN
+				if csr.DNSNames[0] != csr.Subject.CommonName {
+					return fmt.Errorf("CA doesn`t allowed to have any SANs: %v, %v, %v, %v", csr.EmailAddresses, csr.DNSNames, csr.IPAddresses, csr.URIs)
+				}
 			}
 		} else {
 			if !checkStringByRegexp(csr.Subject.CommonName, policy.SubjectCNRegexes) {
@@ -505,7 +506,10 @@ func checkAgainstVenafiPolicy(
 
 		if isCA {
 			if len(email) != 0 || len(sans) != 0 || len(ipAddresses) != 0 {
-				return fmt.Errorf("CA doesn`t allowed to have any SANs: %v, %v, %v", email, sans, ipAddresses)
+				//workaround for setting SAN if CA have normal domain in CN
+				if sans[0] != cn {
+					return fmt.Errorf("CA doesn`t allowed to have any SANs: %v, %v, %v", email, sans, ipAddresses)
+				}
 			}
 		} else {
 			if !checkStringByRegexp(cn, policy.SubjectCNRegexes) {
