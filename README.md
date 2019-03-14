@@ -123,7 +123,7 @@ vault list pki/import-queue
 
 ## Venafi Policy check (UNDER DEVELOPMENT)
 
-Venafi policy check is a feature which allows to limit PKI role by Venafi Trust Protection Platform or Venafi Cloud policies.
+Venafi Policy Check limits the PKI role based on Venafi Trust Protection Platform policies or Venafi Cloud zones.
 Policy check is configured in venafi-policy path, you can restrict this path for InfoSec team only using Vault policies.
 
 1. Write default Venafi policy configuration into venafi-policy path:
@@ -147,7 +147,7 @@ Policy check is configured in venafi-policy path, you can restrict this path for
 
     Policy will be downloaded, parsed, saved into path and user will see output with parsed policy.
     After policy creation, any requested certificate will be checked against it. If checks fail to pass
-    user will see error similar to standart PKI role checks i.e.:
+    user will see error similar to standard PKI role checks i.e.:
     ```
     URL: PUT http://127.0.0.1:8200/v1/vault-pki-monitor-venafi/issue/domain.com
     Code: 400. Errors:
@@ -155,7 +155,7 @@ Policy check is configured in venafi-policy path, you can restrict this path for
     * common name import-vl9kt.import.example.com not allowed by Venafi policy
     ```
 
-1. Policy can be deleted by performing delete operation to the venafi-polict path:
+1. Venafi Policy can be deleted by performing delete operation to the venafi-polict path:
     ```
     vault delete pki/venafi-policy
     ```
@@ -198,10 +198,10 @@ Policy check is configured in venafi-policy path, you can restrict this path for
 <!-- TODO: show example of separating permissions between InfoSec and DevOps -->
 ## Venafi Policy usage scenario
 
-Following scenario assumes that you already started the Vault and mounted venafi plugin. If not you can use instructions from 
+Following scenario assumes that you already started the Vault and mounted venafi plugin. If not, you can use instructions from 
 quickstart or use demo scripts to start simple vault server with consul (not recommended for production). To start demo server
 run `make docker_server` command. 
-After starting demo server you will need to export VAULT_TOKEN with Root token and VAULT_ADDR variables
+After starting demo server, you will need to export VAULT_TOKEN with Root token and VAULT_ADDR variables
     ```
     export VAULT_TOKEN=<enter root token here>
     export VAULT_ADDR=http://127.0.0.1:8200
