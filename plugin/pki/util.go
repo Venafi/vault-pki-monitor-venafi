@@ -131,14 +131,12 @@ func ekuInSlice(i x509.ExtKeyUsage, s []x509.ExtKeyUsage) bool {
 	}
 	return false
 }
-func compareEkuList(a, b []x509.ExtKeyUsage) bool {
-	for _, i := range a {
-		if !ekuInSlice(i, b) {
-			return false
-		}
+func compareEkuList(target, allowed []x509.ExtKeyUsage) bool {
+	if len(allowed) == 0 {
+		return true
 	}
-	for _, i := range b {
-		if !ekuInSlice(i, a) {
+	for _, i := range target {
+		if !ekuInSlice(i, allowed) {
 			return false
 		}
 	}

@@ -301,11 +301,11 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 
 	log.Println("Setting up role")
 	roleData := map[string]interface{}{
-		"organization": "Venafi Inc.",
-		"ou":           "Integration",
-		"locality":     "Salt Lake",
-		"province":     "Utah",
-		"country":      "US",
+		"organization":       "Venafi Inc.",
+		"ou":                 "Integration",
+		"locality":           "Salt Lake",
+		"province":           "Utah",
+		"country":            "US",
 		"allowed_domains":    domain,
 		"allow_subdomains":   "true",
 		"max_ttl":            "4h",
@@ -492,7 +492,6 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 		Data:      roleData,
 	})
 
-	//TODO: add tests for CSR
 	log.Println("Testing wrong CSR signing")
 	certData = map[string]interface{}{
 		"csr": wrong_csr,
