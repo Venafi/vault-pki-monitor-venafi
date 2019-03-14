@@ -31,7 +31,7 @@ services:
     - /opt/venafi/bundle.pem:/opt/venafi/bundle.pem
     entrypoint: /scripts/wait-for-it.sh -t 20 -h consul -p 8500 -s -- vault server -config=/config/vault-config-with-consul.hcl -log-level=debug
 
-#TODO: this is a workaround to avoid internal network conflict, need to find a better solution when netwrok will not be in docker-compose file.
+#TODO: this is a workaround to avoid internal network conflict. Need to find a better solution when the network is not specified in the docker-compose file.
 networks:
   default:
     ipam:

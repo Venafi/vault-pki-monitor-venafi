@@ -30,19 +30,19 @@ func pathVenafiPolicy(b *backend) *framework.Path {
 
 			"tpp_url": {
 				Type:        framework.TypeString,
-				Description: `URL of Venafi Platfrom. Example: https://tpp.venafi.example/vedsdk`,
+				Description: `URL of Venafi Platform. Example: https://tpp.venafi.example/vedsdk`,
 				Required:    true,
 			},
 			"zone": {
 				Type: framework.TypeString,
-				Description: `Name of Venafi Platfrom or Cloud policy. 
+				Description: `Name of Venafi Platform or Cloud policy. 
 Example for Platform: testpolicy\\vault
 Example for Venafi Cloud: Default`,
 				Default: `Default`,
 			},
 			"tpp_user": {
 				Type:        framework.TypeString,
-				Description: `web API user for Venafi Platfrom Example: admin`,
+				Description: `web API user for Venafi Platform Example: admin`,
 				Required:    true,
 			},
 			"tpp_password": {

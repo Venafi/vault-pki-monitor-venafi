@@ -81,7 +81,7 @@ The following options are supported (note: this list can also be viewed from the
 | `zone`              | string  | Venafi Platform policy folder where certificates will be imported             | "Default" | 
 | `tpp_url`           | string  | Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk")                     |           |
 | `tpp_username`      | string  | Venafi Platform WebSDK account username                                       |           |
-| `tpp_password`      | string  | Venafi Platfrom WebSDK account password                                       |           |
+| `tpp_password`      | string  | Venafi Platform WebSDK account password                                       |           |
 | `trust_bundle_file` | string  | PEM trust bundle for Venafi Platform server certificate                       |           |
 | `tpp_import_timeout`| int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
 | `tpp_import_workers`| int     | Maximum number of concurrent threads to use for VCert import                  | 3         |
@@ -209,8 +209,8 @@ After starting demo server, you will need to export VAULT_TOKEN with Root token 
 
 1.  Download linux binary of the plugin into pkg/bin folder or build it using `make dev_build` command
 
-1.  Ceate a policy for DevOps where he allowed to do anything with PKI backend 
-    but venafi-policy can be configured to only one particular Venafi Platfrom and zone:
+1.  Create a policy for the DevOps role to allow all activities with the PKI backend,
+    the venafi-policy can be configured to only one particular Venafi Platform and zone::
     ```bash
     cat <<EOF> devops-policy.hcl
     path "pki/*" {
@@ -241,13 +241,13 @@ After starting demo server, you will need to export VAULT_TOKEN with Root token 
     vault token create -policy=devops-policy -display-name=devops
     ```  
 
-1. Copy token from Key and export it into VAULT_TOKEN variable is you de before with root.
+1. Copy token from Key and export it into the VAULT_TOKEN variable in the same way as you did with root.
     ```bash
     export VAULT_TOKEN=<enter devops token here>
     ```
-1. Create a test zone on you Venafi Platform or Cloud and allow ony example.com domain there
+1. Create a test policy or zone in Venafi Platform or Cloud and allow only the example.com domain
      
-1. Configure venafi policy with devops user (you can try to change zone or tpp_url parameter to make sure
+1. Configure venafi policy with DevOps user (you can try to change zone or tpp_url parameter to make sure
 that restrictions are working):
     ```bash
     vault write pki/venafi-policy/default \
