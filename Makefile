@@ -42,7 +42,8 @@ VAULT_CLIENT_TIMEOUT = 180s
 
 test:
 	VAULT_ACC=1 \
-	go test $(TEST) $(TESTARGS) -v -timeout=$(TEST_TIMEOUT) -parallel=20
+#	go test $(TEST) $(TESTARGS) -v -timeout=$(TEST_TIMEOUT) -parallel=20
+	go test $(TEST) $(TESTARGS) -v -parallel=20
 
 policy_test:
 	go test github.com/Venafi/vault-pki-monitor-venafi/plugin/pki -run ^TestBackend_VenafiPolicy*$
