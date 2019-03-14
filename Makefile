@@ -5,7 +5,7 @@ CURRENT_DIR := $(patsubst %/,%,$(dir $(realpath $(MKFILE_PATH))))
 
 # List of tests to run
 TEST ?= $$(go list ./... | grep -v /vendor/ | grep -v /e2e)
-TEST_TIMEOUT?=5m
+TEST_TIMEOUT?=6m
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 
 #Plugin information
