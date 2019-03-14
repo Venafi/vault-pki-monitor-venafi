@@ -2,7 +2,7 @@
 
 <img src="https://www.venafi.com/sites/default/files/content/body/Light_background_logo.png" width="330px" height="69px"/>  
 
-This solution allows [HashiCorp Vault](https://www.vaultproject.io/) users to provide their Information Security organization visibilty into certificate issuance.  Vault issued certificates are automatically forwarded to the [Venafi Platform](https://www.venafi.com/platform/trust-protection-platform) which enables risk assessment, incident response, and auditing that ensures compliance with enterprise security policy.  The [secrets engine](https://www.vaultproject.io/docs/secrets/pki/index.html) component is the original HashiCorp Vault.
+This solution allows [HashiCorp Vault](https://www.vaultproject.io/) users to provide their Information Security organization visibility into certificate issuance.  Vault issued certificates are automatically forwarded to the [Venafi Platform](https://www.venafi.com/platform/trust-protection-platform) which enables risk assessment, incident response, and auditing that ensures compliance with enterprise security policy.  The [secrets engine](https://www.vaultproject.io/docs/secrets/pki/index.html) component is the original HashiCorp Vault.
 
 ## Dependencies
 

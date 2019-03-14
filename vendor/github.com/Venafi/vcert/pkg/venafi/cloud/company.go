@@ -50,11 +50,12 @@ type certificatePolicyID struct {
 }
 
 func (z *zone) getZoneConfiguration(ud *userDetails, policy *certificatePolicy) (zoneConfig *endpoint.ZoneConfiguration) {
-	zoneConfig = &endpoint.ZoneConfiguration{}
+	zoneConfig = endpoint.NewZoneConfiguration()
 	if policy == nil {
 		return
 	}
 	zoneConfig.Policy = policy.toPolicy()
+	policy.toZoneConfig(zoneConfig)
 	return
 }
 

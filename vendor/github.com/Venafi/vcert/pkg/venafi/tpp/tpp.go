@@ -521,6 +521,14 @@ type serverPolicy struct {
 	WildcardsAllowed      bool
 }
 
+func (sp serverPolicy) toZoneConfig(zc *endpoint.ZoneConfiguration) {
+	zc.Country = sp.Subject.Country.Value
+	zc.Organization = sp.Subject.Organization.Value
+	zc.OrganizationalUnit = sp.Subject.OrganizationalUnit.Values
+	zc.Province = sp.Subject.State.Value
+	zc.Locality = sp.Subject.City.Value
+}
+
 func (sp serverPolicy) toPolicy() (p endpoint.Policy) {
 	escapeArray := func(l []string) []string {
 		escaped := make([]string, len(l))
@@ -533,7 +541,14 @@ func (sp serverPolicy) toPolicy() (p endpoint.Policy) {
 	if len(sp.WhitelistedDomains) == 0 {
 		p.SubjectCNRegexes = []string{allAllowedRegex}
 	} else {
-		p.SubjectCNRegexes = escapeArray(sp.WhitelistedDomains)
+		p.SubjectCNRegexes = make([]string, len(sp.WhitelistedDomains))
+		for i, d := range sp.WhitelistedDomains {
+			if sp.WildcardsAllowed {
+				p.SubjectCNRegexes[i] = ".*" + regexp.QuoteMeta("."+d)
+			} else {
+				p.SubjectCNRegexes[i] = regexp.QuoteMeta(d)
+			}
+		}
 	}
 	if sp.Subject.OrganizationalUnit.Locked {
 		p.SubjectOURegexes = escapeArray(sp.Subject.OrganizationalUnit.Values)
@@ -571,7 +586,6 @@ func (sp serverPolicy) toPolicy() (p endpoint.Policy) {
 				} else {
 					p.DnsSanRegExs[i] = regexp.QuoteMeta(d)
 				}
-
 			}
 		}
 	} else {

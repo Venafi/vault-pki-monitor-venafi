@@ -385,7 +385,7 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 	singleCN = rand + "-policy." + domain
 	certData = map[string]interface{}{
 		"common_name": singleCN,
-		"alt_names":   "foo." + domain+",bar." + domain,
+		"alt_names":   "foo." + domain + ",bar." + domain,
 		"ip_sans":     "1.2.3.4",
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -400,8 +400,6 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 	if err != nil {
 		t.Fatal(err)
 	}
-
-
 
 	log.Println("issue cert with wrong CN")
 	singleCN = rand + "-import." + "wrong.wrong"
@@ -537,7 +535,6 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 	if resp.Data["certificate"] == nil {
 		t.Fatalf("certificate field shouldn't be nil, %#v", resp)
 	}
-
 
 	log.Println("Testing proper CSR without alt names")
 	certData = map[string]interface{}{
