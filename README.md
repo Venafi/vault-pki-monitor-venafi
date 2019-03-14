@@ -126,7 +126,7 @@ vault list pki/import-queue
 Venafi policy check is a feature which allows to limit PKI role by Venafi Trust Protection Platform or Venafi Cloud policies.
 Policy check is configured in venafi-policy path, you can restrict this path for InfoSec team only using Vault policies.
 
-1. Write default venafi policy configuration into venafi-policy path:
+1. Write default Venafi policy configuration into venafi-policy path:
     1. For Trust Protection Platform:
     ```
     vault write pki/venafi-policy/default \
@@ -146,7 +146,7 @@ Policy check is configured in venafi-policy path, you can restrict this path for
     TODO: add scheduled update script with prod ready security example here.
 
     Policy will be downloaded, parsed, saved into path and user will see output with parsed policy.
-    After policy creation any requested certificate will be checked against it. If checks will not pass
+    After policy creation, any requested certificate will be checked against it. If checks fail to pass
     user will see error similar to standart PKI role checks i.e.:
     ```
     URL: PUT http://127.0.0.1:8200/v1/vault-pki-monitor-venafi/issue/domain.com
