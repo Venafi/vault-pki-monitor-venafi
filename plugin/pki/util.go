@@ -4,6 +4,8 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
+	"github.com/Venafi/vcert/pkg/certificate"
+	"github.com/Venafi/vcert/pkg/endpoint"
 	"regexp"
 	"strconv"
 	"strings"
@@ -129,14 +131,12 @@ func ekuInSlice(i x509.ExtKeyUsage, s []x509.ExtKeyUsage) bool {
 	}
 	return false
 }
-func compareEkuList(a, b []x509.ExtKeyUsage) bool {
-	for _, i := range a {
-		if !ekuInSlice(i, b) {
-			return false
-		}
+func compareEkuList(target, allowed []x509.ExtKeyUsage) bool {
+	if len(allowed) == 0 {
+		return true
 	}
-	for _, i := range b {
-		if !ekuInSlice(i, a) {
+	for _, i := range target {
+		if !ekuInSlice(i, allowed) {
 			return false
 		}
 	}
@@ -150,4 +150,65 @@ func intInSlice(i int, s []int) bool {
 		}
 	}
 	return false
+}
+
+func curveInSlice(i certificate.EllipticCurve, s []certificate.EllipticCurve) bool {
+	for _, j := range s {
+		if i == j {
+			return true
+		}
+	}
+	return false
+}
+
+func checkKey(keyType string, bitsize int, curveStr string, allowed []endpoint.AllowedKeyConfiguration) (valid bool) {
+	for _, allowedKey := range allowed {
+		var kt certificate.KeyType
+		kt.Set(keyType)
+		if allowedKey.KeyType == kt {
+			switch allowedKey.KeyType {
+			case certificate.KeyTypeRSA:
+				return intInSlice(bitsize, allowedKey.KeySizes)
+			case certificate.KeyTypeECDSA:
+				var curve certificate.EllipticCurve
+				if err := curve.Set(curveStr); err != nil {
+					return false
+				}
+				return curveInSlice(curve, allowedKey.KeyCurves)
+			default:
+				return
+			}
+		}
+	}
+	return
+}
+
+func checkStringByRegexp(s string, regexs []string) (matched bool) {
+	var err error
+	for _, r := range regexs {
+		matched, err = regexp.MatchString(r, s)
+		if err == nil && matched {
+			return true
+		}
+	}
+	return
+}
+
+func checkStringArrByRegexp(ss []string, regexs []string, optional bool) (matched bool) {
+	if optional && len(ss) == 0 {
+		return true
+	}
+	if len(ss) == 0 {
+		ss = []string{""}
+	}
+	for _, s := range ss {
+		if !checkStringByRegexp(s, regexs) {
+			return false
+		}
+	}
+	return true
+}
+
+func ecdsaCurvesSizesToName(bitLen int) string {
+	return fmt.Sprintf("P%d", bitLen)
 }
