@@ -79,8 +79,10 @@ clean:
 
 build: build_strict build_optional
 
-LDFLAGS_OPT := -s -w -extldflags "-static" -X pki.venafiPolciyCheck=true -X pki.venafiPolicyDenyAll=false
-LDFLAGS_STRICT := -s -w -extldflags "-static" -X pki.venafiPolciyCheck=true -X pki.venafiPolicyDenyAll=true
+#LDFLAGS_OPT := -s -w -extldflags "-static" -X pki.VenafiPolciyCheck=true -X pki.VenafiPolicyDenyAll=false
+#LDFLAGS_STRICT := -s -w -extldflags "-static" -X pki.VenafiPolciyCheck=true -X pki.VenafiPolicyDenyAll=true
+LDFLAGS_OPT := -s -w -extldflags "-static"
+LDFLAGS_STRICT := -s -w -extldflags "-static"
 build_strict:
 	sed -i 's/const venafiPolicyDenyAll =.*/const venafiPolicyDenyAll = true/' plugin/pki/vcert.go
 	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME) || exit 1
@@ -103,8 +105,7 @@ build_optional:
 
 
 dev_build:
-	env CGO_ENABLED=0 go build -ldflags '-s -w -extldflags "-static" -X pki.venafiPolciyCheck=true -X pki.venafiPolicyDenyAll=true'\
-	 -a -o $(PLUGIN_DIR)/$(PLUGIN_NAME) || exit 1
+	env CGO_ENABLED=0 go build -ldflags '-X github.com/Venafi/vault-pki-monitor-venafi/plugin/pki.venafiPolciyCheck=true -X github.com/Venafi/vault-pki-monitor-venafi/plugin/pki.venafiPolicyDenyAll=true -s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/$(PLUGIN_NAME) || exit 1
 
 
 compress:
@@ -112,7 +113,7 @@ compress:
 	rm -f $(DIST_DIR)/*
 	for os in linux linux86 darwin darwin86; do \
 		sha1sum pkg/bin/$${os}/* > $(PLUGIN_DIR)/$${os}/hashsums.sha1  && \
-		sed -i 's#pkg/bin/$${os}/##' $(PLUGIN_DIR)/$${os}/hashsums.sha1 &&  \
+		sed -i "s#pkg/bin/$${os}/##" $(PLUGIN_DIR)/$${os}/hashsums.sha1 &&  \
 		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)" &&  \
 		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_optional" && \
 		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" $(PLUGIN_DIR)/$${os}/hashsums.sha1 ; done
