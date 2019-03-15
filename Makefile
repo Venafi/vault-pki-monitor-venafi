@@ -72,32 +72,39 @@ ca:
         ttl=8760h
 
 #Build
+clean:
+	rm -rf $(PLUGIN_DIR)
+	rm -rf $(DIST_DIR)
+	rm -rf artifcats
+
 build: build_strict build_optional
 
+LDFLAGS_OPT := -s -w -extldflags "-static" -X pki.venafiPolciyCheck=true -X pki.venafiPolicyDenyAll=false
+LDFLAGS_STRICT := -s -w -extldflags "-static" -X pki.venafiPolciyCheck=true -X pki.venafiPolicyDenyAll=true
 build_strict:
 	sed -i 's/const venafiPolicyDenyAll =.*/const venafiPolicyDenyAll = true/' plugin/pki/vcert.go
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME) || exit 1
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=386   go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME) || exit 1
-	env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME) || exit 1
-	env CGO_ENABLED=0 GOOS=darwin  GOARCH=386   go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME) || exit 1
-	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe || exit 1
-	env CGO_ENABLED=0 GOOS=windows GOARCH=386   go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME).exe || exit 1
+	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME) || exit 1
+	env CGO_ENABLED=0 GOOS=linux   GOARCH=386   go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME) || exit 1
+	env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME) || exit 1
+	env CGO_ENABLED=0 GOOS=darwin  GOARCH=386   go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME) || exit 1
+	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe || exit 1
+	env CGO_ENABLED=0 GOOS=windows GOARCH=386   go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME).exe || exit 1
 	chmod +x $(PLUGIN_DIR)/*
 
 build_optional:
 	sed -i 's/const venafiPolicyDenyAll =.*/const venafiPolicyDenyAll = false/' plugin/pki/vcert.go
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_optional || exit 1
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=386   go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME)_optional || exit 1
-	env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_optional || exit 1
-	env CGO_ENABLED=0 GOOS=darwin  GOARCH=386   go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME)_optional || exit 1
-	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME)_optional.exe || exit 1
-	env CGO_ENABLED=0 GOOS=windows GOARCH=386   go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME)_optional.exe || exit 1
+	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '$(LDFLAGS_OPT)' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_optional || exit 1
+	env CGO_ENABLED=0 GOOS=linux   GOARCH=386   go build -ldflags '$(LDFLAGS_OPT)' -a -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME)_optional || exit 1
+	env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags '$(LDFLAGS_OPT)' -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_optional || exit 1
+	env CGO_ENABLED=0 GOOS=darwin  GOARCH=386   go build -ldflags '$(LDFLAGS_OPT)' -a -o $(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME)_optional || exit 1
+	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags '$(LDFLAGS_OPT)' -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME)_optional.exe || exit 1
+	env CGO_ENABLED=0 GOOS=windows GOARCH=386   go build -ldflags '$(LDFLAGS_OPT)' -a -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME)_optional.exe || exit 1
 	chmod +x $(PLUGIN_DIR)/*
 
 
 dev_build:
-	env CGO_ENABLED=0 go build -ldflags '-s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/$(PLUGIN_NAME) || exit 1
-	sha1sum pkg/bin/vault-pki-monitor-venafi > pkg/bin/vault-pki-monitor-venafi.sha1
+	env CGO_ENABLED=0 go build -ldflags '-s -w -extldflags "-static" -X pki.venafiPolciyCheck=true -X pki.venafiPolicyDenyAll=true'\
+	 -a -o $(PLUGIN_DIR)/$(PLUGIN_NAME) || exit 1
 
 
 compress:
