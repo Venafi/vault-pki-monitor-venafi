@@ -105,8 +105,8 @@ build_optional:
 
 
 dev_build:
-	env CGO_ENABLED=0 go build -ldflags '-X github.com/Venafi/vault-pki-monitor-venafi/plugin/pki.venafiPolciyCheck=true -X github.com/Venafi/vault-pki-monitor-venafi/plugin/pki.venafiPolicyDenyAll=true -s -w -extldflags "-static"' -a -o $(PLUGIN_DIR)/$(PLUGIN_NAME) || exit 1
-
+	sed -i 's/const venafiPolicyDenyAll =.*/const venafiPolicyDenyAll = true/' plugin/pki/vcert.go
+	env CGO_ENABLED=0 GOOS=linux  GOARCH=amd64 go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME) || exit 1
 
 compress:
 	mkdir -p $(DIST_DIR)
