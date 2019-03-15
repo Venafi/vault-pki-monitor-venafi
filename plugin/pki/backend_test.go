@@ -16,7 +16,6 @@ import (
 	"math"
 	"math/big"
 	mathrand "math/rand"
-	"net"
 	"net/url"
 	"os"
 	"reflect"
@@ -630,20 +629,21 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			SerialNumber: "MySerialNumber",
 			CommonName:   "my@example.com",
 		},
-		DNSNames: []string{
-			"name1.example.com",
-			"name2.example.com",
-			"name3.example.com",
-		},
-		EmailAddresses: []string{
-			"name1@example.com",
-			"name2@example.com",
-			"name3@example.com",
-		},
-		IPAddresses: []net.IP{
-			net.ParseIP("::ff:1:2:3:4"),
-			net.ParseIP("::ff:5:6:7:8"),
-		},
+		//Usage of SANs in CA is not recommended.
+		//DNSNames: []string{
+		//	"name1.example.com",
+		//	"name2.example.com",
+		//	"name3.example.com",
+		//},
+		//EmailAddresses: []string{
+		//	"name1@example.com",
+		//	"name2@example.com",
+		//	"name3@example.com",
+		//},
+		//IPAddresses: []net.IP{
+		//	net.ParseIP("::ff:1:2:3:4"),
+		//	net.ParseIP("::ff:5:6:7:8"),
+		//},
 	}
 
 	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
