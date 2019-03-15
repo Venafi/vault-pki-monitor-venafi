@@ -79,10 +79,9 @@ func TestBackend_CA_Steps(t *testing.T) {
 			DNSNames:              []string{"root.localhost"},
 			KeyUsage:              x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign),
 			SerialNumber:          big.NewInt(mathrand.Int63()),
-			NotBefore:             time.Now().Add(-30 * time.Second),
 			NotAfter:              time.Now().Add(262980 * time.Hour),
 			BasicConstraintsValid: true,
-			IsCA: true,
+			IsCA:                  true,
 		}
 		caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, cak.Public(), cak)
 		if err != nil {
@@ -168,6 +167,10 @@ func TestBackend_CA_Steps(t *testing.T) {
 			t.Fatal(err)
 		}
 		ecInt = b
+		writePolicyToClient("rsaroot", client, t)
+		writePolicyToClient("ecroot", client, t)
+		writePolicyToClient("rsaint", client, t)
+		writePolicyToClient("ecint", client, t)
 	}
 
 	t.Run("teststeps", func(t *testing.T) {
@@ -508,9 +511,9 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		// Run with a high safety buffer, nothing should happen
 		{
 			resp, err := client.Logical().Write(rootName+"tidy", map[string]interface{}{
-				"safety_buffer":        "3h",
-				"tidy_cert_store":      true,
-				"tidy_revocation_list": true,
+				"safety_buffer":      "3h",
+				"tidy_cert_store":    true,
+				"tidy_revoked_certs": true,
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -529,9 +532,9 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		// Run with both values set false, nothing should happen
 		{
 			resp, err := client.Logical().Write(rootName+"tidy", map[string]interface{}{
-				"safety_buffer":        "1s",
-				"tidy_cert_store":      false,
-				"tidy_revocation_list": false,
+				"safety_buffer":      "1s",
+				"tidy_cert_store":    false,
+				"tidy_revoked_certs": false,
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -550,9 +553,9 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		// Run with a short safety buffer and both set to true, both should be cleared
 		{
 			resp, err := client.Logical().Write(rootName+"tidy", map[string]interface{}{
-				"safety_buffer":        "1s",
-				"tidy_cert_store":      true,
-				"tidy_revocation_list": true,
+				"safety_buffer":      "1s",
+				"tidy_cert_store":    true,
+				"tidy_revoked_certs": true,
 			})
 			if err != nil {
 				t.Fatal(err)

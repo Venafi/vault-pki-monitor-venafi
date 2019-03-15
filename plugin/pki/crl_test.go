@@ -31,7 +31,7 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 			MaxLeaseTTL:     "60h",
 		},
 	})
-
+	writePolicyToClient("pki", client, t)
 	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",

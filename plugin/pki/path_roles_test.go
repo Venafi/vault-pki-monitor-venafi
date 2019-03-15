@@ -560,6 +560,7 @@ func TestPki_RoleNoStore(t *testing.T) {
 		"allowed_domains": "myvault.com",
 		"ttl":             "5h",
 	}
+	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
 
 	roleReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -663,6 +664,7 @@ func TestPki_CertsLease(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
+	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
 
 	caData := map[string]interface{}{
 		"common_name": "myvault.com",

@@ -14,6 +14,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"regexp"
@@ -27,7 +28,7 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/ryanuber/go-glob"
+	glob "github.com/ryanuber/go-glob"
 	"golang.org/x/crypto/cryptobyte"
 	cbbasn1 "golang.org/x/crypto/cryptobyte/asn1"
 	"golang.org/x/net/idna"
@@ -87,6 +88,9 @@ type creationParameters struct {
 
 	// The maximum path length to encode
 	MaxPathLength int
+
+	// The duration the certificate will use NotBefore
+	NotBeforeDuration time.Duration
 }
 
 type caInfoBundle struct {
@@ -259,11 +263,11 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 		return nil, nil
 	}
 
-	// Retrieve the old-style path
-	certEntry, err = req.Storage.Get(ctx, legacyPath)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
-	}
+	// Retrieve the old-style path.  We disregard errors here because they
+	// always manifest on windows, and thus the initial check for a revoked
+	// cert fails would return an error when the cert isn't revoked, preventing
+	// the happy path from working.
+	certEntry, _ = req.Storage.Get(ctx, legacyPath)
 	if certEntry == nil {
 		return nil, nil
 	}
@@ -462,6 +466,12 @@ func validateNames(data *dataBundle, names []string) string {
 // allowed, it will be returned as the second string. Empty strings + error
 // means everything is okay.
 func validateOtherSANs(data *dataBundle, requested map[string][]string) (string, string, error) {
+	for _, val := range data.role.AllowedOtherSANs {
+		if val == "*" {
+			// Anything is allowed
+			return "", "", nil
+		}
+	}
 	allowed, err := parseOtherSANs(data.role.AllowedOtherSANs)
 	if err != nil {
 		return "", "", errwrap.Wrapf("error parsing role's allowed SANs: {{err}}", err)
@@ -501,7 +511,10 @@ func parseOtherSANs(others []string) (map[string][]string, error) {
 		if len(splitType) != 2 {
 			return nil, fmt.Errorf("expected a colon in other SAN %q", other)
 		}
-		if !strings.EqualFold(splitType[0], "utf8") {
+		switch {
+		case strings.EqualFold(splitType[0], "utf8"):
+		case strings.EqualFold(splitType[0], "utf-8"):
+		default:
 			return nil, fmt.Errorf("only utf8 other SANs are supported; found non-supported type in other SAN %q", other)
 		}
 		result[splitOther[0]] = append(result[splitOther[0]], splitType[1])
@@ -546,7 +559,7 @@ func generateCert(ctx context.Context,
 		return nil, errutil.UserError{Err: "RSA keys < 2048 bits are unsafe and not supported"}
 	}
 
-	err := generateCreationBundle(b, data)
+	err := generateCreationBundle(b, data, isCA)
 	if err != nil {
 		return nil, err
 	}
@@ -592,7 +605,7 @@ func generateCert(ctx context.Context,
 // N.B.: This is only meant to be used for generating intermediate CAs.
 // It skips some sanity checks.
 func generateIntermediateCSR(b *backend, data *dataBundle) (*certutil.ParsedCSRBundle, error) {
-	err := generateCreationBundle(b, data)
+	err := generateCreationBundle(b, data, true)
 	if err != nil {
 		return nil, err
 	}
@@ -698,7 +711,7 @@ func signCert(b *backend,
 
 	data.csr = csr
 
-	err = generateCreationBundle(b, data)
+	err = generateCreationBundle(b, data, isCA)
 	if err != nil {
 		return nil, err
 	}
@@ -724,7 +737,8 @@ func signCert(b *backend,
 // generateCreationBundle is a shared function that reads parameters supplied
 // from the various endpoints and generates a creationParameters with the
 // parameters that can be used to issue or sign
-func generateCreationBundle(b *backend, data *dataBundle) error {
+func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
+
 	// Read in names -- CN, DNS and email addresses
 	var cn string
 	var ridSerialNumber string
@@ -801,6 +815,15 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 						}
 					}
 				}
+			}
+		}
+		if venafiPolciyCheck {
+			//Calling Venafi policy check before performing any checks
+			log.Println("Checking creation bundle against Venafi policy")
+			err := checkAgainstVenafiPolicy(data.req, data.role, isCA, data.csr, cn, []string{}, emailAddresses, dnsNames)
+			// i think
+			if err != nil {
+				return errutil.UserError{Err: err.Error()}
 			}
 		}
 
@@ -1019,6 +1042,7 @@ func generateCreationBundle(b *backend, data *dataBundle) error {
 		ExtKeyUsageOIDs:               data.role.ExtKeyUsageOIDs,
 		PolicyIdentifiers:             data.role.PolicyIdentifiers,
 		BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
+		NotBeforeDuration:             data.role.NotBeforeDuration,
 	}
 
 	// Don't deal with URLs or max path length if it's self-signed, as these
@@ -1174,6 +1198,9 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		EmailAddresses: data.params.EmailAddresses,
 		IPAddresses:    data.params.IPAddresses,
 		URIs:           data.params.URIs,
+	}
+	if data.params.NotBeforeDuration > 0 {
+		certTemplate.NotBefore = time.Now().Add(-1 * data.params.NotBeforeDuration)
 	}
 
 	if err := handleOtherSANs(certTemplate, data.params.OtherSANs); err != nil {
@@ -1369,6 +1396,9 @@ func signCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 		NotAfter:       data.params.NotAfter,
 		SubjectKeyId:   subjKeyID[:],
 		AuthorityKeyId: caCert.SubjectKeyId,
+	}
+	if data.params.NotBeforeDuration > 0 {
+		certTemplate.NotBefore = time.Now().Add(-1 * data.params.NotBeforeDuration)
 	}
 
 	switch data.signingBundle.PrivateKeyType {

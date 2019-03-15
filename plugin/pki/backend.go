@@ -48,6 +48,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			SealWrapStorage: []string{
 				"config/ca_bundle",
+				"venafi-policy",
 			},
 		},
 
@@ -75,6 +76,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathFetchListCerts(&b),
 			pathImportQueue(&b),
 			pathImportQueueList(&b),
+			pathVenafiPolicy(&b),
+			pathVenafiPolicyContent(&b),
+			pathVenafiPolicyList(&b),
 			pathRevoke(&b),
 			pathTidy(&b),
 		},

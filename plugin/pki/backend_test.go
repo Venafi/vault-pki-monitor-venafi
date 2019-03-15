@@ -16,7 +16,6 @@ import (
 	"math"
 	"math/big"
 	mathrand "math/rand"
-	"net"
 	"net/url"
 	"os"
 	"reflect"
@@ -68,6 +67,7 @@ func TestPKI_RequireCN(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicyToClient("pki", client, t)
 
 	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
@@ -152,7 +152,7 @@ func TestBackend_CSRValues(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps:   []logicaltest.TestStep{},
+		Steps:          []logicaltest.TestStep{venafiCreateSimplePolicyStep},
 	}
 
 	intdata := map[string]interface{}{}
@@ -179,7 +179,7 @@ func TestBackend_URLsCRUD(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps:   []logicaltest.TestStep{},
+		Steps:          []logicaltest.TestStep{venafiCreateSimplePolicyStep},
 	}
 
 	intdata := map[string]interface{}{}
@@ -209,7 +209,7 @@ func TestBackend_RSARoles(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{
+		Steps: []logicaltest.TestStep{venafiCreateSimplePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -250,7 +250,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{
+		Steps: []logicaltest.TestStep{venafiCreateSimplePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -291,7 +291,7 @@ func TestBackend_ECRoles(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{
+		Steps: []logicaltest.TestStep{venafiCreateSimplePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -332,7 +332,7 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{
+		Steps: []logicaltest.TestStep{venafiCreateSimplePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -422,14 +422,6 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageCodeSigning {
 			return nil, fmt.Errorf("bad extended key usage")
 		}
-	}
-
-	// 40 seconds since we add 30 second slack for clock skew
-	if math.Abs(float64(time.Now().Unix()-cert.NotBefore.Unix())) > 40 {
-		return nil, fmt.Errorf("validity period starts out of range")
-	}
-	if !cert.NotBefore.Before(time.Now().Add(-10 * time.Second)) {
-		return nil, fmt.Errorf("validity period not far enough in the past")
 	}
 
 	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 20 {
@@ -637,20 +629,21 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			SerialNumber: "MySerialNumber",
 			CommonName:   "my@example.com",
 		},
-		DNSNames: []string{
-			"name1.example.com",
-			"name2.example.com",
-			"name3.example.com",
-		},
-		EmailAddresses: []string{
-			"name1@example.com",
-			"name2@example.com",
-			"name3@example.com",
-		},
-		IPAddresses: []net.IP{
-			net.ParseIP("::ff:1:2:3:4"),
-			net.ParseIP("::ff:5:6:7:8"),
-		},
+		//Usage of SANs in CA is not recommended.
+		//DNSNames: []string{
+		//	"name1.example.com",
+		//	"name2.example.com",
+		//	"name3.example.com",
+		//},
+		//EmailAddresses: []string{
+		//	"name1@example.com",
+		//	"name2@example.com",
+		//	"name3@example.com",
+		//},
+		//IPAddresses: []net.IP{
+		//	net.ParseIP("::ff:1:2:3:4"),
+		//	net.ParseIP("::ff:5:6:7:8"),
+		//},
 	}
 
 	priv, _ := rsa.GenerateKey(rand.Reader, 2048)
@@ -973,6 +966,29 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 				return fmt.Errorf("error: returned certificate has PostalCode of %s but %s was specified in the role", cert.Subject.PostalCode, expected)
 			}
 			return nil
+		}
+	}
+
+	getNotBeforeCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+		var certBundle certutil.CertBundle
+		return func(resp *logical.Response) error {
+			err := mapstructure.Decode(resp.Data, &certBundle)
+			if err != nil {
+				return err
+			}
+			parsedCertBundle, err := certBundle.ToParsedCertBundle()
+			if err != nil {
+				return fmt.Errorf("error checking generated certificate: %s", err)
+			}
+			cert := parsedCertBundle.Certificate
+
+			actualDiff := time.Now().Sub(cert.NotBefore)
+			certRoleDiff := (role.NotBeforeDuration - actualDiff).Truncate(time.Second)
+			// These times get truncated, so give a 1 second buffer on each side
+			if certRoleDiff >= -1*time.Second && certRoleDiff <= 1*time.Second {
+				return nil
+			}
+			return fmt.Errorf("validity period out of range diff: %v", certRoleDiff)
 		}
 	}
 
@@ -1324,6 +1340,16 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		roleVals.PostalCode = []string{"f00", "b4r"}
 		addTests(getPostalCodeCheck(roleVals))
 	}
+	// NotBefore tests
+	{
+		roleVals.NotBeforeDuration = 10 * time.Second
+		addTests(getNotBeforeCheck(roleVals))
+
+		roleVals.NotBeforeDuration = 30 * time.Second
+		addTests(getNotBeforeCheck(roleVals))
+
+		roleVals.NotBeforeDuration = 0
+	}
 	// IP SAN tests
 	{
 		roleVals.UseCSRSANs = true
@@ -1409,7 +1435,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
 	// generate root
 	rootData := map[string]interface{}{
 		"common_name": "test.com",
@@ -1536,6 +1562,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -1734,6 +1761,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicyToClient("pki", client, t)
 
 	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
@@ -1834,6 +1862,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicyToClient("root", client, t)
 	err = client.Sys().Mount("int", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
@@ -1844,7 +1873,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	writePolicyToClient("int", client, t)
 	// Direct issuing from root
 	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
@@ -1916,6 +1945,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -1961,8 +1991,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "foo.bar.com",
 		},
-		SerialNumber: big.NewInt(1234),
-		IsCA:         false,
+		SerialNumber:          big.NewInt(1234),
+		IsCA:                  false,
 		BasicConstraintsValid: true,
 	}
 
@@ -1992,8 +2022,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		Subject: pkix.Name{
 			CommonName: "bar.foo.com",
 		},
-		SerialNumber: big.NewInt(2345),
-		IsCA:         true,
+		SerialNumber:          big.NewInt(2345),
+		IsCA:                  true,
 		BasicConstraintsValid: true,
 	}
 	ss, ssCert := getSelfSigned(template, issuer)
@@ -2114,6 +2144,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicyToClient("root", client, t)
 
 	var resp *api.Secret
 	var certStr string
@@ -2333,6 +2364,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicyToClient("root", client, t)
 
 	var resp *api.Secret
 	var certStr string
@@ -2456,6 +2488,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	writePolicyToClient("root", client, t)
 
 	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
@@ -2573,10 +2606,9 @@ func setCerts() {
 		DNSNames:              []string{"root.localhost"},
 		KeyUsage:              x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign),
 		SerialNumber:          big.NewInt(mathrand.Int63()),
-		NotBefore:             time.Now().Add(-30 * time.Second),
 		NotAfter:              time.Now().Add(262980 * time.Hour),
 		BasicConstraintsValid: true,
-		IsCA: true,
+		IsCA:                  true,
 	}
 	caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, cak.Public(), cak)
 	if err != nil {

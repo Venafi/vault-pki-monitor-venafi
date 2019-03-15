@@ -10,7 +10,6 @@ import (
 	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/hashicorp/vault/logical"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -32,6 +31,8 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -82,7 +83,7 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 		"tpp_url":            os.Getenv("TPPURL"),
 		"tpp_user":           os.Getenv("TPPUSER"),
 		"tpp_password":       os.Getenv("TPPPASSWORD"),
-		"zone":               os.Getenv("TPPZONE"),
+		"zone":               os.Getenv("TPPALLALLOWZONE"),
 		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
 		"tpp_import_timeout": 2,
 		"tpp_import_workers": 2,
@@ -131,7 +132,7 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 		Credentials: &endpoint.Authentication{
 			User:     os.Getenv("TPPUSER"),
 			Password: os.Getenv("TPPPASSWORD")},
-		Zone:       os.Getenv("TPPZONE"),
+		Zone:       os.Getenv("TPPALLALLOWZONE"),
 		LogVerbose: true,
 	}
 
@@ -174,6 +175,8 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -224,7 +227,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		"tpp_url":            os.Getenv("TPPURL"),
 		"tpp_user":           os.Getenv("TPPUSER"),
 		"tpp_password":       os.Getenv("TPPPASSWORD"),
-		"zone":               os.Getenv("TPPZONE"),
+		"zone":               os.Getenv("TPPALLALLOWZONE"),
 		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
 		"tpp_import_timeout": 1,
 		"tpp_import_workers": 2,
@@ -276,7 +279,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 			Credentials: &endpoint.Authentication{
 				User:     os.Getenv("TPPUSER"),
 				Password: os.Getenv("TPPPASSWORD")},
-			Zone:       os.Getenv("TPPZONE"),
+			Zone:       os.Getenv("TPPALLALLOWZONE"),
 			LogVerbose: true,
 		}
 
@@ -323,6 +326,8 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -373,7 +378,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		"tpp_url":            os.Getenv("TPPURL"),
 		"tpp_user":           os.Getenv("TPPUSER"),
 		"tpp_password":       os.Getenv("TPPPASSWORD"),
-		"zone":               os.Getenv("TPPZONE"),
+		"zone":               os.Getenv("TPPALLALLOWZONE"),
 		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
 		"tpp_import_timeout": 2,
 		"tpp_import_workers": 5,
@@ -431,14 +436,4 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	log.Printf("Import queue list is:\n %v", keys)
 	time.Sleep(30 * time.Second)
 
-}
-
-func randSeq(n int) string {
-	rand.Seed(time.Now().UTC().UnixNano())
-	var letters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
 }
