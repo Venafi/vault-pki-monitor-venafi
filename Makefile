@@ -106,7 +106,7 @@ build_optional:
 
 dev_build:
 	sed -i 's/const venafiPolicyDenyAll =.*/const venafiPolicyDenyAll = true/' plugin/pki/vcert.go
-	env CGO_ENABLED=0 GOOS=linux  GOARCH=amd64 go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME) || exit 1
+	env CGO_ENABLED=0 GOOS=linux  GOARCH=amd64 go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/$(PLUGIN_NAME) || exit 1
 
 compress:
 	mkdir -p $(DIST_DIR)
