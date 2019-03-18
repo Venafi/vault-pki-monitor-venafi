@@ -79,33 +79,17 @@ clean:
 
 build: build_strict build_optional
 
-#LDFLAGS_OPT := -s -w -extldflags "-static" -X pki.VenafiPolciyCheck=true -X pki.VenafiPolicyDenyAll=false
-#LDFLAGS_STRICT := -s -w -extldflags "-static" -X pki.VenafiPolciyCheck=true -X pki.VenafiPolicyDenyAll=true
-LDFLAGS_OPT := -s -w -extldflags "-static"
 build_strict:
-	scripts/build.sh $(PLUGIN_NAME) $(PLUGIN_DIR) strict
+	scripts/build.sh $(PLUGIN_NAME) $(PLUGIN_DIR) $(DIST_DIR) strict $(VERSION)
 
 build_optional:
-	scripts/build.sh $(PLUGIN_NAME) $(PLUGIN_DIR) optional
+	scripts/build.sh $(PLUGIN_NAME) $(PLUGIN_DIR) $(DIST_DIR) optional $(VERSION)
 
 
 dev_build:
 	sed -i 's/const venafiPolicyDenyAll =.*/const venafiPolicyDenyAll = true/' plugin/pki/vcert.go
 	env CGO_ENABLED=0 GOOS=linux  GOARCH=amd64 go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/$(PLUGIN_NAME) || exit 1
 
-compress:
-	mkdir -p $(DIST_DIR)
-	rm -f $(DIST_DIR)/*
-	for os in linux linux86 darwin darwin86; do \
-		for mode in strict optional; do \
-			sha256sum pkg/bin/$${os}/$(PLUGIN_NAME)_$${mode} > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.SHA256SUM  && \
-			sed -i "s#pkg/bin/$${os}/##" ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.SHA256SUM &&  \
-			zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_$${mode}" ; done ; done
-	for os in windows windows86; do \
-		for mode in strict optional; do \
-			sha256sum pkg/bin/$${os}/$(PLUGIN_NAME)_$${mode}.exe > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.SHA256SUM  && \
-			sed -i "s#pkg/bin/$${os}/##" ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.SHA256SUM &&  \
-			zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_$${mode}.exe" ; done
 
 mount_dev: unset
 	vault write sys/plugins/catalog/$(PLUGIN_NAME) sha_256="$(SHA256)" command="$(PLUGIN_NAME)"
