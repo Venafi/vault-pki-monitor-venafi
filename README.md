@@ -44,14 +44,14 @@ for integrating it with Venafi Platform and Cloud.
    In strict if Venafi policy is not configured when you try to issue the certificate you will get error: 
    "policy data is nil. You need configure Venafi policy to proceed"
     ```
-    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.0/vault-pki-monitor-venafi_0.3.0+53_linux_strict.zip
-    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.0/vault-pki-monitor-venafi_0.3.0+53_linux_strict.SHA256SUM
+    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.0/vault-pki-monitor-venafi_0.3.0+54_linux_strict.zip
+    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.0/vault-pki-monitor-venafi_0.3.0+54_linux_strict.SHA256SUM
     ```
 
 1. Unzip the plugin binary and check it with sha256 
     ```
-    gunzip -S .zip vault-pki-monitor-venafi_0.3.0+53_linux_strict.zip
-    sha256sum -c vault-pki-monitor-venafi_0.3.0+53_linux.SHA256SUM
+    unzip vault-pki-monitor-venafi_0.3.0+54_linux_strict.zip
+    sha256sum -c vault-pki-monitor-venafi_0.3.0+54_linux.SHA256SUM
     ```
 1. Move it to the `/etc/vault/vault_plugins` directory (or a custom directory of our choosing):
     ```
@@ -63,7 +63,7 @@ for integrating it with Venafi Platform and Cloud.
     echo 'plugin_directory = "/etc/vault/vault_plugins"' > vault-config.hcl
     ```
 
-1. Start your Vault (note: if you don't have working configuration you can start it in dev mode.):
+1. Start your Vault (note: if you don't have working configuration you can start it in dev mode.):  
     !!!Dev mode is only for first look or developement purposes. Don't use it in production!!!
     ```
     vault server -log-level=debug -dev -config=vault-config.hcl
@@ -78,7 +78,7 @@ for integrating it with Venafi Platform and Cloud.
 
 1. Get the SHA-256 checksum of `vault-pki-monitor-venafi` plugin binary from checksum file:
     ```
-    SHA256=$(cut -d' ' -f1 vault-pki-monitor-venafi_0.3.0+53_linux_strict.SHA256SUM)
+    SHA256=$(cut -d' ' -f1 vault-pki-monitor-venafi_0.3.0+54_linux_strict.SHA256SUM)
     echo $SHA256
     ```
 
