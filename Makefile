@@ -82,26 +82,11 @@ build: build_strict build_optional
 #LDFLAGS_OPT := -s -w -extldflags "-static" -X pki.VenafiPolciyCheck=true -X pki.VenafiPolicyDenyAll=false
 #LDFLAGS_STRICT := -s -w -extldflags "-static" -X pki.VenafiPolciyCheck=true -X pki.VenafiPolicyDenyAll=true
 LDFLAGS_OPT := -s -w -extldflags "-static"
-LDFLAGS_STRICT := -s -w -extldflags "-static"
 build_strict:
-	sed -i 's/const venafiPolicyDenyAll =.*/const venafiPolicyDenyAll = true/' plugin/pki/vcert.go
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME) || exit 1
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=386   go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME) || exit 1
-	env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME) || exit 1
-	env CGO_ENABLED=0 GOOS=darwin  GOARCH=386   go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME) || exit 1
-	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME).exe || exit 1
-	env CGO_ENABLED=0 GOOS=windows GOARCH=386   go build -ldflags '$(LDFLAGS_STRICT)' -a -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME).exe || exit 1
-	chmod +x $(PLUGIN_DIR)/*
+	scripts/build.sh $(PLUGIN_NAME) $(PLUGIN_DIR) strict
 
 build_optional:
-	sed -i 's/const venafiPolicyDenyAll =.*/const venafiPolicyDenyAll = false/' plugin/pki/vcert.go
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags '$(LDFLAGS_OPT)' -a -o $(PLUGIN_DIR)/linux/$(PLUGIN_NAME)_optional || exit 1
-	env CGO_ENABLED=0 GOOS=linux   GOARCH=386   go build -ldflags '$(LDFLAGS_OPT)' -a -o $(PLUGIN_DIR)/linux86/$(PLUGIN_NAME)_optional || exit 1
-	env CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags '$(LDFLAGS_OPT)' -a -o $(PLUGIN_DIR)/darwin/$(PLUGIN_NAME)_optional || exit 1
-	env CGO_ENABLED=0 GOOS=darwin  GOARCH=386   go build -ldflags '$(LDFLAGS_OPT)' -a -o $(PLUGIN_DIR)/darwin86/$(PLUGIN_NAME)_optional || exit 1
-	env CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags '$(LDFLAGS_OPT)' -a -o $(PLUGIN_DIR)/windows/$(PLUGIN_NAME)_optional.exe || exit 1
-	env CGO_ENABLED=0 GOOS=windows GOARCH=386   go build -ldflags '$(LDFLAGS_OPT)' -a -o $(PLUGIN_DIR)/windows86/$(PLUGIN_NAME)_optional.exe || exit 1
-	chmod +x $(PLUGIN_DIR)/*
+	scripts/build.sh $(PLUGIN_NAME) $(PLUGIN_DIR) optional
 
 
 dev_build:
@@ -112,15 +97,15 @@ compress:
 	mkdir -p $(DIST_DIR)
 	rm -f $(DIST_DIR)/*
 	for os in linux linux86 darwin darwin86; do \
-		for mode in strict optional; do
+		for mode in strict optional; do \
 			sha256sum pkg/bin/$${os}/$(PLUGIN_NAME)_$${mode} > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.SHA256SUM  && \
 			sed -i "s#pkg/bin/$${os}/##" ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.SHA256SUM &&  \
-			zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_$${mode}" ; done
+			zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_$${mode}" ; done ; done
 	for os in windows windows86; do \
-		for mode in strict optional; do
+		for mode in strict optional; do \
 			sha256sum pkg/bin/$${os}/$(PLUGIN_NAME)_$${mode}.exe > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.SHA256SUM  && \
 			sed -i "s#pkg/bin/$${os}/##" ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.SHA256SUM &&  \
-			zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_$${mode}" ; done
+			zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_$${mode}.exe" ; done
 
 mount_dev: unset
 	vault write sys/plugins/catalog/$(PLUGIN_NAME) sha_256="$(SHA256)" command="$(PLUGIN_NAME)"
