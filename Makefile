@@ -112,13 +112,13 @@ compress:
 	mkdir -p $(DIST_DIR)
 	rm -f $(DIST_DIR)/*
 	for os in linux linux86 darwin darwin86; do \
-		sha1sum pkg/bin/$${os}/* > $(PLUGIN_DIR)/$${os}/hashsums.sha1  && \
-		sed -i "s#pkg/bin/$${os}/##" $(PLUGIN_DIR)/$${os}/hashsums.sha1 &&  \
+		sha256sum pkg/bin/$${os}/$(PLUGIN_NAME) > $(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_SHA256SUMS  && \
+		sed -i "s#pkg/bin/$${os}/##" $(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_SHA256SUMS &&  \
 		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)" &&  \
 		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_optional" && \
 		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" $(PLUGIN_DIR)/$${os}/hashsums.sha1 ; done
 	for os in windows windows86; do \
-		sha1sum pkg/bin/$${os}/* > $(PLUGIN_DIR)/$${os}/hashsums.sha1  && \
+		sha256sum pkg/bin/$${os}/* > $(PLUGIN_DIR)/$${os}/hashsums.sha1  && \
 		sed -i 's#pkg/bin/$${os}/##' $(PLUGIN_DIR)/$${os}/hashsums.sha1 &&  \
 		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME).exe" &&  \
 		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_optional.exe" && \

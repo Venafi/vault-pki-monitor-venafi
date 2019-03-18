@@ -2,7 +2,12 @@
 
 <img src="https://www.venafi.com/sites/default/files/content/body/Light_background_logo.png" width="330px" height="69px"/>  
 
-This solution allows [HashiCorp Vault](https://www.vaultproject.io/) users to provide their Information Security organization visibility into certificate issuance.  Vault issued certificates are automatically forwarded to the [Venafi Platform](https://www.venafi.com/platform/trust-protection-platform) which enables risk assessment, incident response, and auditing that ensures compliance with enterprise security policy.  The [secrets engine](https://www.vaultproject.io/docs/secrets/pki/index.html) component is the original HashiCorp Vault.
+This solution allows [HashiCorp Vault](https://www.vaultproject.io/) users to provide their
+Information Security organization visibility into certificate issuance.
+Vault issued certificates are automatically forwarded to the 
+[Venafi Platform](https://www.venafi.com/platform/trust-protection-platform) which enables
+risk assessment, incident response, and auditing that ensures compliance with enterprise security policy.
+The [secrets engine](https://www.vaultproject.io/docs/secrets/pki/index.html) component is the original HashiCorp Vault.
 
 ## Dependencies
 
@@ -10,56 +15,76 @@ This solution allows [HashiCorp Vault](https://www.vaultproject.io/) users to pr
 
 ## Requirements for use with Trust Protection Platform
 
-1. The WebSDK user that Vault will be using to authenticate with the Venafi Platform has been granted view, read, write, and create permission to their policy folder.
+1. The WebSDK user that Vault will be using to authenticate with the Venafi Platform has been
+ granted view, read, write, and create permission to their policy folder.
 
 ### Establishing Trust between Vault and Trust Protection Platform
 
-It is not common for the Venafi Platform's REST API (WebSDK) to be secured using a certificate issued by a publicly trusted CA, therefore establishing trust for that server certificate is a critical part of your configuration.  Ideally this is done by obtaining the root CA certificate in the issuing chain in PEM format and copying that file to your Vault server (e.g. /opt/venafi/bundle.pem).  You then reference that file using the 'trust_bundle_file' parameter whenever you create a new PKI role in your Vault.
+It is not common for the Venafi Platform's REST API (WebSDK) to be secured using a certificate issued by a publicly trusted CA,
+therefore establishing trust for that server certificate is a critical part of your configuration.
+Ideally this is done by obtaining the root CA certificate in the issuing chain in PEM format and copying that file to
+your Vault server (e.g. /opt/venafi/bundle.pem).  You then reference that file using the 'trust_bundle_file' parameter whenever you create
+a new PKI role in your Vault.
 
 ## Quickstart, Step by Step
 
-1. Familiarize yourself with the [HashiCorp Vault Plugin System](https://www.vaultproject.io/docs/internals/plugins.html)
+This is a [Vault plugin](https://www.vaultproject.io/docs/internals/plugins.html)
+and is meant to work with Vault. This guide assumes you have already installed Vault
+and have a basic understanding of how Vault works.
 
-2. Download the current `vault-pki-monitor-venafi` release package for your operating system and unzip the plugin to the `/etc/vault/vault_plugins` directory (or a custom directory of our choosing):
+Otherwise, first read this guide on how to [get started with Vault](https://www.vaultproject.io/intro/getting-started/install.html).
+
+To learn specifically about how plugins work, see documentation on [Vault plugins](https://www.vaultproject.io/docs/internals/plugins.html).
+
+1. Download the current `vault-pki-monitor-venafi` release package for your operating system and checksum for the binary
     ```
-    wget https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.0.2/vault-pki-monitor-venafi_0.0.3_linux.zip
-    unzip vault-pki-monitor-venafi_0.0.3_linux.zip
+    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.0/vault-pki-monitor-venafi_0.3.0+53_linux.zip
+    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.0/vault-pki-monitor-venafi_0.3.0+53_linux.SHA256SUM
+    ```
+
+1. Unzip the plugin binary and check it with sha256 
+    ```
+     unzip vault-pki-monitor-venafi_0.3.0+53_linux.zip
+     sha256sum -c vault-pki-monitor-venafi_0.3.0+53_linux.SHA256SUM
+     ```
+1. Move it to the `/etc/vault/vault_plugins` directory (or a custom directory of our choosing):
+    ```
     mv vault-pki-monitor-venafi /etc/vault/vault_plugins
     ```
-
-3. Configure the plugin directory for your Vault by specifying it in the startup configuration file:
+    
+1. Configure the plugin directory for your Vault by specifying it in the startup configuration file:
     ```
     echo 'plugin_directory = "/etc/vault/vault_plugins"' > vault-config.hcl
     ```
 
-4. Start your Vault (note: if you don't have working configuration you can start it in dev mode):
+1. Start your Vault (note: if you don't have working configuration you can start it in dev mode):
     ```
     vault server -log-level=debug -dev -config=vault-config.hcl
     ```
 
 [![demo](https://asciinema.org/a/VQ1f9Xdmftz5FhtX0GP1bblSg.png)](https://asciinema.org/a/VQ1f9Xdmftz5FhtX0GP1bblSg?autoplay=1)
 
-5.  Export the VAULT_ADDR environment variable so that the Vault client will interact with the local Vault:
+1.  Export the VAULT_ADDR environment variable so that the Vault client will interact with the local Vault:
     ```
     export VAULT_ADDR=http://127.0.0.1:8200
     ```
 
-6. Get the SHA-256 checksum of `vault-pki-monitor-venafi` plugin binary:
+1. Get the SHA-256 checksum of `vault-pki-monitor-venafi` plugin binary:
     ```
     SHA256=$(shasum -a 256 /etc/vault/vault_plugins/vault-pki-monitor-venafi | cut -d' ' -f1)
     ```
 
-7. Add the `vault-pki-monitor-venafi` plugin to the Vault system catalog:
+1. Add the `vault-pki-monitor-venafi` plugin to the Vault system catalog:
     ```
     vault write sys/plugins/catalog/vault-pki-monitor-venafi sha_256="${SHA256}" command="vault-pki-monitor-venafi"
     ```
 
-8. Enable the secrets backend for the `vault-pki-monitor-venafi` plugin:
+1. Enable the secrets backend for the `vault-pki-monitor-venafi` plugin:
     ```
     vault secrets enable -path=pki -plugin-name=vault-pki-monitor-venafi plugin
     ```
 
-9. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `pki` backend making sure the `tpp_import` option is enabled:
+1. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `pki` backend making sure the `tpp_import` option is enabled:
     ```
     vault write pki/roles/vault-monitor \
         tpp_import=true \
@@ -111,7 +136,8 @@ The following options are supported (note: this list can also be viewed from the
 13. Log into the Venafi Platform, navigate to the policy folder (zone) you specified when you created the role, and review the certificate that was created.
 
 ## Import Queue
-After a certificate has been signed it is added to the import queue. Processing of certificates in the queue begins automatically and will run continuously from that point until the plugin exits.  You can also manually initiate import queue processing using the following command:
+After a certificate has been signed it is added to the import queue. Processing of certificates in the queue begins automatically
+and will run continuously from that point until the plugin exits.  You can also manually initiate import queue processing using the following command:
 ```
 vault read pki/import-queue/<ROLE_NAME>
 ```
