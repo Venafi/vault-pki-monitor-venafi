@@ -187,7 +187,7 @@ The following options are supported (note: this list can also be viewed from the
 | Parameter           | Type    | Description                                                                   | Default   |
 | ------------------- | ------- | ------------------------------------------------------------------------------| --------- |
 | `tpp_import`        | bool    | Controls whether certificates are forwarded to the Venafi Platform            | `true`    |
-| `zone`              | string  | Venafi Platform policy folder where certificates will be imported             | "Default" | 
+| `zone`              | string  | Venafi Platform policy folder where certificates will be imported             | "Default" |
 | `tpp_url`           | string  | Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk")                     |           |
 | `tpp_username`      | string  | Venafi Platform WebSDK account username                                       |           |
 | `tpp_password`      | string  | Venafi Platform WebSDK account password                                       |           |
