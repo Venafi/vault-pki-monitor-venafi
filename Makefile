@@ -123,7 +123,8 @@ collect_artifacts:
 	rm -rf artifcats
 	mkdir -p artifcats
 	cp -rv $(DIST_DIR)/*.zip artifcats
-	cd artifcats; sha1sum * > hashsums.sha1
+	cp -rv $(DIST_DIR)/*.SHA256SUM artifcats
+	cd artifcats; sha256sum * > hashsums.SHA256SUM
 
 #Docker server with consul
 docker_server_prepare:
