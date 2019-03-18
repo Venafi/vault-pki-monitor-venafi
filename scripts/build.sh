@@ -20,6 +20,8 @@ for os in linux darwin windows; do
     for arch in 386 amd64; do
         if echo ${arch}|grep --quiet 386; then
             binary_name="${PLUGIN_DIR}/${os}86/${PLUGIN_NAME}_${BUILD_MODE}"
+        else
+            binary_name="${PLUGIN_DIR}/${os}/${PLUGIN_NAME}_${BUILD_MODE}"
         fi
         if echo ${os}|grep --quiet  windows; then
             binary_name="${binary_name}.exe"
