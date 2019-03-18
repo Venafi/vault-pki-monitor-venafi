@@ -112,17 +112,15 @@ compress:
 	mkdir -p $(DIST_DIR)
 	rm -f $(DIST_DIR)/*
 	for os in linux linux86 darwin darwin86; do \
-		sha256sum pkg/bin/$${os}/$(PLUGIN_NAME) > $(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_SHA256SUMS  && \
-		sed -i "s#pkg/bin/$${os}/##" $(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_SHA256SUMS &&  \
-		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)" &&  \
-		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_optional" && \
-		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" $(PLUGIN_DIR)/$${os}/hashsums.sha1 ; done
+		for mode in strict optional; do
+			sha256sum pkg/bin/$${os}/$(PLUGIN_NAME)_$${mode} > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.SHA256SUM  && \
+			sed -i "s#pkg/bin/$${os}/##" ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.SHA256SUM &&  \
+			zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_$${mode}" ; done
 	for os in windows windows86; do \
-		sha256sum pkg/bin/$${os}/* > $(PLUGIN_DIR)/$${os}/hashsums.sha1  && \
-		sed -i 's#pkg/bin/$${os}/##' $(PLUGIN_DIR)/$${os}/hashsums.sha1 &&  \
-		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME).exe" &&  \
-		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_optional.exe" && \
-		zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}.zip" $(PLUGIN_DIR)/$${os}/hashsums.sha1 ; done
+		for mode in strict optional; do
+			sha256sum pkg/bin/$${os}/$(PLUGIN_NAME)_$${mode}.exe > ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.SHA256SUM  && \
+			sed -i "s#pkg/bin/$${os}/##" ${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.SHA256SUM &&  \
+			zip -j "${CURRENT_DIR}/$(DIST_DIR)/${PLUGIN_NAME}_${VERSION}_$${os}_$${mode}.zip" "$(PLUGIN_DIR)/$${os}/$(PLUGIN_NAME)_$${mode}" ; done
 
 mount_dev: unset
 	vault write sys/plugins/catalog/$(PLUGIN_NAME) sha_256="$(SHA256)" command="$(PLUGIN_NAME)"

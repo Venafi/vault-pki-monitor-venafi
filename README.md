@@ -26,7 +26,7 @@ Ideally this is done by obtaining the root CA certificate in the issuing chain i
 your Vault server (e.g. /opt/venafi/bundle.pem).  You then reference that file using the 'trust_bundle_file' parameter whenever you create
 a new PKI role in your Vault.
 
-## Quickstart, Step by Step
+## Quickstart. Enabling the plugin.
 
 This is a [Vault plugin](https://www.vaultproject.io/docs/internals/plugins.html)
 and is meant to work with Vault. This guide assumes you have already installed Vault
@@ -36,17 +36,23 @@ Otherwise, first read this guide on how to [get started with Vault](https://www.
 
 To learn specifically about how plugins work, see documentation on [Vault plugins](https://www.vaultproject.io/docs/internals/plugins.html).
 
-1. Download the current `vault-pki-monitor-venafi` release package for your operating system and checksum for the binary
+This plugin is a copy of [original Vault PKI plugin](https://www.vaultproject.io/docs/secrets/pki/index.html) with additional features
+for integrating it with Venafi Platform and Cloud.
+
+1. Download the current `vault-pki-monitor-venafi` release package for your operating system and checksum for the binary.
+   There're two versions of binaries - optional and strict. In optional binary if Venafi policy is not configured no checks will be made.
+   In strict if Venafi policy is not configured when you try to issue the certificate you will get error: 
+   "policy data is nil. You need configure Venafi policy to proceed"
     ```
-    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.0/vault-pki-monitor-venafi_0.3.0+53_linux.zip
-    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.0/vault-pki-monitor-venafi_0.3.0+53_linux.SHA256SUM
+    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.0/vault-pki-monitor-venafi_0.3.0+53_linux_strict.zip
+    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.0/vault-pki-monitor-venafi_0.3.0+53_linux_strict.SHA256SUM
     ```
 
 1. Unzip the plugin binary and check it with sha256 
     ```
-     unzip vault-pki-monitor-venafi_0.3.0+53_linux.zip
-     sha256sum -c vault-pki-monitor-venafi_0.3.0+53_linux.SHA256SUM
-     ```
+    gunzip -S .zip vault-pki-monitor-venafi_0.3.0+53_linux_strict.zip
+    sha256sum -c vault-pki-monitor-venafi_0.3.0+53_linux.SHA256SUM
+    ```
 1. Move it to the `/etc/vault/vault_plugins` directory (or a custom directory of our choosing):
     ```
     mv vault-pki-monitor-venafi /etc/vault/vault_plugins
@@ -57,7 +63,8 @@ To learn specifically about how plugins work, see documentation on [Vault plugin
     echo 'plugin_directory = "/etc/vault/vault_plugins"' > vault-config.hcl
     ```
 
-1. Start your Vault (note: if you don't have working configuration you can start it in dev mode):
+1. Start your Vault (note: if you don't have working configuration you can start it in dev mode.):
+    !!!Dev mode is only for first look or developement purposes. Don't use it in production!!!
     ```
     vault server -log-level=debug -dev -config=vault-config.hcl
     ```
@@ -69,85 +76,23 @@ To learn specifically about how plugins work, see documentation on [Vault plugin
     export VAULT_ADDR=http://127.0.0.1:8200
     ```
 
-1. Get the SHA-256 checksum of `vault-pki-monitor-venafi` plugin binary:
+1. Get the SHA-256 checksum of `vault-pki-monitor-venafi` plugin binary from checksum file:
     ```
-    SHA256=$(shasum -a 256 /etc/vault/vault_plugins/vault-pki-monitor-venafi | cut -d' ' -f1)
+    SHA256=$(cut -d' ' -f1 vault-pki-monitor-venafi_0.3.0+53_linux_strict.SHA256SUM)
+    echo $SHA256
     ```
 
 1. Add the `vault-pki-monitor-venafi` plugin to the Vault system catalog:
     ```
-    vault write sys/plugins/catalog/vault-pki-monitor-venafi sha_256="${SHA256}" command="vault-pki-monitor-venafi"
+    vault write sys/plugins/catalog/vault-pki-monitor-venafi_strict sha_256="${SHA256}" command="vault-pki-monitor-venafi_strict"
     ```
 
 1. Enable the secrets backend for the `vault-pki-monitor-venafi` plugin:
     ```
-    vault secrets enable -path=pki -plugin-name=vault-pki-monitor-venafi plugin
+    vault secrets enable -path=pki -plugin-name=vault-pki-monitor-venafi_strict plugin
     ```
 
-1. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `pki` backend making sure the `tpp_import` option is enabled:
-    ```
-    vault write pki/roles/vault-monitor \
-        tpp_import=true \
-        tpp_url="https://tpp.venafi.example:443/vedsdk" \
-        tpp_user="local:admin" \
-        tpp_password="password" \
-        zone="DevOps\\Vault Monitor" \
-        trust_bundle_file="/opt/venafi/bundle.pem" \
-        generate_lease=true ttl=1h max_ttl=1h \
-        allowed_domains=example.com \
-        allow_subdomains=true
-    ```
-
-The following options are supported (note: this list can also be viewed from the command line using `vault path-help vault-pki-monitor-venafi/roles/<ROLE_NAME>`):
-
-| Parameter           | Type    | Description                                                                   | Default   |
-| ------------------- | ------- | ------------------------------------------------------------------------------| --------- |
-| `tpp_import`        | bool    | Controls whether certificates are forwarded to the Venafi Platform            | `true`    |
-| `zone`              | string  | Venafi Platform policy folder where certificates will be imported             | "Default" | 
-| `tpp_url`           | string  | Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk")                     |           |
-| `tpp_username`      | string  | Venafi Platform WebSDK account username                                       |           |
-| `tpp_password`      | string  | Venafi Platform WebSDK account password                                       |           |
-| `trust_bundle_file` | string  | PEM trust bundle for Venafi Platform server certificate                       |           |
-| `tpp_import_timeout`| int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
-| `tpp_import_workers`| int     | Maximum number of concurrent threads to use for VCert import                  | 3         |
-
-10. Initialize the Vault PKI certificate authority:
-    ```
-    vault write pki/root/generate/internal common_name="Vault Test Root CA" ttl=8760h
-    ```
-
-11. Enroll a certificate using the CA:
-    ```
-    vault write pki/issue/vault-monitor common_name="test.example.com" alt_names="test-1.example.com,test-2.example.com"
-    ```
-
-12. Check the Vault log and you should see something like this:
-```
-2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi: 2018/11/14 17:18:59 Job id: 1 ### Certificate imported:
-2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi:  {
-2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi:     "CertificateDN": "\\VED\\Policy\\DevOps\\Vault Monitor\\test.example.com",
-2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi:     "CertificateVaultId": 9147083,
-2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi:     "Guid": "{dffb26c2-4510-4965-89c0-4d64a04b80fa}"
-2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi: }
-```
-
-[![demo](https://asciinema.org/a/FrX6zj2MwbYLjop9ceIwUFNVU.png)](https://asciinema.org/a/FrX6zj2MwbYLjop9ceIwUFNVU?autoplay=1)
-
-13. Log into the Venafi Platform, navigate to the policy folder (zone) you specified when you created the role, and review the certificate that was created.
-
-## Import Queue
-After a certificate has been signed it is added to the import queue. Processing of certificates in the queue begins automatically
-and will run continuously from that point until the plugin exits.  You can also manually initiate import queue processing using the following command:
-```
-vault read pki/import-queue/<ROLE_NAME>
-```
-
-At any time you can view the contents of the import queue by certificate serial number using the following command:
-```
-vault list pki/import-queue
-```
-
-## Venafi Policy check (UNDER DEVELOPMENT)
+## Quickstart. Venafi Policy check
 
 Venafi Policy Check limits the PKI role based on Venafi Trust Protection Platform policies or Venafi Cloud zones.
 Policy check is configured in venafi-policy path, you can restrict this path for InfoSec team only using Vault policies.
@@ -208,7 +153,7 @@ Policy check is configured in venafi-policy path, you can restrict this path for
     ```
     1. Specify policy on role configuration:
     ```
-    vault write pki/roles/venafi \
+    vault write pki/roles/venafi-role \
         tpp_import=true \
         tpp_url="https://tpp.venafi.example:443/vedsdk" \
         tpp_user="local:admin" \
@@ -220,6 +165,72 @@ Policy check is configured in venafi-policy path, you can restrict this path for
         allowed_domains=example.com \
         allow_subdomains=true
     ```
+
+## Quickstart. Enabling Venafi Platform Import feature
+
+1. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `pki` backend making sure the `tpp_import` option is enabled:
+    ```
+    vault write pki/roles/tpp-import-role \
+        tpp_import=true \
+        tpp_url="https://tpp.venafi.example:443/vedsdk" \
+        tpp_user="local:admin" \
+        tpp_password="password" \
+        zone="DevOps\\Vault Monitor" \
+        trust_bundle_file="/opt/venafi/bundle.pem" \
+        generate_lease=true ttl=1h max_ttl=1h \
+        allowed_domains=example.com \
+        allow_subdomains=true
+    ```
+
+The following options are supported (note: this list can also be viewed from the command line using `vault path-help vault-pki-monitor-venafi/roles/<ROLE_NAME>`):
+
+| Parameter           | Type    | Description                                                                   | Default   |
+| ------------------- | ------- | ------------------------------------------------------------------------------| --------- |
+| `tpp_import`        | bool    | Controls whether certificates are forwarded to the Venafi Platform            | `true`    |
+| `zone`              | string  | Venafi Platform policy folder where certificates will be imported             | "Default" | 
+| `tpp_url`           | string  | Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk")                     |           |
+| `tpp_username`      | string  | Venafi Platform WebSDK account username                                       |           |
+| `tpp_password`      | string  | Venafi Platform WebSDK account password                                       |           |
+| `trust_bundle_file` | string  | PEM trust bundle for Venafi Platform server certificate                       |           |
+| `tpp_import_timeout`| int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
+| `tpp_import_workers`| int     | Maximum number of concurrent threads to use for VCert import                  | 3         |
+|`venafi_check_policy`|string   | Which Venafi policy check to use                                              | "default" |
+
+10. Initialize the Vault PKI certificate authority:
+    ```
+    vault write pki/root/generate/internal common_name="Vault Test Root CA" ttl=8760h
+    ```
+
+11. Enroll a certificate using the CA:
+    ```
+    vault write pki/issue/tpp-import-role common_name="test.example.com" alt_names="test-1.example.com,test-2.example.com"
+    ```
+
+12. Check the Vault log and you should see something like this:
+```
+2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi: 2018/11/14 17:18:59 Job id: 1 ### Certificate imported:
+2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi:  {
+2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi:     "CertificateDN": "\\VED\\Policy\\DevOps\\Vault Monitor\\test.example.com",
+2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi:     "CertificateVaultId": 9147083,
+2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi:     "Guid": "{dffb26c2-4510-4965-89c0-4d64a04b80fa}"
+2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi: }
+```
+
+[![demo](https://asciinema.org/a/FrX6zj2MwbYLjop9ceIwUFNVU.png)](https://asciinema.org/a/FrX6zj2MwbYLjop9ceIwUFNVU?autoplay=1)
+
+13. Log into the Venafi Platform, navigate to the policy folder (zone) you specified when you created the role, and review the certificate that was created.
+
+## Import Queue
+After a certificate has been signed it is added to the import queue. Processing of certificates in the queue begins automatically
+and will run continuously from that point until the plugin exits.  You can also manually initiate import queue processing using the following command:
+```
+vault read pki/import-queue/<ROLE_NAME>
+```
+
+At any time you can view the contents of the import queue by certificate serial number using the following command:
+```
+vault list pki/import-queue
+```
 
 <!-- TODO: show example of separating permissions between InfoSec and DevOps -->
 ## Venafi Policy usage scenario
