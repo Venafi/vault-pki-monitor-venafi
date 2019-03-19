@@ -44,32 +44,30 @@ for integrating it with Venafi Platform and Cloud.
    In strict if Venafi policy is not configured when you try to issue the certificate you will get error: 
    "policy data is nil. You need configure Venafi policy to proceed"
     ```
-    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.1/vault-pki-monitor-venafi_0.3.1+54_linux_strict.zip
-    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.1/vault-pki-monitor-venafi_0.3.1+54_linux_strict.SHA256SUM
+    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.1/vault-pki-monitor-venafi_0.3.1+59_linux_strict.zip
+    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.3.1/vault-pki-monitor-venafi_0.3.1+59_linux_strict.SHA256SUM
     ```
 
 1. Unzip the plugin binary and check it with sha256 
     ```
-    unzip vault-pki-monitor-venafi_0.3.1+54_linux_strict.zip
-    sha256sum -c vault-pki-monitor-venafi_0.3.1+54_linux.SHA256SUM
+    unzip vault-pki-monitor-venafi_0.3.1+59_linux_strict.zip
+    sha256sum -c vault-pki-monitor-venafi_0.3.1+59_linux_strict.SHA256SUM
     ```
-1. Move it to the `/etc/vault/vault_plugins` directory (or a custom directory of our choosing):
+1. Move it to the `/etc/vault/vault_plugins` directory (or a custom directory of your choosing):
     ```
-    mv vault-pki-monitor-venafi /etc/vault/vault_plugins
+    mv vault-pki-monitor-venafi_strict /etc/vault/vault_plugins
     ```
     
 1. Configure the plugin directory for your Vault by specifying it in the startup configuration file:
     ```
-    echo 'plugin_directory = "/etc/vault/vault_plugins"' > vault-config.hcl
+    echo 'plugin_directory = "/home/arykalin/tmp/monitortest/vault_plugins"' > vault-config.hcl
     ```
 
 1. Start your Vault (note: if you don't have working configuration you can start it in dev mode.):  
-    !!!Dev mode is only for first look or developement purposes. Don't use it in production!!!
+    **!Dev mode is only for first look or developement purposes. Don't use it in production!**
     ```
     vault server -log-level=debug -dev -config=vault-config.hcl
     ```
-
-[![demo](https://asciinema.org/a/VQ1f9Xdmftz5FhtX0GP1bblSg.png)](https://asciinema.org/a/VQ1f9Xdmftz5FhtX0GP1bblSg?autoplay=1)
 
 1.  Export the VAULT_ADDR environment variable so that the Vault client will interact with the local Vault:
     ```
@@ -78,7 +76,7 @@ for integrating it with Venafi Platform and Cloud.
 
 1. Get the SHA-256 checksum of `vault-pki-monitor-venafi` plugin binary from checksum file:
     ```
-    SHA256=$(cut -d' ' -f1 vault-pki-monitor-venafi_0.3.1+54_linux_strict.SHA256SUM)
+    SHA256=$(cut -d' ' -f1 vault-pki-monitor-venafi_0.3.1+59_linux_strict.SHA256SUM)
     echo $SHA256
     ```
 
@@ -91,6 +89,8 @@ for integrating it with Venafi Platform and Cloud.
     ```
     vault secrets enable -path=pki -plugin-name=vault-pki-monitor-venafi_strict plugin
     ```
+
+[![asciicast](https://asciinema.org/a/vmo1iE4fj3bDQFOByCSVH5h4D.svg)](https://asciinema.org/a/vmo1iE4fj3bDQFOByCSVH5h4D)
 
 ## Quickstart. Venafi Policy check
 
