@@ -126,11 +126,6 @@ Policy check is configured in venafi-policy path, you can restrict this path for
     * common name import-vl9kt.import.example.com not allowed by Venafi policy
     ```
 
-1. Venafi Policy can be deleted by performing delete operation to the venafi-polict path:
-    ```
-    vault delete pki/venafi-policy
-    ```
-
 1. You can read content of the policy using read operation:
     ```
     vault read pki/venafi-policy/default/policy
@@ -153,19 +148,23 @@ Policy check is configured in venafi-policy path, you can restrict this path for
     ```
     1. Specify policy on role configuration:
     ```
+    <!--TODO: rename tpp_import to venafi_import-->
     vault write pki/roles/venafi-role \
-        tpp_import=true \
-        tpp_url="https://tpp.venafi.example:443/vedsdk" \
-        tpp_user="local:admin" \
-        tpp_password="password" \
         zone="DevOps\\Vault Monitor" \
         venafi_check_policy="another-policy" \
         trust_bundle_file="/opt/venafi/bundle.pem" \
-        generate_lease=true store_by_cn=true store_pkey=true store_by_serial=true ttl=1h max_ttl=1h \
+        generate_lease=true ttl=1h max_ttl=1h \
         allowed_domains=example.com \
         allow_subdomains=true
     ```
 
+1. Venafi Policy can be deleted by performing delete operation to the venafi-polict path:
+    ```
+    vault delete pki/venafi-policy
+    ```
+    
+[![asciicast](https://asciinema.org/a/exZfzOOFyuxjvvQ61RE74B1LC.svg)](https://asciinema.org/a/exZfzOOFyuxjvvQ61RE74B1LC)    
+    
 ## Quickstart. Enabling Venafi Platform Import feature
 
 1. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `pki` backend making sure the `tpp_import` option is enabled:
