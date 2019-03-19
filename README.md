@@ -111,10 +111,19 @@ Policy check is configured in venafi-policy path, you can restrict this path for
     ```
     vault write pki/venafi-policy/default \
         token="xxxxx-xxxxx-xxxxx-xxxxx-xxxxxx" \
-        zone="Default" \
+        zone="Default"
     ```
 
-    TODO: add scheduled update script with prod ready security example here.
+    Following options are supported(note: this list can also be viewed from the command line using `vault path-help pki/venafi-policy/default`):  
+    | Parameter           | Type    | Description                                                                   | Default   |
+    | ------------------- | ------- | ------------------------------------------------------------------------------| --------- |
+    |apikey
+    |ext_key_usage
+    |name
+    |
+    
+    You also 
+    <!--TODO: add scheduled update script with prod ready security example here.-->
 
     Policy will be downloaded, parsed, saved into path and user will see output with parsed policy.
     After policy creation, any requested certificate will be checked against it. If checks fail to pass
@@ -181,7 +190,7 @@ Policy check is configured in venafi-policy path, you can restrict this path for
         allow_subdomains=true
     ```
 
-The following options are supported (note: this list can also be viewed from the command line using `vault path-help vault-pki-monitor-venafi/roles/<ROLE_NAME>`):
+The following options are supported (note: this list can also be viewed from the command line using `vault path-help pki/roles/<ROLE_NAME>`):
 
 | Parameter           | Type    | Description                                                                   | Default   |
 | ------------------- | ------- | ------------------------------------------------------------------------------| --------- |
@@ -195,7 +204,7 @@ The following options are supported (note: this list can also be viewed from the
 | `tpp_import_workers`| int     | Maximum number of concurrent threads to use for VCert import                  | 3         |
 |`venafi_check_policy`|string   | Which Venafi policy check to use                                              | "default" |
 
-10. Initialize the Vault PKI certificate authority:
+10. Initialize the Vault PKI certificate authority (if not yet initialized):
     ```
     vault write pki/root/generate/internal common_name="Vault Test Root CA" ttl=8760h
     ```
