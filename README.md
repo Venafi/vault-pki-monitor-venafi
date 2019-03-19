@@ -60,7 +60,7 @@ for integrating it with Venafi Platform and Cloud.
     
 1. Configure the plugin directory for your Vault by specifying it in the startup configuration file:
     ```
-    echo 'plugin_directory = "/home/arykalin/tmp/monitortest/vault_plugins"' > vault-config.hcl
+    echo 'plugin_directory = "/etc/vault/vault_plugins"' > vault-config.hcl
     ```
 
 1. Start your Vault (note: if you don't have working configuration you can start it in dev mode.):  
@@ -229,8 +229,6 @@ The following options are supported (note: this list can also be viewed from the
 2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi: }
 ```
 
-[![demo](https://asciinema.org/a/FrX6zj2MwbYLjop9ceIwUFNVU.png)](https://asciinema.org/a/FrX6zj2MwbYLjop9ceIwUFNVU?autoplay=1)
-
 13. Log into the Venafi Platform, navigate to the policy folder (zone) you specified when you created the role, and review the certificate that was created.
 
 ## Import Queue
@@ -244,6 +242,8 @@ At any time you can view the contents of the import queue by certificate serial 
 ```
 vault list pki/import-queue
 ```
+
+[![asciicast](https://asciinema.org/a/ydAXoUiZFmMcmXfSvqQSxJyJa.svg)](https://asciinema.org/a/ydAXoUiZFmMcmXfSvqQSxJyJa)
 
 <!-- TODO: show example of separating permissions between InfoSec and DevOps -->
 ## Venafi Policy usage scenario
