@@ -115,12 +115,17 @@ Policy check is configured in venafi-policy path, you can restrict this path for
     ```
 
     Following options are supported(note: this list can also be viewed from the command line using `vault path-help pki/venafi-policy/default`):  
-    | Parameter           | Type    | Description                                                                   | Default   |
+    
+    | Parameter           | Type    | Description                                                                   | Example   |
     | ------------------- | ------- | ------------------------------------------------------------------------------| --------- |
-    |apikey
-    |ext_key_usage
-    |name
-    |
+    |`apikey`               |string   | API key for Venafi Cloud.                                                   |`142231b7-cvb0-412e-886b-6aeght0bc93d`|
+    |`ext_key_usage`        |string   | A comma-separated string or list of allowed extended key usages.            |`ServerAuth,ClientAuth`|
+    |`name`                 |string   | Name of the Venafi policy config. IS not set will be `default`              |`another-policy`|
+    |`tpp_password`         |string   | Password for web API user                                                   |`password`|
+    |`tpp_url`              |string   | URL of Venafi Platform.                                                     |`https://tpp.venafi.example/vedsdk`|
+    |`tpp_user`             |string   | Web API user for Venafi Platform                                            |`admin`|
+    |`trust_bundle_file`    |string   | Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server.|`"/full/path/to/chain.pem"`|
+    |`zone`                 |string   | Name of Venafi Platform or Cloud policy.                                    |`testpolicy\\vault`|
     
     You also 
     <!--TODO: add scheduled update script with prod ready security example here.-->

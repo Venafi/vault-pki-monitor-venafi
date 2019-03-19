@@ -66,7 +66,7 @@ Example:
 			"ext_key_usage": {
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{},
-				Description: `A comma-separated string or list of extended key usages. Valid values can be found at
+				Description: `A comma-separated string or list of allowed extended key usages. Valid values can be found at
 https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 -- simply drop the "ExtKeyUsage" part of the name.
 Also you can use constants from this module (like 1, 5,8) direct or use OIDs (like 1.3.6.1.5.5.7.3.4)`,
