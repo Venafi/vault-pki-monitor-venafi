@@ -18,7 +18,6 @@ import (
 const venafiPolicyPath = "venafi-policy/"
 const defaultVenafiPolicyName = "default"
 
-// This returns the list of queued for import to TPP certificates
 func pathVenafiPolicy(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: venafiPolicyPath + framework.GenericNameRegex("name"),
@@ -50,11 +49,6 @@ Example for Venafi Cloud: Default`,
 				Description: `Password for web API user Example: password`,
 				Required:    true,
 			},
-			"tpp_import": {
-				Type:        framework.TypeBool,
-				Description: `Import certificate to Venafi Platform if true. False by default.`,
-				Required:    true,
-			},
 			"trust_bundle_file": {
 				Type: framework.TypeString,
 				Description: `Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server.
@@ -72,7 +66,7 @@ Example:
 			"ext_key_usage": {
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{},
-				Description: `A comma-separated string or list of extended key usages. Valid values can be found at
+				Description: `A comma-separated string or list of allowed extended key usages. Valid values can be found at
 https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 -- simply drop the "ExtKeyUsage" part of the name.
 Also you can use constants from this module (like 1, 5,8) direct or use OIDs (like 1.3.6.1.5.5.7.3.4)`,
@@ -337,7 +331,6 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		"zone":              config.Zone,
 		"tpp_password":      config.TPPPassword,
 		"tpp_user":          config.TPPUser,
-		"tpp_import":        config.TPPImport,
 		"trust_bundle_file": config.TrustBundleFile,
 		"apikey":            config.Apikey,
 		"cloud_url":         config.CloudURL,
@@ -604,7 +597,6 @@ type venafiPolicyConfigEntry struct {
 	Zone            string             `json:"zone"`
 	TPPPassword     string             `json:"tpp_password"`
 	TPPUser         string             `json:"tpp_user"`
-	TPPImport       bool               `json:"tpp_import"`
 	TrustBundleFile string             `json:"trust_bundle_file"`
 	Apikey          string             `json:"apikey"`
 	CloudURL        string             `json:"cloud_url"`
