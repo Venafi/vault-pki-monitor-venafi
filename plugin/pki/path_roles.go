@@ -555,12 +555,14 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
 		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 		//Role options added for Venafi Platform import
-		TPPURL:            data.Get("tpp_url").(string),
-		Zone:              data.Get("zone").(string),
-		TPPPassword:       data.Get("tpp_password").(string),
-		TPPUser:           data.Get("tpp_user").(string),
+		venafiConnectionConfig: venafiConnectionConfig{
+			TPPURL:          data.Get("tpp_url").(string),
+			Zone:            data.Get("zone").(string),
+			TPPPassword:     data.Get("tpp_password").(string),
+			TPPUser:         data.Get("tpp_user").(string),
+			TrustBundleFile: data.Get("trust_bundle_file").(string),
+		},
 		TPPImport:         data.Get("tpp_import").(bool),
-		TrustBundleFile:   data.Get("trust_bundle_file").(string),
 		TPPImportTimeout:  data.Get("tpp_import_timeout").(int),
 		TPPImportWorkers:  data.Get("tpp_import_workers").(int),
 		VenafiCheckPolicy: data.Get("venafi_check_policy").(string),
@@ -762,12 +764,9 @@ type roleEntry struct {
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
 	NotBeforeDuration             time.Duration `json:"not_before_duration" mapstructure:"not_before_duration"`
 	//Role options added for Venafi Platform import
-	TPPURL            string `json:"tpp_url"`
-	Zone              string `json:"zone"`
-	TPPPassword       string `json:"tpp_password"`
-	TPPUser           string `json:"tpp_user"`
+	venafiConnectionConfig
+
 	TPPImport         bool   `json:"tpp_import"`
-	TrustBundleFile   string `json:"trust_bundle_file"`
 	TPPImportTimeout  int    `json:"tpp_import_timeout"`
 	TPPImportWorkers  int    `json:"tpp_import_workers"`
 	VenafiCheckPolicy string `json:"venafi_check_policy"`

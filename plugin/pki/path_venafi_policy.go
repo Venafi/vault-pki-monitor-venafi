@@ -171,13 +171,15 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 
 	log.Printf("Write policy endpoint configuration into storage")
 	configEntry := &venafiPolicyConfigEntry{
-		TPPURL:          data.Get("tpp_url").(string),
-		CloudURL:        data.Get("cloud_url").(string),
-		Zone:            data.Get("zone").(string),
-		TPPPassword:     data.Get("tpp_password").(string),
-		Apikey:          data.Get("apikey").(string),
-		TPPUser:         data.Get("tpp_user").(string),
-		TrustBundleFile: data.Get("trust_bundle_file").(string),
+		venafiConnectionConfig: venafiConnectionConfig{
+			TPPURL:          data.Get("tpp_url").(string),
+			CloudURL:        data.Get("cloud_url").(string),
+			Zone:            data.Get("zone").(string),
+			TPPPassword:     data.Get("tpp_password").(string),
+			Apikey:          data.Get("apikey").(string),
+			TPPUser:         data.Get("tpp_user").(string),
+			TrustBundleFile: data.Get("trust_bundle_file").(string),
+		},
 	}
 	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
 	configEntry.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
@@ -593,14 +595,8 @@ func (b *backend) getPolicyConfigZone(ctx context.Context, s logical.Storage, n 
 }
 
 type venafiPolicyConfigEntry struct {
-	TPPURL          string             `json:"tpp_url"`
-	Zone            string             `json:"zone"`
-	TPPPassword     string             `json:"tpp_password"`
-	TPPUser         string             `json:"tpp_user"`
-	TrustBundleFile string             `json:"trust_bundle_file"`
-	Apikey          string             `json:"apikey"`
-	CloudURL        string             `json:"cloud_url"`
-	ExtKeyUsage     []x509.ExtKeyUsage `json:"ext_key_usage"`
+	venafiConnectionConfig
+	ExtKeyUsage []x509.ExtKeyUsage `json:"ext_key_usage"`
 }
 
 type venafiPolicyEntry struct {

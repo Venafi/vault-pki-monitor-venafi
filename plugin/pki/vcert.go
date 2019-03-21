@@ -20,14 +20,12 @@ const venafiPolicyDenyAll = true
 func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logical.Request, configName string, configType string) (
 	endpoint.Connector, error) {
 
-	var cfg *vcert.Config
+	if configName == "" {
+		return nil, fmt.Errorf("missing %s name", configType)
+	}
 
+	log.Printf("Using %s: %s", configType, configName)
 	if configType == "role" {
-		if configName == "" {
-			return nil, fmt.Errorf("missing role name")
-		}
-		log.Printf("Using role: %s", configName)
-
 		role, err := b.getRole(ctx, req.Storage, configName)
 		if err != nil {
 			return nil, err
@@ -35,32 +33,9 @@ func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logi
 		if role == nil {
 			return nil, fmt.Errorf("unknown role %v", role)
 		}
-
-		log.Printf("Using Venafi Platform with url %s\n", role.TPPURL)
-		cfg = &vcert.Config{
-			ConnectorType: endpoint.ConnectorTypeTPP,
-			BaseUrl:       role.TPPURL,
-			Credentials: &endpoint.Authentication{
-				User:     role.TPPUser,
-				Password: role.TPPPassword,
-			},
-			Zone:       role.Zone,
-			LogVerbose: true,
-		}
-		if role.TrustBundleFile != "" {
-			trustBundle, err := ioutil.ReadFile(role.TrustBundleFile)
-			if err != nil {
-				log.Printf("Can`t read trust bundle from file %s: %v\n", role.TrustBundleFile, err)
-				return nil, err
-			}
-			cfg.ConnectionTrust = string(trustBundle)
-		}
+		return role.venafiConnectionConfig.getConnection()
 
 	} else if configType == "policy" {
-		if configName == "" {
-			return nil, fmt.Errorf("missing policy name")
-		}
-
 		policy, err := b.getPolicyConfig(ctx, req.Storage, configName)
 		if err != nil {
 			return nil, err
@@ -69,63 +44,10 @@ func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logi
 			return nil, fmt.Errorf("expected policy but got nil from Vault storage %v", policy)
 		}
 
-		log.Printf("Using policy: %s", configName)
-		if policy.TPPURL != "" && policy.TPPUser != "" && policy.TPPPassword != "" {
-			log.Printf("Using Platform with url %s to issue certificate\n", policy.TPPURL)
-			if policy.TrustBundleFile != "" {
-				log.Printf("Trying to read trust bundle from file %s\n", policy.TrustBundleFile)
-				trustBundle, err := ioutil.ReadFile(policy.TrustBundleFile)
-				if err != nil {
-					return nil, err
-				}
-				trustBundlePEM := string(trustBundle)
-				cfg = &vcert.Config{
-					ConnectorType:   endpoint.ConnectorTypeTPP,
-					BaseUrl:         policy.TPPURL,
-					ConnectionTrust: trustBundlePEM,
-					Credentials: &endpoint.Authentication{
-						User:     policy.TPPUser,
-						Password: policy.TPPPassword,
-					},
-					Zone:       policy.Zone,
-					LogVerbose: true,
-				}
-			} else {
-				cfg = &vcert.Config{
-					ConnectorType: endpoint.ConnectorTypeTPP,
-					BaseUrl:       policy.TPPURL,
-					Credentials: &endpoint.Authentication{
-						User:     policy.TPPUser,
-						Password: policy.TPPPassword,
-					},
-					Zone:       policy.Zone,
-					LogVerbose: true,
-				}
-			}
-		} else if policy.Apikey != "" {
-			log.Println("Using Cloud to issue certificate")
-			cfg = &vcert.Config{
-				ConnectorType: endpoint.ConnectorTypeCloud,
-				BaseUrl:       policy.CloudURL,
-				Credentials: &endpoint.Authentication{
-					APIKey: policy.Apikey,
-				},
-				Zone:       policy.Zone,
-				LogVerbose: true,
-			}
-		} else {
-			return nil, fmt.Errorf("failed to build config for Venafi issuer")
-		}
+		return policy.venafiConnectionConfig.getConnection()
 	} else {
 		return nil, fmt.Errorf("couldn't determine config type")
 	}
-
-	client, err := vcert.NewClient(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Venafi issuer client: %s", err)
-	}
-
-	return client, nil
 }
 
 func pp(a interface{}) string {
@@ -144,4 +66,51 @@ func randSeq(n int) string {
 		b[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(b)
+}
+
+type venafiConnectionConfig struct {
+	TPPURL          string `json:"tpp_url"`
+	Zone            string `json:"zone"`
+	TPPPassword     string `json:"tpp_password"`
+	TPPUser         string `json:"tpp_user"`
+	TrustBundleFile string `json:"trust_bundle_file"`
+	Apikey          string `json:"apikey"`
+	CloudURL        string `json:"cloud_url"`
+}
+
+func (c venafiConnectionConfig) getConnection() (endpoint.Connector, error) {
+	cfg := vcert.Config{
+		Zone:       c.Zone,
+		LogVerbose: true,
+	}
+	if c.TPPURL != "" && c.TPPUser != "" && c.TPPPassword != "" {
+		cfg.ConnectorType = endpoint.ConnectorTypeTPP
+		cfg.BaseUrl = c.TPPURL
+		cfg.Credentials = &endpoint.Authentication{
+			User:     c.TPPUser,
+			Password: c.TPPPassword,
+		}
+
+		if c.TrustBundleFile != "" {
+			trustBundle, err := ioutil.ReadFile(c.TrustBundleFile)
+			if err != nil {
+				log.Printf("Can`t read trust bundle from file %s: %v\n", c.TrustBundleFile, err)
+				return nil, err
+			}
+			cfg.ConnectionTrust = string(trustBundle)
+		}
+	} else if c.Apikey != "" {
+		cfg.ConnectorType = endpoint.ConnectorTypeCloud
+		cfg.BaseUrl = c.CloudURL
+		cfg.Credentials = &endpoint.Authentication{
+			APIKey: c.Apikey,
+		}
+	} else {
+		return nil, fmt.Errorf("failed to build config for Venafi conection")
+	}
+	client, err := vcert.NewClient(&cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Venafi issuer client: %s", err)
+	}
+	return client, nil
 }
