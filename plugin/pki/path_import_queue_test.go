@@ -2,9 +2,11 @@ package pki
 
 import (
 	"context"
+	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"github.com/Venafi/vcert"
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/Venafi/vcert/pkg/endpoint"
@@ -13,13 +15,105 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
 
+type getRoleDataFunc func(string, int, int) map[string]interface{}
+
+func getTPProleConfig(domain string, timeout, workers int) map[string]interface{} {
+	return map[string]interface{}{
+		"allowed_domains":    domain,
+		"allow_subdomains":   "true",
+		"max_ttl":            "4h",
+		"allow_bare_domains": true,
+		"generate_lease":     true,
+		"tpp_import":         true,
+		"tpp_url":            os.Getenv("TPPURL"),
+		"tpp_user":           os.Getenv("TPPUSER"),
+		"tpp_password":       os.Getenv("TPPPASSWORD"),
+		"zone":               os.Getenv("TPPALLALLOWZONE"),
+		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
+		"tpp_import_timeout": timeout,
+		"tpp_import_workers": workers,
+	}
+}
+
+func getCloudRoleConfig(domain string, timeout, workers int) map[string]interface{} {
+	return map[string]interface{}{
+		"allowed_domains":    domain,
+		"allow_subdomains":   "true",
+		"max_ttl":            "4h",
+		"allow_bare_domains": true,
+		"generate_lease":     true,
+		"tpp_import":         true,
+		"apikey":             os.Getenv("CLOUDAPIKEY"),
+		"cloud_url":          os.Getenv("CLOUDURL"),
+		"zone":               os.Getenv("CLOUDZONE"),
+		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
+		"tpp_import_timeout": timeout,
+		"tpp_import_workers": workers,
+		"organization":       "Venafi Inc.",
+		"ou":                 "Integration",
+		"locality":           "Salt Lake",
+		"province":           "Utah",
+		"country":            "US",
+	}
+}
+
+type getConnectionFunc func(t *testing.T) endpoint.Connector
+
+func getTPPConnection(t *testing.T) endpoint.Connector {
+	var tppConfig = &vcert.Config{
+		ConnectorType: endpoint.ConnectorTypeTPP,
+		BaseUrl:       os.Getenv("TPPURL"),
+		Credentials: &endpoint.Authentication{
+			User:     os.Getenv("TPPUSER"),
+			Password: os.Getenv("TPPPASSWORD")},
+		Zone:       os.Getenv("TPPALLALLOWZONE"),
+		LogVerbose: true,
+	}
+	cl, err := vcert.NewClient(tppConfig)
+	if err != nil {
+		t.Fatalf("could not connect to endpoint: %s", err)
+	}
+	return cl
+}
+
+func getCloudConnection(t *testing.T) endpoint.Connector {
+	var tppConfig = &vcert.Config{
+		ConnectorType: endpoint.ConnectorTypeCloud,
+		BaseUrl:       os.Getenv("CLOUDURL"),
+		Credentials: &endpoint.Authentication{
+			APIKey: os.Getenv("CLOUDAPIKEY"),
+		},
+		Zone:       os.Getenv("CLOUDZONE"),
+		LogVerbose: true,
+	}
+	cl, err := vcert.NewClient(tppConfig)
+	if err != nil {
+		t.Fatalf("could not connect to endpoint: %s", err)
+	}
+	return cl
+}
+
+func calcThumbprint(cert string) string {
+	p, _ := pem.Decode([]byte(cert))
+	h := sha1.New()
+	h.Write(p.Bytes)
+	buf := h.Sum(nil)
+	return strings.ToUpper(fmt.Sprintf("%x", buf))
+}
 func TestBackend_PathImportToTPP(t *testing.T) {
+	testBackend_pathImport(t, getTPProleConfig, getTPPConnection, venafiTestTPPConfig)
+}
+func TestBackend_PathImportToCloud(t *testing.T) {
+	testBackend_pathImport(t, getCloudRoleConfig, getCloudConnection, venafiTestCloudConfig)
+}
+func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnection getConnectionFunc, policy map[string]interface{}) {
 	rand := randSeq(9)
-	domain := "example.com"
+	domain := "vfidev.com"
 
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -32,12 +126,17 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
+	writePolicy(b, storage, policy, t)
 
 	// generate root
 	rootData := map[string]interface{}{
-		"common_name": domain,
-		"ttl":         "6h",
+		"common_name":  "ca.some.domain",
+		"organization": "Venafi Inc.",
+		"ou":           "Integration",
+		"locality":     "Salt Lake",
+		"province":     "Utah",
+		"country":      "US",
+		"ttl":          "6h",
 	}
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -73,21 +172,7 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 	}
 
 	// create a role entry
-	roleData := map[string]interface{}{
-		"allowed_domains":    domain,
-		"allow_subdomains":   "true",
-		"max_ttl":            "4h",
-		"allow_bare_domains": true,
-		"generate_lease":     true,
-		"tpp_import":         true,
-		"tpp_url":            os.Getenv("TPPURL"),
-		"tpp_user":           os.Getenv("TPPUSER"),
-		"tpp_password":       os.Getenv("TPPPASSWORD"),
-		"zone":               os.Getenv("TPPALLALLOWZONE"),
-		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
-		"tpp_import_timeout": 2,
-		"tpp_import_workers": 2,
-	}
+	roleData := getRoleData(domain, 2, 2)
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -121,33 +206,20 @@ func TestBackend_PathImportToTPP(t *testing.T) {
 	}
 	//Wait until certificate will be imported
 	time.Sleep(10 * time.Second)
-
+	certText := resp.Data["certificate"].(string)
+	thumbprint := calcThumbprint(certText)
 	//retrieve imported certificate
-	//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
 	log.Println("Trying to retrieve requested certificate", singleCN)
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	var tppConfig = &vcert.Config{
-		ConnectorType: endpoint.ConnectorTypeTPP,
-		BaseUrl:       os.Getenv("TPPURL"),
-		Credentials: &endpoint.Authentication{
-			User:     os.Getenv("TPPUSER"),
-			Password: os.Getenv("TPPPASSWORD")},
-		Zone:       os.Getenv("TPPALLALLOWZONE"),
-		LogVerbose: true,
-	}
 
 	req := &certificate.Request{}
-	req.PickupID = "\\VED\\Policy\\devops\\vcert\\" + singleCN
+	req.Thumbprint = thumbprint
 	req.ChainOption = certificate.ChainOptionIgnore
-	//req.Thumbprint = "111111"
 
-	cl, err := vcert.NewClient(tppConfig)
-	if err != nil {
-		t.Fatalf("could not connect to endpoint: %s", err)
-	}
+	cl := getConnection(t)
 	pcc, err := cl.RetrieveCertificate(req)
 	if err != nil {
-		t.Fatalf("could not retrieve certificate using requestId %s: %s", req.PickupID, err)
+		t.Fatalf("could not retrieve certificate using thumbprint %s: %s", req.Thumbprint, err)
 	}
 	//log.Printf("Got certificate\n:%s",pp(pcc.Certificate))
 	block, _ := pem.Decode([]byte(pcc.Certificate))
@@ -176,7 +248,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
+	writePolicy(b, storage, venafiTestTPPConfig, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -217,21 +289,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 	}
 
 	// create a role entry
-	roleData := map[string]interface{}{
-		"allowed_domains":    domain,
-		"allow_subdomains":   "true",
-		"max_ttl":            "4h",
-		"allow_bare_domains": true,
-		"generate_lease":     true,
-		"tpp_import":         true,
-		"tpp_url":            os.Getenv("TPPURL"),
-		"tpp_user":           os.Getenv("TPPUSER"),
-		"tpp_password":       os.Getenv("TPPPASSWORD"),
-		"zone":               os.Getenv("TPPALLALLOWZONE"),
-		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
-		"tpp_import_timeout": 1,
-		"tpp_import_workers": 2,
-	}
+	roleData := getTPProleConfig(domain, 1, 2)
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -252,8 +310,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		"common_name": singleCN,
 	}
 
-	i := 1
-	for i <= 3 {
+	for i := 1; i <= 3; i++ {
 		resp, err = b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
 			Path:      "issue/test-import",
@@ -273,22 +330,13 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
 		log.Println("Trying to retrieve requested certificate", singleCN)
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		var tppConfig = &vcert.Config{
-			ConnectorType: endpoint.ConnectorTypeTPP,
-			BaseUrl:       os.Getenv("TPPURL"),
-			Credentials: &endpoint.Authentication{
-				User:     os.Getenv("TPPUSER"),
-				Password: os.Getenv("TPPPASSWORD")},
-			Zone:       os.Getenv("TPPALLALLOWZONE"),
-			LogVerbose: true,
-		}
 
 		req := &certificate.Request{}
 		req.PickupID = "\\VED\\Policy\\devops\\vcert\\" + singleCN
 		req.ChainOption = certificate.ChainOptionIgnore
 		//req.Thumbprint = "111111"
 
-		cl, err := vcert.NewClient(tppConfig)
+		cl := getTPPConnection(t)
 		if err != nil {
 			t.Fatalf("could not connect to endpoint: %s", err)
 		}
@@ -307,8 +355,6 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		} else {
 			log.Printf("Subject common name: expected %v, got %v", cert.Subject.CommonName, singleCN)
 		}
-		i = i + 1
-
 	}
 }
 
@@ -327,7 +373,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
+	writePolicy(b, storage, venafiTestTPPConfig, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -368,21 +414,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	}
 
 	// create a role entry
-	roleData := map[string]interface{}{
-		"allowed_domains":    domain,
-		"allow_subdomains":   "true",
-		"max_ttl":            "4h",
-		"allow_bare_domains": true,
-		"generate_lease":     true,
-		"tpp_import":         true,
-		"tpp_url":            os.Getenv("TPPURL"),
-		"tpp_user":           os.Getenv("TPPUSER"),
-		"tpp_password":       os.Getenv("TPPPASSWORD"),
-		"zone":               os.Getenv("TPPALLALLOWZONE"),
-		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
-		"tpp_import_timeout": 2,
-		"tpp_import_workers": 5,
-	}
+	roleData := getTPProleConfig(domain, 2, 5)
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -398,8 +430,8 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	}
 
 	//issue some certs
-	i := 1
-	for i < 10 {
+
+	for i := 1; i < 10; i++ {
 		randCN := rand + strconv.Itoa(i) + "-import." + domain
 		certData := map[string]interface{}{
 			"common_name": randCN,
@@ -416,8 +448,6 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		i = i + 1
 	}
 
 	//list import queue

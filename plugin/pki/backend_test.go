@@ -152,7 +152,7 @@ func TestBackend_CSRValues(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps:          []logicaltest.TestStep{venafiCreateSimplePolicyStep},
+		Steps:          []logicaltest.TestStep{venafiTPPCreateSimplePolicyStep},
 	}
 
 	intdata := map[string]interface{}{}
@@ -179,7 +179,7 @@ func TestBackend_URLsCRUD(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps:          []logicaltest.TestStep{venafiCreateSimplePolicyStep},
+		Steps:          []logicaltest.TestStep{venafiTPPCreateSimplePolicyStep},
 	}
 
 	intdata := map[string]interface{}{}
@@ -209,7 +209,7 @@ func TestBackend_RSARoles(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{venafiCreateSimplePolicyStep,
+		Steps: []logicaltest.TestStep{venafiTPPCreateSimplePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -250,7 +250,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{venafiCreateSimplePolicyStep,
+		Steps: []logicaltest.TestStep{venafiTPPCreateSimplePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -291,7 +291,7 @@ func TestBackend_ECRoles(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{venafiCreateSimplePolicyStep,
+		Steps: []logicaltest.TestStep{venafiTPPCreateSimplePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -332,7 +332,7 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{venafiCreateSimplePolicyStep,
+		Steps: []logicaltest.TestStep{venafiTPPCreateSimplePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -1435,7 +1435,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
+	writePolicy(b, storage, venafiTestTPPConfig, t)
 	// generate root
 	rootData := map[string]interface{}{
 		"common_name": "test.com",
@@ -1562,7 +1562,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
+	writePolicy(b, storage, venafiTestTPPConfig, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -1945,7 +1945,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writePolicy(b, storage, venafiCreateSimplePolicyStep.Data, t)
+	writePolicy(b, storage, venafiTestTPPConfig, t)
 
 	// generate root
 	rootData := map[string]interface{}{

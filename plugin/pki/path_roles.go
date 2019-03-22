@@ -325,6 +325,14 @@ Example for Venafi Cloud: Default`,
 Example:
   trust_bundle_file = "/full/path/to/chain.pem""`,
 			},
+			"apikey": {
+				Type:        framework.TypeString,
+				Description: `API key for Venafi Cloud. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
+			},
+			"cloud_url": {
+				Type:        framework.TypeString,
+				Description: `URL for Venafi Cloud. Set it only if you want to use non production Cloud`,
+			},
 			"tpp_import_timeout": {
 				Type:        framework.TypeInt,
 				Default:     15,
@@ -561,6 +569,8 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 			TPPPassword:     data.Get("tpp_password").(string),
 			TPPUser:         data.Get("tpp_user").(string),
 			TrustBundleFile: data.Get("trust_bundle_file").(string),
+			Apikey:          data.Get("apikey").(string),
+			CloudURL:        data.Get("cloud_url").(string),
 		},
 		TPPImport:         data.Get("tpp_import").(bool),
 		TPPImportTimeout:  data.Get("tpp_import_timeout").(int),
