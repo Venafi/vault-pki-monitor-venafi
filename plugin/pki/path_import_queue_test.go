@@ -106,10 +106,10 @@ func calcThumbprint(cert string) string {
 	return strings.ToUpper(fmt.Sprintf("%x", buf))
 }
 func TestBackend_PathImportToTPP(t *testing.T) {
-	testBackend_pathImport(t, getTPProleConfig, getTPPConnection, venafiTestTPPConfig)
+	testBackend_pathImport(t, getTPProleConfig, getTPPConnection, venafiTestTPPConfigAllAllow)
 }
 func TestBackend_PathImportToCloud(t *testing.T) {
-	testBackend_pathImport(t, getCloudRoleConfig, getCloudConnection, venafiTestCloudConfig)
+	testBackend_pathImport(t, getCloudRoleConfig, getCloudConnection, venafiTestCloudConfigAllAllow)
 }
 func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnection getConnectionFunc, policy map[string]interface{}) {
 	rand := randSeq(9)
@@ -248,7 +248,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	writePolicy(b, storage, venafiTestTPPConfig, t)
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -373,7 +373,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	writePolicy(b, storage, venafiTestTPPConfig, t)
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t)
 
 	// generate root
 	rootData := map[string]interface{}{

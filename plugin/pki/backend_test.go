@@ -1435,7 +1435,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writePolicy(b, storage, venafiTestTPPConfig, t)
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t)
 	// generate root
 	rootData := map[string]interface{}{
 		"common_name": "test.com",
@@ -1562,7 +1562,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writePolicy(b, storage, venafiTestTPPConfig, t)
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -1945,7 +1945,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writePolicy(b, storage, venafiTestTPPConfig, t)
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t)
 
 	// generate root
 	rootData := map[string]interface{}{
