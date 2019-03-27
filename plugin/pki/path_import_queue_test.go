@@ -22,7 +22,7 @@ import (
 
 type getRoleDataFunc func(string, int, int) map[string]interface{}
 
-func getTPProleConfig(domain string, timeout, workers int) map[string]interface{} {
+func getTPPRoleConfig(domain string, timeout, workers int) map[string]interface{} {
 	return map[string]interface{}{
 		"allowed_domains":    domain,
 		"allow_subdomains":   "true",
@@ -106,7 +106,7 @@ func calcThumbprint(cert string) string {
 	return strings.ToUpper(fmt.Sprintf("%x", buf))
 }
 func TestBackend_PathImportToTPP(t *testing.T) {
-	testBackend_pathImport(t, getTPProleConfig, getTPPConnection, venafiTestTPPConfigAllAllow)
+	testBackend_pathImport(t, getTPPRoleConfig, getTPPConnection, venafiTestTPPConfigAllAllow)
 }
 func TestBackend_PathImportToCloud(t *testing.T) {
 	testBackend_pathImport(t, getCloudRoleConfig, getCloudConnection, venafiTestCloudConfigAllAllow)
@@ -289,7 +289,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 	}
 
 	// create a role entry
-	roleData := getTPProleConfig(domain, 1, 2)
+	roleData := getTPPRoleConfig(domain, 1, 2)
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -414,7 +414,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	}
 
 	// create a role entry
-	roleData := getTPProleConfig(domain, 2, 5)
+	roleData := getTPPRoleConfig(domain, 2, 5)
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
