@@ -107,39 +107,53 @@ bOcvXbCN3l5HIY76e+6FbLGGCvNKcgNpSAAPYJg=
 -----END CERTIFICATE REQUEST-----
 `
 
-var venafiCreateSimplePolicyStep = logicaltest.TestStep{
+var venafiTestTPPConfigAllAllow = map[string]interface{}{
+	"tpp_url":           os.Getenv("TPPURL"),
+	"tpp_user":          os.Getenv("TPPUSER"),
+	"tpp_password":      os.Getenv("TPPPASSWORD"),
+	"zone":              os.Getenv("TPPALLALLOWZONE"),
+	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+}
+
+var venafiTestTPPConfigRestricted = map[string]interface{}{
+	"tpp_url":           os.Getenv("TPPURL"),
+	"tpp_user":          os.Getenv("TPPUSER"),
+	"tpp_password":      os.Getenv("TPPPASSWORD"),
+	"zone":              os.Getenv("TPPRESTRICTEDZONE"),
+	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+}
+
+var venafiTestCloudConfigRestricted = map[string]interface{}{
+	"cloud_url": os.Getenv("CLOUDURL"),
+	"apikey":    os.Getenv("CLOUDAPIKEY"),
+	"zone":      os.Getenv("CLOUDRESTRICTEDZONE"),
+}
+var venafiTestCloudConfigAllAllow = map[string]interface{}{
+	"cloud_url": os.Getenv("CLOUDURL"),
+	"apikey":    os.Getenv("CLOUDAPIKEY"),
+	"zone":      os.Getenv("CLOUDZONE"),
+}
+
+var venafiTPPCreateSimplePolicyStep = logicaltest.TestStep{
 	Operation: logical.UpdateOperation,
 	Path:      venafiPolicyPath + defaultVenafiPolicyName,
-	Data: map[string]interface{}{
-		"tpp_url":           os.Getenv("TPPURL"),
-		"tpp_user":          os.Getenv("TPPUSER"),
-		"tpp_password":      os.Getenv("TPPPASSWORD"),
-		"zone":              os.Getenv("TPPALLALLOWZONE"),
-		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-	},
+	Data:      venafiTestTPPConfigAllAllow,
+}
+var venafiCloudCreateSimplePolicyStep = logicaltest.TestStep{
+	Operation: logical.UpdateOperation,
+	Path:      venafiPolicyPath + defaultVenafiPolicyName,
+	Data:      venafiTestCloudConfigAllAllow,
 }
 
 func makeVenafiCloudConfig() (domain string, policyData map[string]interface{}) {
 	domain = "vfidev.com"
-	// Configure Venafi default policy
-	policyData = map[string]interface{}{
-		"cloud_url": os.Getenv("CLOUDURL"),
-		"apikey":    os.Getenv("CLOUDAPIKEY"),
-		"zone":      os.Getenv("CLOUDRESTRICTEDZONE"),
-	}
+	policyData = venafiTestCloudConfigRestricted
 	return
 }
 
 func makeVenafiTPPConfig() (domain string, policyData map[string]interface{}) {
 	domain = "vfidev.com"
-	// Configure Venafi default policy
-	policyData = map[string]interface{}{
-		"tpp_url":           os.Getenv("TPPURL"),
-		"tpp_user":          os.Getenv("TPPUSER"),
-		"tpp_password":      os.Getenv("TPPPASSWORD"),
-		"zone":              os.Getenv("TPPRESTRICTEDZONE"),
-		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-	}
+	policyData = venafiTestTPPConfigRestricted
 	return
 }
 
@@ -287,7 +301,7 @@ func writePolicy(b *backend, storage logical.Storage, policyData map[string]inte
 }
 
 func writePolicyToClient(mountPoint string, client *api.Client, t *testing.T) {
-	_, err := client.Logical().Write(mountPoint+"/"+venafiPolicyPath+defaultVenafiPolicyName, venafiCreateSimplePolicyStep.Data)
+	_, err := client.Logical().Write(mountPoint+"/"+venafiPolicyPath+defaultVenafiPolicyName, venafiTestTPPConfigAllAllow)
 	if err != nil {
 		t.Fatal(err)
 	}
