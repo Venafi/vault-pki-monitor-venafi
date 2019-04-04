@@ -134,6 +134,14 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 			}
 		}
 
+		defer func(){
+			log.Printf("Setting import lock to false on path %s\n", lockPath)
+			err = req.Storage.Put(ctx, &logical.StorageEntry{
+				Key:   lockPath,
+				Value: []byte("false"),
+			})
+		}()
+
 		if importLocked {
 			log.Printf("Import queue for role %s is locked. Exiting", roleName)
 			err = errors.New("Import locked")
@@ -190,11 +198,6 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 		log.Println("Waiting for next turn")
 		time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second) //todo: maybe need to sub working time from prev line
 	}
-	log.Printf("Setting import lock to false on path %s\n", lockPath)
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   lockPath,
-		Value: []byte("false"),
-	})
 }
 
 func (b *backend) createWorkerPool(noOfWorkers int, results chan Result, jobs chan Job) {
