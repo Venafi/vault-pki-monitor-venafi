@@ -135,16 +135,19 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 		}
 
 		defer func(){
-			log.Printf("Setting import lock to false on path %s\n", lockPath)
-			err = req.Storage.Put(ctx, &logical.StorageEntry{
-				Key:   lockPath,
-				Value: []byte("false"),
-			})
+			if importLocked {
+				log.Printf("Import queue for role %s is locked. Exiting", roleName)
+				err = errors.New("Import locked")
+			} else {
+				log.Printf("Setting import lock to false on path %s\n", lockPath)
+				err = req.Storage.Put(ctx, &logical.StorageEntry{
+					Key:   lockPath,
+					Value: []byte("false"),
+				})
+			}
 		}()
 
 		if importLocked {
-			log.Printf("Import queue for role %s is locked. Exiting", roleName)
-			err = errors.New("Import locked")
 			return
 		}
 
