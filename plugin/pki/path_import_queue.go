@@ -253,8 +253,11 @@ func (b *backend) processImportToTPP(job Job) string {
 	}
 
 	certEntry, err := req.Storage.Get(ctx, importPath+entry)
-	if err != nil {
+	if err != nil  {
 		return fmt.Sprintf("%s Could not get certificate from %s: %s", msg, importPath+entry, err)
+	}
+	if certEntry == nil {
+		return fmt.Sprintf("%s Could not get certificate from %s: cert entry not found", msg, importPath+entry)
 	}
 	block := pem.Block{
 		Type:  "CERTIFICATE",
