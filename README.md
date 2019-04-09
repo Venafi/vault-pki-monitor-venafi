@@ -82,7 +82,7 @@ for integrating it with Venafi Platform and Cloud.
 
 1. Add the `vault-pki-monitor-venafi` plugin to the Vault system catalog:
     ```
-    vault write sys/plugins/catalog/vault-pki-monitor-venafi_strict sha_256="${SHA256}" command="vault-pki-monitor-venafi_strict"
+    vault write sys/plugins/catalog/secret/vault-pki-monitor-venafi_strict sha_256="${SHA256}" command="vault-pki-monitor-venafi_strict"
     ```
 
 1. Enable the secrets backend for the `vault-pki-monitor-venafi` plugin:
