@@ -4,13 +4,11 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"log"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,7 +21,8 @@ type Job struct {
 	roleName   string
 	importPath string
 	ctx        context.Context
-	req        *logical.Request
+	//req        *logical.Request
+	storage	    logical.Storage
 }
 
 //Result tructure for import queue worker
@@ -90,7 +89,7 @@ func (b *backend) pathUpdateImportQueue(ctx context.Context, req *logical.Reques
 	log.Printf("Using role: %s", roleName)
 	//Running import queue in background
 	ctx = context.Background()
-	go b.importToTPP(roleName, ctx, req)
+	//go b.importToTPP(req.)
 
 	entries, err := req.Storage.List(ctx, "import-queue/"+data.Get("role").(string)+"/")
 	if err != nil {
@@ -100,75 +99,16 @@ func (b *backend) pathUpdateImportQueue(ctx context.Context, req *logical.Reques
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical.Request) {
+func (b *backend) importToTPP(storage logical.Storage) {
 
-	var err error
-	var importLocked bool
-
-	lockPath := "import-queue-lock/" + roleName
+	ctx := context.Background()
+	roleName := "venafi-role"
+	//var err error
 	importPath := "import-queue/" + roleName + "/"
-
-	log.Printf("Locking import mutex on backend to safely change data for import lock\n")
-	err = func() (err error) {
-		b.importQueue.Lock()
-		defer log.Printf("Unlocking import mutex on backend\n")
-		defer b.importQueue.Unlock()
-
-		log.Printf("Getting import lock for path %s", lockPath)
-		importLockEntry, err := req.Storage.Get(ctx, lockPath)
-		if err != nil {
-			log.Printf("Unable to get lock import for role %s:\n %s\n", roleName, err)
-			return
-		}
-
-		if importLockEntry == nil || importLockEntry.Value == nil || len(importLockEntry.Value) == 0 {
-			log.Println("Role lock is empty, assuming it is false")
-			importLocked = false
-		} else {
-			il := string(importLockEntry.Value)
-			log.Printf("Got from storage %s", il)
-			importLocked, err = strconv.ParseBool(il)
-			if err != nil {
-				log.Printf("Unable to parse lock import %s to bool for role %s:\n %s\n", il, roleName, err)
-				return
-			}
-		}
-
-
-		//Locking import for a role
-		err = req.Storage.Put(ctx, &logical.StorageEntry{
-			Key:   lockPath,
-			Value: []byte("true"),
-		})
-		if err != nil {
-			log.Printf("Unable to lock import queue: %s\n", err)
-		}
-		return
-	}()
-	if err != nil {
-		return
-	}
-
-	defer func(){
-		if importLocked {
-			log.Printf("Import queue for role %s is locked. Exiting", roleName)
-			err = errors.New("Import locked")
-		} else {
-			log.Printf("Setting import lock to false on path %s\n", lockPath)
-			err = req.Storage.Put(ctx, &logical.StorageEntry{
-				Key:   lockPath,
-				Value: []byte("false"),
-			})
-		}
-	}()
-
-	if importLocked {
-		return
-	}
 
 	log.Println("!!!!Starting new import routine!!!!")
 	for {
-		entries, err := req.Storage.List(ctx, importPath)
+		entries, err := storage.List(ctx, importPath)
 		if err != nil {
 			log.Printf("Could not get queue list from path %s: %s", err, importPath)
 			break
@@ -176,7 +116,7 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 		log.Printf("Queue list on path %s is: %s", importPath, entries)
 
 		//Update role since it's settings may be changed
-		role, err := b.getRole(ctx, req.Storage, roleName)
+		role, err := b.getRole(ctx, storage, roleName)
 		if err != nil {
 			log.Printf("Error getting role %v: %s\n Exiting.", role, err)
 			break
@@ -193,7 +133,7 @@ func (b *backend) importToTPP(roleName string, ctx context.Context, req *logical
 			var results = make(chan Result, len(entries))
 			startTime := time.Now()
 			go b.createWorkerPool(noOfWorkers, results, jobs)
-			go allocate(jobs, entries, ctx, req, roleName, importPath)
+			go allocate(jobs, entries, ctx, storage, roleName, importPath)
 			for result := range results {
 				log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", result.job.id, result.job.entry, result.result)
 			}
@@ -222,7 +162,7 @@ func (b *backend) worker(wg *sync.WaitGroup, results chan Result, jobs chan Job)
 	wg.Done()
 }
 
-func allocate(jobs chan Job, entries []string, ctx context.Context, req *logical.Request, roleName string, importPath string) {
+func allocate(jobs chan Job, entries []string, ctx context.Context, storage logical.Storage, roleName string, importPath string) {
 	for i, entry := range entries {
 		log.Printf("Allocating job for entry %s", entry)
 		job := Job{
@@ -230,7 +170,7 @@ func allocate(jobs chan Job, entries []string, ctx context.Context, req *logical
 			entry:      entry,
 			importPath: importPath,
 			roleName:   roleName,
-			req:        req,
+			storage: storage,
 			ctx:        ctx,
 		}
 		jobs <- job
@@ -240,20 +180,21 @@ func allocate(jobs chan Job, entries []string, ctx context.Context, req *logical
 
 func (b *backend) processImportToTPP(job Job) string {
 	ctx := job.ctx
-	req := job.req
+	//req := job.req
 	roleName := job.roleName
+	storage := job.storage
 	entry := job.entry
 	id := job.id
 	msg := fmt.Sprintf("Job id: %v ###", id)
 	importPath := job.importPath
 	log.Printf("%s Processing entry %s\n", msg, entry)
 	log.Printf("%s Trying to import certificate with SN %s", msg, entry)
-	cl, err := b.ClientVenafi(ctx, req.Storage, req, roleName, "role")
+	cl, err := b.ClientVenafi(ctx, storage, roleName, "role")
 	if err != nil {
 		return fmt.Sprintf("%s Could not create venafi client: %s", msg, err)
 	}
 
-	certEntry, err := req.Storage.Get(ctx, importPath+entry)
+	certEntry, err := storage.Get(ctx, importPath+entry)
 	if err != nil  {
 		return fmt.Sprintf("%s Could not get certificate from %s: %s", msg, importPath+entry, err)
 	}
@@ -300,17 +241,17 @@ func (b *backend) processImportToTPP(job Job) string {
 
 func (b *backend) deleteCertFromQueue(job Job) {
 	ctx := job.ctx
-	req := job.req
+	s := job.storage
 	entry := job.entry
 	msg := fmt.Sprintf("Job id: %v ###", job.id)
 	importPath := job.importPath
 	log.Printf("%s Removing certificate from import path %s", msg, importPath+entry)
-	err := req.Storage.Delete(ctx, importPath+entry)
+	err := s.Delete(ctx, importPath+entry)
 	if err != nil {
 		log.Printf("%s Could not delete %s from queue: %s", msg, importPath+entry, err)
 	} else {
 		log.Printf("%s Certificate with SN %s removed from queue", msg, entry)
-		entries, err := req.Storage.List(ctx, importPath)
+		entries, err := s.List(ctx, importPath)
 		if err != nil {
 			log.Printf("%s Could not get queue list: %s", msg, err)
 		} else {

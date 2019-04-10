@@ -93,6 +93,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.crlLifetime = time.Hour * 72
 	b.tidyCASGuard = new(uint32)
 	b.storage = conf.StorageView
+	go b.importToTPP(b.storage)
 
 	return &b
 }

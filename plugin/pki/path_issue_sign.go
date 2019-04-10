@@ -342,7 +342,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 		log.Printf("Running certificates import from queue")
 		ctx = context.Background()
-		go b.importToTPP(data.Get("role").(string), ctx, req)
+		//go b.importToTPP(data.Get("role").(string), ctx, req)
 	}
 
 	log.Printf("Returning sign response")

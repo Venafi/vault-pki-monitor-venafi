@@ -280,7 +280,7 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 
 func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request, policyConfig string) (policy *endpoint.Policy, err error) {
 	log.Printf("Creating Venafi client")
-	cl, err := b.ClientVenafi(ctx, req.Storage, req, policyConfig, "policy")
+	cl, err := b.ClientVenafi(ctx, req.Storage, policyConfig, "policy")
 	if err != nil {
 		return
 	}
