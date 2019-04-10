@@ -102,7 +102,8 @@ func (b *backend) pathUpdateImportQueue(ctx context.Context, req *logical.Reques
 func (b *backend) importToTPP(storage logical.Storage) {
 
 	ctx := context.Background()
-	roleName := "venafi-role"
+	//TODO: get the list of roles and start routine for each role whee venafi-import is enabled
+	roleName := "test-import"
 	//var err error
 	importPath := "import-queue/" + roleName + "/"
 
@@ -111,7 +112,8 @@ func (b *backend) importToTPP(storage logical.Storage) {
 		entries, err := storage.List(ctx, importPath)
 		if err != nil {
 			log.Printf("Could not get queue list from path %s: %s", err, importPath)
-			break
+			time.Sleep(5 * time.Second)
+			continue
 		}
 		log.Printf("Queue list on path %s is: %s", importPath, entries)
 
@@ -119,11 +121,13 @@ func (b *backend) importToTPP(storage logical.Storage) {
 		role, err := b.getRole(ctx, storage, roleName)
 		if err != nil {
 			log.Printf("Error getting role %v: %s\n Exiting.", role, err)
-			break
+			time.Sleep(5 * time.Second)
+			continue
 		}
 		if role == nil {
 			log.Printf("Unknown role %v\n Exiting for path %s.", role, importPath)
-			break
+			time.Sleep(5 * time.Second)
+			continue
 		}
 
 		noOfWorkers := role.TPPImportWorkers
