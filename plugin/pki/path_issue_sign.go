@@ -340,9 +340,6 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		if err != nil {
 			log.Printf("Unable to store certificate in import queue: %s", err)
 		}
-		log.Printf("Running certificates import from queue")
-		ctx = context.Background()
-		//go b.importToTPP(data.Get("role").(string), ctx, req)
 	}
 
 	log.Printf("Returning sign response")

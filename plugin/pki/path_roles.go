@@ -635,12 +635,6 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		return nil, err
 	}
 
-	//Running venafi import queue in background
-	if entry.TPPImport {
-		ctx = context.Background()
-		//go b.importToTPP(name, ctx, req)
-	}
-
 	return nil, nil
 }
 

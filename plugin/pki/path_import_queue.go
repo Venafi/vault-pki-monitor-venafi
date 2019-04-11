@@ -22,7 +22,7 @@ type Job struct {
 	importPath string
 	ctx        context.Context
 	//req        *logical.Request
-	storage	    logical.Storage
+	storage logical.Storage
 }
 
 //Result tructure for import queue worker
@@ -87,9 +87,6 @@ func (b *backend) pathFetchImportQueueList(ctx context.Context, req *logical.Req
 func (b *backend) pathUpdateImportQueue(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
 	roleName := data.Get("role").(string)
 	log.Printf("Using role: %s", roleName)
-	//Running import queue in background
-	ctx = context.Background()
-	//go b.importToTPP(req.)
 
 	entries, err := req.Storage.List(ctx, "import-queue/"+data.Get("role").(string)+"/")
 	if err != nil {
@@ -102,49 +99,64 @@ func (b *backend) pathUpdateImportQueue(ctx context.Context, req *logical.Reques
 func (b *backend) importToTPP(storage logical.Storage) {
 
 	ctx := context.Background()
-	//TODO: get the list of roles and start routine for each role whee venafi-import is enabled
-	roleName := "test-import"
-	//var err error
-	importPath := "import-queue/" + roleName + "/"
+	log.Printf("Locking import mutex on backend for the import queue\n")
+	b.importQueue.Lock()
+	defer func() {
+		log.Printf("Unlocking import mutex for the import queue on backend\n")
+		b.importQueue.Unlock()
+	}()
+
 
 	log.Println("!!!!Starting new import routine!!!!")
 	for {
-		entries, err := storage.List(ctx, importPath)
+		//TODO: get the list of roles and start routine for each role whee venafi-import is enabled
+		roles, err := storage.List(ctx, "role/")
 		if err != nil {
-			log.Printf("Could not get queue list from path %s: %s", err, importPath)
-			time.Sleep(5 * time.Second)
-			continue
-		}
-		log.Printf("Queue list on path %s is: %s", importPath, entries)
+			log.Printf("Couldn't get list of roles %s", roles)
 
-		//Update role since it's settings may be changed
-		role, err := b.getRole(ctx, storage, roleName)
-		if err != nil {
-			log.Printf("Error getting role %v: %s\n Exiting.", role, err)
-			time.Sleep(5 * time.Second)
-			continue
-		}
-		if role == nil {
-			log.Printf("Unknown role %v\n Exiting for path %s.", role, importPath)
-			time.Sleep(5 * time.Second)
-			continue
 		}
 
-		noOfWorkers := role.TPPImportWorkers
-		if len(entries) > 0 {
-			log.Printf("Creating %d of jobs for %d workers.\n", len(entries), noOfWorkers)
-			var jobs = make(chan Job, len(entries))
-			var results = make(chan Result, len(entries))
-			startTime := time.Now()
-			go b.createWorkerPool(noOfWorkers, results, jobs)
-			go allocate(jobs, entries, ctx, storage, roleName, importPath)
-			for result := range results {
-				log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", result.job.id, result.job.entry, result.result)
+		for _,roleName := range roles {
+			//var err error
+			importPath := "import-queue/" + roleName + "/"
+
+			entries, err := storage.List(ctx, importPath)
+			if err != nil {
+				log.Printf("Could not get queue list from path %s: %s", err, importPath)
+				time.Sleep(5 * time.Second)
+				continue
 			}
-			log.Printf("Total time taken %v seconds.\n", time.Now().Sub(startTime))
+			log.Printf("Queue list on path %s is: %s", importPath, entries)
+
+			//Update role since it's settings may be changed
+			role, err := b.getRole(ctx, storage, roleName)
+			if err != nil {
+				log.Printf("Error getting role %v: %s\n Exiting.", role, err)
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			if role == nil {
+				log.Printf("Unknown role %v\n Exiting for path %s.", role, importPath)
+				time.Sleep(5 * time.Second)
+				continue
+			}
+
+			noOfWorkers := role.TPPImportWorkers
+			if len(entries) > 0 {
+				log.Printf("Creating %d of jobs for %d workers.\n", len(entries), noOfWorkers)
+				var jobs = make(chan Job, len(entries))
+				var results = make(chan Result, len(entries))
+				startTime := time.Now()
+				go b.createWorkerPool(noOfWorkers, results, jobs)
+				go allocate(jobs, entries, ctx, storage, roleName, importPath)
+				for result := range results {
+					log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", result.job.id, result.job.entry, result.result)
+				}
+				log.Printf("Total time taken %v seconds.\n", time.Now().Sub(startTime))
+			}
+			log.Println("Waiting for next turn")
+			time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second) //todo: maybe need to sub working time from prev line
 		}
-		log.Println("Waiting for next turn")
-		time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second) //todo: maybe need to sub working time from prev line
 	}
 }
 
@@ -174,7 +186,7 @@ func allocate(jobs chan Job, entries []string, ctx context.Context, storage logi
 			entry:      entry,
 			importPath: importPath,
 			roleName:   roleName,
-			storage: storage,
+			storage:    storage,
 			ctx:        ctx,
 		}
 		jobs <- job
@@ -199,7 +211,7 @@ func (b *backend) processImportToTPP(job Job) string {
 	}
 
 	certEntry, err := storage.Get(ctx, importPath+entry)
-	if err != nil  {
+	if err != nil {
 		return fmt.Sprintf("%s Could not get certificate from %s: %s", msg, importPath+entry, err)
 	}
 	if certEntry == nil {
