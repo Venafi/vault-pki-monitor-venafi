@@ -121,6 +121,7 @@ func (b *backend) importToTPP(storage logical.Storage) {
 			//Firing go routine for each role
 			wg.Add(1)
 			go func() {
+				log.Println("Started routine for role",roleName)
 				//var err error
 				importPath := "import-queue/" + roleName + "/"
 
