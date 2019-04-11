@@ -116,46 +116,53 @@ func (b *backend) importToTPP(storage logical.Storage) {
 
 		}
 
+		var wg sync.WaitGroup
 		for _,roleName := range roles {
-			//var err error
-			importPath := "import-queue/" + roleName + "/"
+			//Firing go routine for each role
+			wg.Add(1)
+			go func() {
+				//var err error
+				importPath := "import-queue/" + roleName + "/"
 
-			entries, err := storage.List(ctx, importPath)
-			if err != nil {
-				log.Printf("Could not get queue list from path %s: %s", err, importPath)
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			log.Printf("Queue list on path %s is: %s", importPath, entries)
-
-			//Update role since it's settings may be changed
-			role, err := b.getRole(ctx, storage, roleName)
-			if err != nil {
-				log.Printf("Error getting role %v: %s\n Exiting.", role, err)
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			if role == nil {
-				log.Printf("Unknown role %v\n Exiting for path %s.", role, importPath)
-				time.Sleep(5 * time.Second)
-				continue
-			}
-
-			noOfWorkers := role.TPPImportWorkers
-			if len(entries) > 0 {
-				log.Printf("Creating %d of jobs for %d workers.\n", len(entries), noOfWorkers)
-				var jobs = make(chan Job, len(entries))
-				var results = make(chan Result, len(entries))
-				startTime := time.Now()
-				go b.createWorkerPool(noOfWorkers, results, jobs)
-				go allocate(jobs, entries, ctx, storage, roleName, importPath)
-				for result := range results {
-					log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", result.job.id, result.job.entry, result.result)
+				entries, err := storage.List(ctx, importPath)
+				if err != nil {
+					log.Printf("Could not get queue list from path %s: %s", err, importPath)
+					time.Sleep(5 * time.Second)
+					return
 				}
-				log.Printf("Total time taken %v seconds.\n", time.Now().Sub(startTime))
-			}
-			log.Println("Waiting for next turn")
-			time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second) //todo: maybe need to sub working time from prev line
+				log.Printf("Queue list on path %s is: %s", importPath, entries)
+
+				//Update role since it's settings may be changed
+				role, err := b.getRole(ctx, storage, roleName)
+				if err != nil {
+					log.Printf("Error getting role %v: %s\n Exiting.", role, err)
+					time.Sleep(5 * time.Second)
+					return
+				}
+				if role == nil {
+					log.Printf("Unknown role %v\n Exiting for path %s.", role, importPath)
+					time.Sleep(5 * time.Second)
+					return
+				}
+
+				noOfWorkers := role.TPPImportWorkers
+				if len(entries) > 0 {
+					log.Printf("Creating %d of jobs for %d workers.\n", len(entries), noOfWorkers)
+					var jobs = make(chan Job, len(entries))
+					var results = make(chan Result, len(entries))
+					startTime := time.Now()
+					go b.createWorkerPool(noOfWorkers, results, jobs)
+					go allocate(jobs, entries, ctx, storage, roleName, importPath)
+					for result := range results {
+						log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", result.job.id, result.job.entry, result.result)
+					}
+					log.Printf("Total time taken %v seconds.\n", time.Now().Sub(startTime))
+				}
+				log.Println("Waiting for next turn")
+				time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second) //todo: maybe need to sub working time from prev line
+				wg.Done()
+			}()
+			wg.Wait()
 		}
 	}
 }
