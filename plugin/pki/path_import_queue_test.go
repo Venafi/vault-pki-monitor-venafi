@@ -431,8 +431,10 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 
 	//issue some certs
 
+	var certs_list []string
 	for i := 1; i < 10; i++ {
 		randCN := rand + strconv.Itoa(i) + "-import." + domain
+		certs_list = append(certs_list, randCN)
 		certData := map[string]interface{}{
 			"common_name": randCN,
 		}
@@ -464,8 +466,40 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	}
 	keys := resp.Data["keys"]
 	log.Printf("Import queue list is:\n %v", keys)
-	time.Sleep(30 * time.Second)
-	//	TODO: After creating all certificates we need to check that they exist in TPP
+	time.Sleep(15 * time.Second)
+
+	//After creating all certificates we need to check that they exist in TPP
+	for _, singleCN := range  certs_list {
+		//retrieve imported certificate
+		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
+		log.Println("Trying to retrieve requested certificate", singleCN)
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
+		req := &certificate.Request{}
+		req.PickupID = "\\VED\\Policy\\devops\\vcert\\" + singleCN
+		req.ChainOption = certificate.ChainOptionIgnore
+		//req.Thumbprint = "111111"
+
+		cl := getTPPConnection(t)
+		if err != nil {
+			t.Fatalf("could not connect to endpoint: %s", err)
+		}
+		pcc, err := cl.RetrieveCertificate(req)
+		if err != nil {
+			t.Fatalf("could not retrieve certificate using requestId %s: %s", req.PickupID, err)
+		}
+		//log.Printf("Got certificate\n:%s",pp(pcc.Certificate))
+		block, _ := pem.Decode([]byte(pcc.Certificate))
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			t.Fatalf("Error parsing cert: %s", err)
+		}
+		if cert.Subject.CommonName != singleCN {
+			t.Fatalf("Incorrect subject common name: expected %v, got %v", cert.Subject.CommonName, singleCN)
+		} else {
+			log.Printf("Subject common name: expected %v, got %v", cert.Subject.CommonName, singleCN)
+		}
+	}
 
 }
 
