@@ -162,8 +162,8 @@ func (b *backend) importToTPP(storage logical.Storage) {
 				time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second) //todo: maybe need to sub working time from prev line
 				wg.Done()
 			}()
-			wg.Wait()
 		}
+		wg.Wait()
 	}
 }
 
