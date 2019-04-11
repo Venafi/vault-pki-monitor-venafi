@@ -413,62 +413,69 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// create a role entry
-	roleData := getTPPRoleConfig(domain, 2, 5)
-
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "roles/test-import",
-		Storage:   storage,
-		Data:      roleData,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to create a role, %#v", resp)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	//issue some certs
-
 	var certs_list []string
-	for i := 1; i < 10; i++ {
-		randCN := rand + strconv.Itoa(i) + "-import." + domain
-		certs_list = append(certs_list, randCN)
-		certData := map[string]interface{}{
-			"common_name": randCN,
-		}
+	//Importing certs in multiple roles
+	for i := 1; i <= 3 ; i++ {
+		randRole := rand + strconv.Itoa(i) + "-role"
+		log.Println("Creating certs ro role", randRole)
+		// create a role entry
+		roleData := getTPPRoleConfig(domain, 2, 5)
+
 		resp, err = b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
-			Path:      "issue/test-import",
+			Path:      "roles/"+randRole,
 			Storage:   storage,
-			Data:      certData,
+			Data:      roleData,
 		})
 		if resp != nil && resp.IsError() {
-			t.Fatalf("failed to issue a cert, %#v", resp)
+			t.Fatalf("failed to create a role, %#v", resp)
 		}
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		//issue some certs
+
+		for i := 1; i < 10; i++ {
+			randCN := rand + strconv.Itoa(i) + "-import." + domain
+			certs_list = append(certs_list, randCN)
+			certData := map[string]interface{}{
+				"common_name": randCN,
+			}
+			resp, err = b.HandleRequest(context.Background(), &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "issue/"+randRole,
+				Storage:   storage,
+				Data:      certData,
+			})
+			if resp != nil && resp.IsError() {
+				t.Fatalf("failed to issue a cert, %#v", resp)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		//list import queue
+		resp, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.ListOperation,
+			Path:      "import-queue/",
+			Storage:   storage,
+		})
+		if resp != nil && resp.IsError() {
+			t.Fatalf("failed to list certs, %#v", resp)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		keys := resp.Data["keys"]
+		log.Printf("Import queue list is:\n %v", keys)
+
 	}
 
-	//list import queue
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.ListOperation,
-		Path:      "import-queue/",
-		Storage:   storage,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to list certs, %#v", resp)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-	keys := resp.Data["keys"]
-	log.Printf("Import queue list is:\n %v", keys)
-	time.Sleep(15 * time.Second)
-
+	time.Sleep(30 * time.Second)
 	//After creating all certificates we need to check that they exist in TPP
+	log.Println("Trying check all certificates from list",certs_list)
 	for _, singleCN := range  certs_list {
 		//retrieve imported certificate
 		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
@@ -502,5 +509,3 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	}
 
 }
-
-//TODO: make test when importing certs from multiple roles pls creating cert on non imported roles
