@@ -465,5 +465,8 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	keys := resp.Data["keys"]
 	log.Printf("Import queue list is:\n %v", keys)
 	time.Sleep(30 * time.Second)
+	//	TODO: After creating all certificates we need to check that they exist in TPP
 
 }
+
+//TODO: make test when importing certs from multiple roles pls creating cert on non imported roles
