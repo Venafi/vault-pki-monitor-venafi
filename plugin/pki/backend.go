@@ -108,9 +108,6 @@ type backend struct {
 
 	//Mutex for import queue
 	importQueue sync.Mutex
-
-	//Use importQueueLocker ant sync/atomic package
-	//importQueueLocker *uint32
 }
 
 const backendHelp = `

@@ -97,7 +97,6 @@ func (b *backend) pathUpdateImportQueue(ctx context.Context, req *logical.Reques
 }
 
 func (b *backend) importToTPP(storage logical.Storage) {
-
 	ctx := context.Background()
 	log.Printf("Locking import mutex on backend for the import queue\n")
 	b.importQueue.Lock()
@@ -109,11 +108,11 @@ func (b *backend) importToTPP(storage logical.Storage) {
 
 	log.Println("!!!!Starting new import routine!!!!")
 	for {
-		//TODO: get the list of roles and start routine for each role whee venafi-import is enabled
 		roles, err := storage.List(ctx, "role/")
 		if err != nil {
 			log.Printf("Couldn't get list of roles %s", roles)
-
+			time.Sleep(time.Second)
+			continue
 		}
 
 		var wg sync.WaitGroup
@@ -128,7 +127,7 @@ func (b *backend) importToTPP(storage logical.Storage) {
 				entries, err := storage.List(ctx, importPath)
 				if err != nil {
 					log.Printf("Could not get queue list from path %s: %s", err, importPath)
-					time.Sleep(5 * time.Second)
+					time.Sleep(3 * time.Second)
 					return
 				}
 				log.Printf("Queue list on path %s is: %s", importPath, entries)
@@ -137,12 +136,12 @@ func (b *backend) importToTPP(storage logical.Storage) {
 				role, err := b.getRole(ctx, storage, roleName)
 				if err != nil {
 					log.Printf("Error getting role %v: %s\n Exiting.", role, err)
-					time.Sleep(5 * time.Second)
+					time.Sleep(3 * time.Second)
 					return
 				}
 				if role == nil {
 					log.Printf("Unknown role %v\n Exiting for path %s.", role, importPath)
-					time.Sleep(5 * time.Second)
+					time.Sleep(3 * time.Second)
 					return
 				}
 
@@ -238,7 +237,7 @@ func (b *backend) processImportToTPP(job Job) string {
 	cn := Certificate.Subject.CommonName
 
 	certString := string(pem.EncodeToMemory(&block))
-	log.Printf("%s Importing cert to %s:\n %s", msg, cn, certString)
+	log.Printf("%s Importing cert to %s:\n", msg, cn)
 
 	importReq := &certificate.ImportRequest{
 		// if PolicyDN is empty, it is taken from cfg.Zone
