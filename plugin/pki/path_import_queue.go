@@ -106,14 +106,13 @@ func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConf
 		b.importQueue.Unlock()
 	}()
 
-
 	log.Println("Starting new import routine")
 	for {
 		replicationState := conf.System.ReplicationState()
 		if (conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) &&
 			!replicationState.HasState(hconsts.ReplicationDRSecondary) &&
 			!replicationState.HasState(hconsts.ReplicationPerformanceStandby) {
-				log.Println("Looks like we're on master. Starting to import certificates")
+			log.Println("Looks like we're on master. Starting to import certificates")
 			roles, err := storage.List(ctx, "role/")
 			if err != nil {
 				log.Printf("Couldn't get list of roles %s", roles)
@@ -122,11 +121,11 @@ func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConf
 			}
 
 			var wg sync.WaitGroup
-			for _,roleName := range roles {
+			for _, roleName := range roles {
 				//Firing go routine for each role
 				wg.Add(1)
 				go func() {
-					log.Println("Started routine for role",roleName)
+					log.Println("Started routine for role", roleName)
 					//var err error
 					importPath := "import-queue/" + roleName + "/"
 
