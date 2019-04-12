@@ -417,7 +417,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	//Importing certs in multiple roles
 	for i := 1; i <= 3 ; i++ {
 		randRole := rand + strconv.Itoa(i) + "-role"
-		log.Println("Creating certs ro role", randRole)
+		log.Println("Creating certs for role", randRole)
 		// create a role entry
 		roleData := getTPPRoleConfig(domain, 2, 5)
 

@@ -122,6 +122,12 @@ func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConf
 				continue
 			}
 
+			if len(roles) == 0 {
+				log.Printf("Role list is empty. Sleeping.")
+				time.Sleep(time.Second)
+				continue
+			}
+
 			var wg sync.WaitGroup
 			for _, roleName := range roles {
 				//Firing go routine for each role
