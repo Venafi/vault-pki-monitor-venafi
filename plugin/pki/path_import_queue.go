@@ -112,7 +112,7 @@ func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConf
 		if (conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) &&
 			!replicationState.HasState(hconsts.ReplicationDRSecondary) &&
 			!replicationState.HasState(hconsts.ReplicationPerformanceStandby) {
-			log.Println("Looks like we're on master. Starting to import certificates")
+			log.Println("We're on master. Starting to import certificates")
 			roles, err := storage.List(ctx, "role/")
 			if err != nil {
 				log.Printf("Couldn't get list of roles %s", roles)
