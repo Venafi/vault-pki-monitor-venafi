@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/Venafi/vcert/pkg/certificate"
+	hconsts "github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"log"
@@ -96,7 +97,7 @@ func (b *backend) pathUpdateImportQueue(ctx context.Context, req *logical.Reques
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) importToTPP(storage logical.Storage) {
+func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConfig) {
 	ctx := context.Background()
 	log.Printf("Locking import mutex on backend for the import queue\n")
 	b.importQueue.Lock()
@@ -106,64 +107,73 @@ func (b *backend) importToTPP(storage logical.Storage) {
 	}()
 
 
-	log.Println("!!!!Starting new import routine!!!!")
+	log.Println("Starting new import routine")
 	for {
-		roles, err := storage.List(ctx, "role/")
-		if err != nil {
-			log.Printf("Couldn't get list of roles %s", roles)
-			time.Sleep(time.Second)
-			continue
-		}
+		replicationState := conf.System.ReplicationState()
+		if (conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) &&
+			!replicationState.HasState(hconsts.ReplicationDRSecondary) &&
+			!replicationState.HasState(hconsts.ReplicationPerformanceStandby) {
+				log.Println("Looks like we're on master. Starting to import certificates")
+			roles, err := storage.List(ctx, "role/")
+			if err != nil {
+				log.Printf("Couldn't get list of roles %s", roles)
+				time.Sleep(time.Second)
+				continue
+			}
 
-		var wg sync.WaitGroup
-		for _,roleName := range roles {
-			//Firing go routine for each role
-			wg.Add(1)
-			go func() {
-				log.Println("Started routine for role",roleName)
-				//var err error
-				importPath := "import-queue/" + roleName + "/"
+			var wg sync.WaitGroup
+			for _,roleName := range roles {
+				//Firing go routine for each role
+				wg.Add(1)
+				go func() {
+					log.Println("Started routine for role",roleName)
+					//var err error
+					importPath := "import-queue/" + roleName + "/"
 
-				entries, err := storage.List(ctx, importPath)
-				if err != nil {
-					log.Printf("Could not get queue list from path %s: %s", err, importPath)
-					time.Sleep(3 * time.Second)
-					return
-				}
-				log.Printf("Queue list on path %s is: %s", importPath, entries)
-
-				//Update role since it's settings may be changed
-				role, err := b.getRole(ctx, storage, roleName)
-				if err != nil {
-					log.Printf("Error getting role %v: %s\n Exiting.", role, err)
-					time.Sleep(3 * time.Second)
-					return
-				}
-				if role == nil {
-					log.Printf("Unknown role %v\n Exiting for path %s.", role, importPath)
-					time.Sleep(3 * time.Second)
-					return
-				}
-
-				noOfWorkers := role.TPPImportWorkers
-				if len(entries) > 0 {
-					log.Printf("Creating %d of jobs for %d workers.\n", len(entries), noOfWorkers)
-					var jobs = make(chan Job, len(entries))
-					var results = make(chan Result, len(entries))
-					startTime := time.Now()
-					go b.createWorkerPool(noOfWorkers, results, jobs)
-					go allocate(jobs, entries, ctx, storage, roleName, importPath)
-					for result := range results {
-						log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", result.job.id, result.job.entry, result.result)
+					entries, err := storage.List(ctx, importPath)
+					if err != nil {
+						log.Printf("Could not get queue list from path %s: %s", err, importPath)
+						time.Sleep(3 * time.Second)
+						return
 					}
-					log.Printf("Total time taken %v seconds.\n", time.Now().Sub(startTime))
-				}
-				log.Println("Waiting for next turn")
-				time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second) //todo: maybe need to sub working time from prev line
-				wg.Done()
-			}()
+					log.Printf("Queue list on path %s is: %s", importPath, entries)
+
+					//Update role since it's settings may be changed
+					role, err := b.getRole(ctx, storage, roleName)
+					if err != nil {
+						log.Printf("Error getting role %v: %s\n Exiting.", role, err)
+						time.Sleep(3 * time.Second)
+						return
+					}
+					if role == nil {
+						log.Printf("Unknown role %v\n Exiting for path %s.", role, importPath)
+						time.Sleep(3 * time.Second)
+						return
+					}
+
+					noOfWorkers := role.TPPImportWorkers
+					if len(entries) > 0 {
+						log.Printf("Creating %d of jobs for %d workers.\n", len(entries), noOfWorkers)
+						var jobs = make(chan Job, len(entries))
+						var results = make(chan Result, len(entries))
+						startTime := time.Now()
+						go b.createWorkerPool(noOfWorkers, results, jobs)
+						go allocate(jobs, entries, ctx, storage, roleName, importPath)
+						for result := range results {
+							log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", result.job.id, result.job.entry, result.result)
+						}
+						log.Printf("Total time taken %v seconds.\n", time.Now().Sub(startTime))
+					}
+					log.Println("Waiting for next turn")
+					time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second) //todo: maybe need to sub working time from prev line
+					wg.Done()
+				}()
+			}
+			wg.Wait()
+		} else {
+			log.Println("We're on slave. Sleeping")
+			time.Sleep(10 * time.Second)
 		}
-		wg.Wait()
 	}
 }
 
