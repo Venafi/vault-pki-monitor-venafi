@@ -109,9 +109,11 @@ func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConf
 	log.Println("Starting new import routine")
 	for {
 		replicationState := conf.System.ReplicationState()
+		//Checking if we are on master on the stanby Vault server
 		if (conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) &&
 			!replicationState.HasState(hconsts.ReplicationDRSecondary) &&
 			!replicationState.HasState(hconsts.ReplicationPerformanceStandby) {
+
 			log.Println("We're on master. Starting to import certificates")
 			roles, err := storage.List(ctx, "role/")
 			if err != nil {
