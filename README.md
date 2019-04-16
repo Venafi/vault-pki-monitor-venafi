@@ -233,15 +233,18 @@ The following options are supported (note: this list can also be viewed from the
 
 ## Import Queue
 After a certificate has been signed it is added to the import queue. Processing of certificates in the queue begins automatically
-and will run continuously from that point until the plugin exits.  You can also manually initiate import queue processing using the following command:
-```
-vault read pki/import-queue/<ROLE_NAME>
-```
+and will run continuously from that point until the plugin exits. 
 
 At any time you can view the contents of the import queue by certificate serial number using the following command:
 ```
 vault list pki/import-queue
 ```
+Also you can check certificates for any role by running:
+```
+vault read pki/import-queue/<ROLE_NAME>
+```
+
+Import queue is starting automatically when plugin is started.
 
 [![asciicast](https://asciinema.org/a/ydAXoUiZFmMcmXfSvqQSxJyJa.svg)](https://asciinema.org/a/ydAXoUiZFmMcmXfSvqQSxJyJa)
 

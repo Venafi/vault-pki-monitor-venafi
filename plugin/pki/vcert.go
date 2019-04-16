@@ -17,7 +17,7 @@ import (
 const venafiPolciyCheck = true
 const venafiPolicyDenyAll = true
 
-func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logical.Request, configName string, configType string) (
+func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, configName string, configType string) (
 	endpoint.Connector, error) {
 
 	if configName == "" {
@@ -26,7 +26,7 @@ func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logi
 
 	log.Printf("Using %s: %s", configType, configName)
 	if configType == "role" {
-		role, err := b.getRole(ctx, req.Storage, configName)
+		role, err := b.getRole(ctx, s, configName)
 		if err != nil {
 			return nil, err
 		}
@@ -36,7 +36,7 @@ func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, req *logi
 		return role.venafiConnectionConfig.getConnection()
 
 	} else if configType == "policy" {
-		policy, err := b.getPolicyConfig(ctx, req.Storage, configName)
+		policy, err := b.getPolicyConfig(ctx, s, configName)
 		if err != nil {
 			return nil, err
 		}

@@ -9,6 +9,11 @@ import (
 )
 
 //Plugin config
+//TODO: Transfer to normal logger
+//Example:
+//hclog "github.com/hashicorp/go-hclog"
+//logger := hclog.New(&hclog.LoggerOptions{})
+
 func main() {
 	apiClientMeta := &pluginutil.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()

@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -93,6 +94,12 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.crlLifetime = time.Hour * 72
 	b.tidyCASGuard = new(uint32)
 	b.storage = conf.StorageView
+	//Don't start import queue on tests which are using nil storage
+	if b.storage == nil {
+		log.Println("Can't start queue when storage is nil")
+	} else {
+		go b.importToTPP(b.storage, conf)
+	}
 
 	return &b
 }
@@ -107,9 +114,6 @@ type backend struct {
 
 	//Mutex for import queue
 	importQueue sync.Mutex
-
-	//Use importQueueLocker ant sync/atomic package
-	//importQueueLocker *uint32
 }
 
 const backendHelp = `
