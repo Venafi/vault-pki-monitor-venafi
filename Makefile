@@ -98,7 +98,7 @@ mount_dev: unset
 
 import_config_write:
 	vault write $(MOUNT)/roles/$(IMPORT_ROLE) \
-		tpp_import="true"  \
+		venafi_import="true"  \
 		tpp_url=$(TPPURL) \
 		tpp_user=$(TPPUSER) \
 		tpp_password=$(TPPPASSWORD) \
@@ -107,8 +107,8 @@ import_config_write:
 		allowed_domains=$(IMPORT_DOMAIN) \
 		allow_subdomains=true \
 		trust_bundle_file=$(TRUST_BUNDLE) \
-		tpp_import_timeout=15 \
-		tpp_import_workers=5
+		venafi_import_timeout=15 \
+		venafi_import_workers=5
 
 import_config_read:
 	vault read $(MOUNT)/roles/$(IMPORT_ROLE)
@@ -176,3 +176,6 @@ mount_docker:
 	$(VAULT_CMD) write sys/plugins/catalog/$(PLUGIN_NAME) sha_256="$$SHA256" command="$(PLUGIN_NAME)"
 	$(VAULT_CMD) secrets disable $(MOUNT) || echo "Secrets already disabled"
 	$(VAULT_CMD) secrets enable -path=$(MOUNT) -plugin-name=$(PLUGIN_NAME) plugin
+
+linter:
+	golangci-lint run --tests=false -D unused -E interfacer -E unconvert -E goconst
