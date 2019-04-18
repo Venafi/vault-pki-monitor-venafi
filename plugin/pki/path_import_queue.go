@@ -132,7 +132,7 @@ func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConf
 			for _, roleName := range roles {
 				//Firing go routine for each role
 				wg.Add(1)
-				go func() {
+				go func(roleName string) {
 					log.Println("Started routine for role", roleName)
 					//var err error
 					importPath := "import-queue/" + roleName + "/"
@@ -169,12 +169,12 @@ func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConf
 						for result := range results {
 							log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", result.job.id, result.job.entry, result.result)
 						}
-						log.Printf("Total time taken %v seconds.\n", time.Now().Sub(startTime))
+						log.Printf("Total time taken %v seconds.\n", time.Since(startTime))
 					}
 					log.Println("Waiting for next turn")
 					time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second) //todo: maybe need to sub working time from prev line
 					wg.Done()
-				}()
+				}(roleName)
 			}
 			wg.Wait()
 		} else {
@@ -304,6 +304,9 @@ func (b *backend) cleanupImportToTPP(roleName string, ctx context.Context, req *
 
 	importPath := "import-queue/" + roleName + "/"
 	entries, err := req.Storage.List(ctx, importPath)
+	if err != nil {
+		log.Printf("Could not read from queue: %s", err)
+	}
 	for _, sn := range entries {
 		err = req.Storage.Delete(ctx, importPath+sn)
 		if err != nil {

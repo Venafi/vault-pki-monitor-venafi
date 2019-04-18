@@ -9,8 +9,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"io/ioutil"
 	"log"
-	"math/rand"
-	"time"
 )
 
 //Set it false to disable Venafi policy check. It can be done only on the code level of the plugin.
@@ -55,17 +53,7 @@ func pp(a interface{}) string {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	return fmt.Sprintf(string(b))
-}
-
-func randSeq(n int) string {
-	rand.Seed(time.Now().UTC().UnixNano())
-	var letters = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
+	return fmt.Sprint(string(b))
 }
 
 type venafiConnectionConfig struct {

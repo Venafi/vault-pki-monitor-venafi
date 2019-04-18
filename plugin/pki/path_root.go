@@ -360,7 +360,7 @@ func (b *backend) pathCASignIntermediate(ctx context.Context, req *logical.Reque
 		for _, caCert := range parsedBundle.CAChain {
 			caChain = append(caChain, base64.StdEncoding.EncodeToString(caCert.Bytes))
 		}
-		if caChain != nil && len(caChain) > 0 {
+		if len(caChain) > 0 {
 			resp.Data["ca_chain"] = cb.CAChain
 		}
 	}
