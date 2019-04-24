@@ -24,19 +24,19 @@ type getRoleDataFunc func(string, int, int) map[string]interface{}
 
 func getTPPRoleConfig(domain string, timeout, workers int) map[string]interface{} {
 	return map[string]interface{}{
-		"allowed_domains":    domain,
-		"allow_subdomains":   "true",
-		"max_ttl":            "4h",
-		"allow_bare_domains": true,
-		"generate_lease":     true,
-		"tpp_import":         true,
-		"tpp_url":            os.Getenv("TPPURL"),
-		"tpp_user":           os.Getenv("TPPUSER"),
-		"tpp_password":       os.Getenv("TPPPASSWORD"),
-		"zone":               os.Getenv("TPPALLALLOWZONE"),
-		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
-		"tpp_import_timeout": timeout,
-		"tpp_import_workers": workers,
+		"allowed_domains":       domain,
+		"allow_subdomains":      "true",
+		"max_ttl":               "4h",
+		"allow_bare_domains":    true,
+		"generate_lease":        true,
+		"venafi_import":         true,
+		"tpp_url":               os.Getenv("TPPURL"),
+		"tpp_user":              os.Getenv("TPPUSER"),
+		"tpp_password":          os.Getenv("TPPPASSWORD"),
+		"zone":                  os.Getenv("TPPALLALLOWZONE"),
+		"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
+		"venafi_import_timeout": timeout,
+		"venafi_import_workers": workers,
 	}
 }
 
@@ -415,7 +415,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 
 	var certs_list []string
 	//Importing certs in multiple roles
-	for i := 1; i <= 3 ; i++ {
+	for i := 1; i <= 3; i++ {
 		randRole := rand + strconv.Itoa(i) + "-role"
 		log.Println("Creating certs for role", randRole)
 		// create a role entry
@@ -423,7 +423,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 
 		resp, err = b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
-			Path:      "roles/"+randRole,
+			Path:      "roles/" + randRole,
 			Storage:   storage,
 			Data:      roleData,
 		})
@@ -444,7 +444,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 			}
 			resp, err = b.HandleRequest(context.Background(), &logical.Request{
 				Operation: logical.UpdateOperation,
-				Path:      "issue/"+randRole,
+				Path:      "issue/" + randRole,
 				Storage:   storage,
 				Data:      certData,
 			})
@@ -475,8 +475,8 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 
 	time.Sleep(30 * time.Second)
 	//After creating all certificates we need to check that they exist in TPP
-	log.Println("Trying check all certificates from list",certs_list)
-	for _, singleCN := range  certs_list {
+	log.Println("Trying check all certificates from list", certs_list)
+	for _, singleCN := range certs_list {
 		//retrieve imported certificate
 		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
 		log.Println("Trying to retrieve requested certificate", singleCN)
