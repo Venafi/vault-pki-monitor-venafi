@@ -202,6 +202,9 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 	policyEntry, err := savePolicyEntry(policy, name, ctx, req)
+	if err != nil {
+		return nil, err
+	}
 	//Send policy to the user output
 	respData := formPolicyRespData(*policyEntry)
 
@@ -347,6 +350,9 @@ func (b *backend) pathDeleteVenafiPolicy(ctx context.Context, req *logical.Reque
 	var err error
 	name := data.Get("name").(string)
 	rawEntry, err := req.Storage.List(ctx, venafiPolicyPath+name+"/")
+	if err != nil {
+		return nil, err
+	}
 	//Deleting all content of the policy
 	for _, e := range rawEntry {
 		err = req.Storage.Delete(ctx, venafiPolicyPath+name+"/"+e)

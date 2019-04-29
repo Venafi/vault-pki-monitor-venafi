@@ -128,15 +128,6 @@ var (
 	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
 )
 
-func oidInExtensions(oid asn1.ObjectIdentifier, extensions []pkix.Extension) bool {
-	for _, e := range extensions {
-		if e.Id.Equal(oid) {
-			return true
-		}
-	}
-	return false
-}
-
 func getFormat(data *framework.FieldData) string {
 	format := data.Get("format").(string)
 	switch format {
@@ -635,8 +626,7 @@ func signCert(b *backend,
 		return nil, errutil.UserError{Err: fmt.Sprintf("\"csr\" is empty")}
 	}
 
-	pemBytes := []byte(csrString)
-	pemBlock, pemBytes := pem.Decode(pemBytes)
+	pemBlock, _ := pem.Decode([]byte(csrString))
 	if pemBlock == nil {
 		return nil, errutil.UserError{Err: "csr contains no data"}
 	}
@@ -1559,11 +1549,7 @@ func handleOtherCSRSANs(in *x509.CertificateRequest, sans map[string][]string) e
 	if err := handleOtherSANs(certTemplate, sans); err != nil {
 		return err
 	}
-	if len(certTemplate.ExtraExtensions) > 0 {
-		for _, v := range certTemplate.ExtraExtensions {
-			in.ExtraExtensions = append(in.ExtraExtensions, v)
-		}
-	}
+	in.ExtraExtensions = append(in.ExtraExtensions, certTemplate.ExtraExtensions...)
 	return nil
 }
 

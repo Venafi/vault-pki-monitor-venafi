@@ -501,6 +501,9 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 	//Cleanup Venafi import if defined
 	roleName := data.Get("name").(string)
 	role, err := b.getRole(ctx, req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
 	if role.TPPImport {
 		b.cleanupImportToTPP(roleName, ctx, req)
 	}
