@@ -171,7 +171,6 @@ Policy check is configured in venafi-policy path, you can restrict this path for
     ```
     1. Specify policy on role configuration:
     ```
-    <!--TODO: rename tpp_import to venafi_import-->
     vault write pki/roles/venafi-role \
         zone="DevOps\\Vault Monitor" \
         venafi_check_policy="another-policy" \
@@ -190,10 +189,10 @@ Policy check is configured in venafi-policy path, you can restrict this path for
     
 ## Quickstart. Enabling Venafi Platform Import feature
 
-1. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `pki` backend making sure the `tpp_import` option is enabled:
+1. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `pki` backend making sure the `venafi_import` option is enabled:
     ```
     vault write pki/roles/tpp-import-role \
-        tpp_import=true \
+        venafi_import=true \
         tpp_url="https://tpp.venafi.example:443/vedsdk" \
         tpp_user="local:admin" \
         tpp_password="password" \
@@ -206,17 +205,17 @@ Policy check is configured in venafi-policy path, you can restrict this path for
 
 The following options are supported (note: this list can also be viewed from the command line using `vault path-help pki/roles/<ROLE_NAME>`):
 
-| Parameter           | Type    | Description                                                                   | Default   |
-| ------------------- | ------- | ------------------------------------------------------------------------------| --------- |
-| `tpp_import`        | bool    | Controls whether certificates are forwarded to the Venafi Platform            | `true`    |
-| `zone`              | string  | Venafi Platform policy folder where certificates will be imported             | "Default" |
-| `tpp_url`           | string  | Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk")                     |           |
-| `tpp_username`      | string  | Venafi Platform WebSDK account username                                       |           |
-| `tpp_password`      | string  | Venafi Platform WebSDK account password                                       |           |
-| `trust_bundle_file` | string  | PEM trust bundle for Venafi Platform server certificate                       |           |
-| `tpp_import_timeout`| int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
-| `tpp_import_workers`| int     | Maximum number of concurrent threads to use for VCert import                  | 3         |
-|`venafi_check_policy`|string   | Which Venafi policy check to use                                              | "default" |
+| Parameter               | Type    | Description                                                                   | Default   |
+| ----------------------- | ------- | ------------------------------------------------------------------------------| --------- |
+| `venafi_import`         | bool    | Controls whether certificates are forwarded to the Venafi Platform            | `true`    |
+| `zone`                  | string  | Venafi Platform policy folder where certificates will be imported             | "Default" |
+| `tpp_url`               | string  | Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk")                     |           |
+| `tpp_username`          | string  | Venafi Platform WebSDK account username                                       |           |
+| `tpp_password`          | string  | Venafi Platform WebSDK account password                                       |           |
+| `trust_bundle_file`     | string  | PEM trust bundle for Venafi Platform server certificate                       |           |
+| `venafi_import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
+| `venafi_import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 3         |
+| `venafi_check_policy`   | string  | Which Venafi policy check to use                                              | "default" |
 
 10. Initialize the Vault PKI certificate authority (if not yet initialized):
     ```
