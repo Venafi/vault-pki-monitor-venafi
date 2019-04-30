@@ -274,7 +274,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		for _, caCert := range parsedBundle.CAChain {
 			caChain = append(caChain, base64.StdEncoding.EncodeToString(caCert.Bytes))
 		}
-		if caChain != nil && len(caChain) > 0 {
+		if len(caChain) > 0 {
 			respData["ca_chain"] = caChain
 		}
 
@@ -288,7 +288,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	switch {
 	case role.GenerateLease == nil:
 		return nil, fmt.Errorf("generate lease in role is nil")
-	case *role.GenerateLease == false:
+	case !*role.GenerateLease:
 		// If lease generation is disabled do not populate `Secret` field in
 		// the response
 		resp = &logical.Response{
@@ -300,7 +300,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			map[string]interface{}{
 				"serial_number": cb.SerialNumber,
 			})
-		resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
+		resp.Secret.TTL = time.Until(parsedBundle.Certificate.NotAfter)
 	}
 
 	if data.Get("private_key_format").(string) == "pkcs8" {

@@ -164,7 +164,9 @@ func curveInSlice(i certificate.EllipticCurve, s []certificate.EllipticCurve) bo
 func checkKey(keyType string, bitsize int, curveStr string, allowed []endpoint.AllowedKeyConfiguration) (valid bool) {
 	for _, allowedKey := range allowed {
 		var kt certificate.KeyType
-		kt.Set(keyType)
+		if err := kt.Set(keyType); err != nil {
+			return false
+		}
 		if allowedKey.KeyType == kt {
 			switch allowedKey.KeyType {
 			case certificate.KeyTypeRSA:
