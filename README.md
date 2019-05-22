@@ -235,7 +235,7 @@ The following options are supported (note: this list can also be viewed from the
 
 11. Enroll a certificate using the CA:
     ```
-    vault write pki/issue/tpp-import-role common_name="test.example.com" alt_names="test-1.example.com,test-2.example.com"
+    vault write pki/issue/venafi-import-role common_name="test.example.com" alt_names="test-1.example.com,test-2.example.com"
     ```
 
 12. Check the Vault log and you should see something like this:
