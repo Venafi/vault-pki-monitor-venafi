@@ -95,11 +95,8 @@ for integrating it with Venafi Platform and Cloud.
 ### Running under Windows
  If you want to run plugin on Windows the following environment variables must specified to restrict the port that will be assigned to be from within a specific range. If not values are provided plugin will exit with error. For more information please see https://github.com/hashicorp/go-plugin/pull/111
 
-  * `PLUGIN_MIN_PORT`: Specifies the minimum port value that will be assigned to
- * the listener.
-
-  * `PLUGIN_MAX_PORT`: Specifies the maximum port value that will be assigned to
- * the listener.
+  * `PLUGIN_MIN_PORT`: Specifies the minimum port value that will be assigned to the listener.
+  * `PLUGIN_MAX_PORT`: Specifies the maximum port value that will be assigned to the listener.
  
 ## Quickstart. Venafi Policy check
 
@@ -116,7 +113,7 @@ Policy check is configured in venafi-policy path, you can restrict this path for
         zone="DevOps\\Default" \
         trust_bundle_file="/opt/venafi/bundle.pem"
     ```
-    1. For the Cloud:
+    2. For the Cloud:
     ```
     vault write pki/venafi-policy/default \
         token="xxxxx-xxxxx-xxxxx-xxxxx-xxxxxx" \
@@ -169,7 +166,7 @@ Policy check is configured in venafi-policy path, you can restrict this path for
         zone="DevOps\\Another policy" \
         trust_bundle_file="/opt/venafi/bundle.pem"
     ```
-    1. Specify policy on role configuration:
+    2. Specify policy on role configuration:
     ```
     vault write pki/roles/venafi-role \
         zone="DevOps\\Vault Monitor" \
@@ -207,7 +204,7 @@ Policy check is configured in venafi-policy path, you can restrict this path for
     ```
     vault write pki/roles/venafi-import-role \
         venafi_import=true \
-	apikey="XXXXXXXX" \
+        apikey="XXXXXXXX" \
         zone="DevOps Engineering" \
         generate_lease=true ttl=1h max_ttl=1h \
         allowed_domains=example.com \
@@ -343,7 +340,7 @@ that restrictions are working):
     
     You should see error
     
-1. Sing CA with allowed domain:
+1. Sign CA with allowed domain:
     ```
     vault write pki/root/generate/internal common_name="vault.example.com" ttl=8760h
     ```
@@ -377,8 +374,6 @@ that restrictions are working):
     openssl req -new -newkey rsa:2048 -nodes -out test_example_com.csr -keyout test_example_com.key -subj "/C=/ST=/L=/O=/CN=test.example.com"
     vault write pki/sign/venafi-policy csr=@test_example_com.csr
     ```
-
-<!--TODO: add delete policy to usage scenario-->
 
 1. Delete the policy:
     ```
