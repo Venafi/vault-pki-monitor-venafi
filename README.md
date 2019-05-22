@@ -248,7 +248,11 @@ The following options are supported (note: this list can also be viewed from the
 2018-11-14T17:18:59.586+0300 [DEBUG] secrets.plugin.plugin_84b4a95f.vault-pki-monitor-venafi.vault-pki-monitor-venafi: }
 ```
 
-13. Log into the Venafi Platform, navigate to the policy folder (zone) you specified when you created the role, and review the certificate that was created.
+13a. Log into the Venafi Platform, navigate to the policy folder (zone) you specified when you created the role, and review the certificate that was created.
+
+OR
+
+13b. Log into your Venafi Cloud account and navigate to the certificate inventory page. Use the 'Newly Discovered' filter to view certificates that were uploaded from Vault within the specified time frame.
 
 ## Import Queue
 After a certificate has been signed it is added to the import queue. Processing of certificates in the queue begins automatically
