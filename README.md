@@ -187,11 +187,12 @@ Policy check is configured in venafi-policy path, you can restrict this path for
     
 [![asciicast](https://asciinema.org/a/exZfzOOFyuxjvvQ61RE74B1LC.svg)](https://asciinema.org/a/exZfzOOFyuxjvvQ61RE74B1LC)    
     
-## Quickstart. Enabling Venafi Platform Import feature
+## Quickstart. Enabling Venafi Platform and Venafi Cloud Import feature
 
 1. Create a [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) for the `pki` backend making sure the `venafi_import` option is enabled:
+    1. For the Venafi Platform:
     ```
-    vault write pki/roles/tpp-import-role \
+    vault write pki/roles/venafi-import-role \
         venafi_import=true \
         tpp_url="https://tpp.venafi.example:443/vedsdk" \
         tpp_user="local:admin" \
@@ -202,13 +203,23 @@ Policy check is configured in venafi-policy path, you can restrict this path for
         allowed_domains=example.com \
         allow_subdomains=true
     ```
+    2. For Venafi Cloud:
+    ```
+    vault write pki/roles/venafi-import-role \
+        venafi_import=true \
+	apikey="XXXXXXXX" \
+        zone="DevOps Engineering" \
+        generate_lease=true ttl=1h max_ttl=1h \
+        allowed_domains=example.com \
+        allow_subdomains=true
+    ```
 
 The following options are supported (note: this list can also be viewed from the command line using `vault path-help pki/roles/<ROLE_NAME>`):
 
 | Parameter               | Type    | Description                                                                   | Default   |
 | ----------------------- | ------- | ------------------------------------------------------------------------------| --------- |
-| `venafi_import`         | bool    | Controls whether certificates are forwarded to the Venafi Platform            | `true`    |
-| `zone`                  | string  | Venafi Platform policy folder where certificates will be imported             | "Default" |
+| `venafi_import`         | bool    | Controls whether certificates are forwarded to the Venafi Platform or Venafi Cloud            | `true`    |
+| `zone`                  | string  | Venafi Platform policy folder where certificates will be imported; for Venafi Cloud this is the endpoint that the certificates will be sent to.             | "Default" |
 | `tpp_url`               | string  | Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk")                     |           |
 | `tpp_username`          | string  | Venafi Platform WebSDK account username                                       |           |
 | `tpp_password`          | string  | Venafi Platform WebSDK account password                                       |           |
