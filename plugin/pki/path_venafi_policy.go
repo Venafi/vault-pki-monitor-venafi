@@ -289,12 +289,8 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request,
 	}
 
 	log.Printf("Getting policy from Venafi endpoint")
-	zone, err := b.getPolicyConfigZone(ctx, req.Storage, policyConfig)
-	if err != nil {
-		return
-	}
 
-	policy, err = cl.ReadPolicyConfiguration(zone)
+	policy, err = cl.ReadPolicyConfiguration()
 	if err != nil {
 		return
 	}
@@ -581,23 +577,6 @@ func (b *backend) getPolicyConfig(ctx context.Context, s logical.Storage, n stri
 		return nil, err
 	}
 	return &result, nil
-}
-
-func (b *backend) getPolicyConfigZone(ctx context.Context, s logical.Storage, n string) (string, error) {
-	entry, err := s.Get(ctx, venafiPolicyPath+n)
-	if err != nil {
-		return "", err
-	}
-	if entry == nil {
-		return "", nil
-	}
-
-	var result venafiPolicyConfigEntry
-	if err := entry.DecodeJSON(&result); err != nil {
-		return "", err
-	}
-	zone := result.Zone
-	return zone, nil
 }
 
 type venafiPolicyConfigEntry struct {
