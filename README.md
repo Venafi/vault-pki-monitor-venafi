@@ -1,4 +1,4 @@
-# Venafi PKI plugin backend for monitoring HashiCorp Vault
+# Venafi PKI Monitoring Secrets Engine for HashiCorp Vault
 
 <img src="https://www.venafi.com/sites/default/files/content/body/Light_background_logo.png" width="330px" height="69px"/>  
 
