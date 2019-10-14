@@ -119,8 +119,8 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     2. For the Cloud:
     ```
     vault write pki/venafi-policy/default \
-        token="xxxxx-xxxxx-xxxxx-xxxxx-xxxxxx" \
-        zone="Default"
+        token="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+        zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
     ```
 
     Following options are supported (note: this list can also be viewed from the command line using `vault path-help pki/venafi-policy/default`):  
@@ -134,7 +134,7 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     |`tpp_url`              |string   | URL of Venafi Platform.                                                     |`https://tpp.venafi.example/vedsdk`|
     |`tpp_user`             |string   | Web API user for Venafi Platform                                            |`admin`|
     |`trust_bundle_file`    |string   | Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server.|`"/full/path/to/chain.pem"`|
-    |`zone`                 |string   | Name of Venafi Platform or Cloud policy.                                    |`testpolicy\\vault`|
+    |`zone`                 |string   | Name of Venafi Platform policy or Venafi Cloud Zone ID.                     |`testpolicy\\vault`|
     
     <!--TODO: add scheduled update script with prod ready security example here.-->
 
@@ -229,8 +229,8 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     ```
     vault write pki/roles/venafi-role \
         venafi_import=true \
-        apikey="XXXXXXXX" \
-        zone="DevOps Engineering" \
+        apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+        zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz" \
         generate_lease=true ttl=1h max_ttl=1h \
         allowed_domains=example.com \
         allow_subdomains=true
@@ -290,7 +290,7 @@ vault read pki/import-queue/<ROLE_NAME>
 1. Check the result in Venafi:
     1. For Venafi Platform, navigate to the policy folder (zone) you specified when you created the role, and review
     the certificate that was created.
-    1. For Venafi Cloud, navigate to the certificate inventory page and use the 'Newly Discovered' filter to view
+    1. For Venafi Cloud, navigate to the Venafi Cloud Risk Assessement certificate inventory page and use the 'Newly Discovered' filter to view
     certificates that were uploaded from Vault within the specified timeframe.
 
 <!-- TODO: show example of separating permissions between InfoSec and DevOps -->
