@@ -119,8 +119,8 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     2. For the Cloud:
     ```
     vault write pki/venafi-policy/default \
-        token="xxxxx-xxxxx-xxxxx-xxxxx-xxxxxx" \
-        zone="xxxxx-xxxxx-xxxxx-xxxxx-xxxxxx"
+        token="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+        zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
     ```
 
     Following options are supported (note: this list can also be viewed from the command line using `vault path-help pki/venafi-policy/default`):  
@@ -229,8 +229,8 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     ```
     vault write pki/roles/venafi-role \
         venafi_import=true \
-        apikey="XXXXXXXX" \
-        zone="XXXXXXXXX" \
+        apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+        zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz" \
         generate_lease=true ttl=1h max_ttl=1h \
         allowed_domains=example.com \
         allow_subdomains=true
