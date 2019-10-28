@@ -66,6 +66,8 @@ for integrating it with Venafi Platform and Cloud.
     echo 'plugin_directory = "/etc/vault/vault_plugins"' > vault-config.hcl
     ```
 
+    **NOTE**: If you are running through these instructions on a Macbook, you need to make sure the directory you set for your plugins are NOT symlinked. The directory /etc is default symlinked to /private/etc so if you wish to use that folder set the directory value to `/private/etc/vault/vault_plugins` instead. Make sure that any changes made involving this are reflected in the rest of your actions in the instructions.
+
 1. Start your Vault (note: if you don't have working configuration you can start it in dev mode.):  
     **Dev mode is only for educational or development purposes. Don't use it in production!**
     ```
@@ -119,7 +121,7 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     2. For the Cloud:
     ```
     vault write pki/venafi-policy/default \
-        token="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+        apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
         zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
     ```
 
@@ -134,7 +136,8 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     |`tpp_url`              |string   | URL of Venafi Platform.                                                     |`https://tpp.venafi.example/vedsdk`|
     |`tpp_user`             |string   | Web API user for Venafi Platform                                            |`admin`|
     |`trust_bundle_file`    |string   | Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server.|`"/full/path/to/chain.pem"`|
-    |`zone`                 |string   | Name of Venafi Platform policy or Venafi Cloud Zone ID.                     |`testpolicy\\vault`|
+    |`zone`                 |string   | Name of Venafi Platform policy or Venafi Cloud Zone ID.                     |`testpolicy\\vault` or `zzzzzz-zzzz-zzzz-zzzz-zzzzzzzzz`|
+    |`cloud_url`            |string   | Url of Venafi Cloud, this is only needed if you aren't pointing to the prod environment (ui.venafi.cloud).|`ui.dev.venafi.cloud`|
     
     <!--TODO: add scheduled update script with prod ready security example here.-->
 
@@ -249,6 +252,7 @@ The following options are supported (note: this list can also be viewed from the
 | `venafi_import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
 | `venafi_import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 3         |
 | `venafi_check_policy`   | string  | Which Venafi policy check to use                                              | "default" |
+| `cloud_url`             | string  | Url of Venafi Cloud, this is only needed if you aren't pointing to the prod environment (ui.venafi.cloud).|`ui.dev.venafi.cloud`|
 
 ### Import Queue
 After a certificate has been signed by the Vault CA it is added to the import queue. Processing of certificates in the queue
