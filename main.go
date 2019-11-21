@@ -2,8 +2,8 @@ package main
 
 import (
 	pki "github.com/Venafi/vault-pki-monitor-venafi/plugin/pki"
-	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/logical/plugin"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/plugin"
 	"log"
 	"os"
 )
