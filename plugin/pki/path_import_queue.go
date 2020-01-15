@@ -4,13 +4,14 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"github.com/Venafi/vcert/pkg/certificate"
+	"github.com/Venafi/vcert/pkg/verror"
 	hconsts "github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"log"
-	"strings"
 	"sync"
 	"time"
 )
@@ -266,7 +267,7 @@ func (b *backend) processImportToTPP(job Job) string {
 	}
 	importResp, err := cl.ImportCertificate(importReq)
 	if err != nil {
-		if strings.Contains(string(err.Error()), "Import error. The certificate already exists at Certificate DN") {
+		if errors.Is(err, verror.ServerBadDataResponce) || errors.Is(err, verror.UserDataError) {
 			//TODO: Here should be renew instead of deletion
 			b.deleteCertFromQueue(job)
 		}
