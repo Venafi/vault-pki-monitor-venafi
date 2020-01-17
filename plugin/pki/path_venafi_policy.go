@@ -540,7 +540,7 @@ func checkAgainstVenafiPolicy(
 		}
 
 		if !checkStringArrByRegexp(role.Province, policy.SubjectSTRegexes, false) {
-			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", role.Locality, policy.SubjectSTRegexes)
+			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", role.Province, policy.SubjectSTRegexes)
 		}
 		if !checkKey(role.KeyType, role.KeyBits, ecdsaCurvesSizesToName(role.KeyBits), policy.AllowedKeyConfigurations) {
 			return fmt.Errorf("key type not compatible vith Venafi policies")
