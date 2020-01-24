@@ -19,7 +19,9 @@ original HashiCorp Vault PKI secrets engine.
 1. For policy enforcement, the Venafi WebSDK user that Vault will be using needs to have been granted view and read
    permissions to the policy folder from which Venafi policy will be obtained.
 1. For issuance visibility, the Venafi WebSDK user that Vault will be using needs to have been granted write and create
-   permission to the policy folder where Vault issued certificates will be imported.
+   permission to the policy folder where Vault issued certificates will be imported, and the 
+   _Allow Users to Import Duplicate Certificates and Reuse Private Keys_ policy of that folder needs to be set to 'Yes'
+   to ensure that all certificates issued by the Vault can be imported.
 
 ### Establishing Trust between Vault and Trust Protection Platform
 
