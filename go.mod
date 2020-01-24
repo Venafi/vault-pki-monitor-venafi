@@ -5,7 +5,6 @@ go 1.12
 require (
 	github.com/SermoDigital/jose v0.0.0-20161205224733-f6df55f235c2 // indirect
 	github.com/Venafi/vcert v0.0.0-20200115132725-c9121e28d548
-	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190410073721-9d7b4bde1c8f // indirect
 	github.com/araddon/gou v0.0.0-20190110011759-c797efecbb61 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf
 	github.com/coreos/bbolt v1.3.2 // indirect
