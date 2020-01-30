@@ -3,8 +3,8 @@ package pki
 import (
 	"context"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"log"
 	"os"
 	"strings"

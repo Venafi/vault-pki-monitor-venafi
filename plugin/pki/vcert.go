@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/Venafi/vcert"
 	"github.com/Venafi/vcert/pkg/endpoint"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"io/ioutil"
 	"log"
 )

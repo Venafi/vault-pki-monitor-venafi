@@ -10,7 +10,7 @@ import (
 	"github.com/Venafi/vcert"
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/Venafi/vcert/pkg/endpoint"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"log"
 	"net/http"
 	"os"
@@ -113,7 +113,7 @@ func TestBackend_PathImportToCloud(t *testing.T) {
 }
 func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnection getConnectionFunc, policy map[string]interface{}) {
 	rand := randSeq(9)
-	domain := "vfidev.com"
+	domain := "example.com"
 
 	// create the backend
 	config := logical.TestBackendConfig()
