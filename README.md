@@ -249,7 +249,7 @@ The following options are supported (note: this list can also be viewed from the
 | `tpp_password`          | string  | Venafi Platform WebSDK account password                                       |           |
 | `trust_bundle_file`     | string  | PEM trust bundle for Venafi Platform server certificate                       |           |
 | `venafi_import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
-| `venafi_import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 3         |
+| `venafi_import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 12        |
 | `venafi_check_policy`   | string  | Which Venafi policy check to use                                              | "default" |
 
 ### Import Queue

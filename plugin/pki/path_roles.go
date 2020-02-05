@@ -350,12 +350,12 @@ Example:
 			},
 			"venafi_import_workers": {
 				Type:        framework.TypeInt,
-				Default:     3,
+				Default:     12,
 				Description: `Max amount of simultaneously working instances of vcert import`,
 			},
 			"tpp_import_workers": { // todo: deprecated. should be removed
 				Type:        framework.TypeInt,
-				Default:     3,
+				Default:     12,
 				Description: `Max amount of simultaneously working instances of vcert import`,
 			},
 			"venafi_check_policy": {
