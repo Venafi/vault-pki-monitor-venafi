@@ -319,11 +319,6 @@ Example for Venafi Cloud: Default`,
 				Description: `Import certificate to Venafi Platform if true. False by default.`,
 				Required:    false,
 			},
-			"tpp_import": { // todo: deprecated. should be removed and venafi_import should become required.
-				Type:        framework.TypeBool,
-				Description: `Import certificate to Venafi Platform if true. False by default.`,
-				Required:    false,
-			},
 			"trust_bundle_file": {
 				Type: framework.TypeString,
 				Description: `Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server.
@@ -343,19 +338,9 @@ Example:
 				Default:     15,
 				Description: `Timeout in second to rerun import queue`,
 			},
-			"tpp_import_timeout": { // todo: deprecated. should be removed
-				Type:        framework.TypeInt,
-				Default:     15,
-				Description: `Timeout in second to rerun import queue`,
-			},
 			"venafi_import_workers": {
 				Type:        framework.TypeInt,
-				Default:     12,
-				Description: `Max amount of simultaneously working instances of vcert import`,
-			},
-			"tpp_import_workers": { // todo: deprecated. should be removed
-				Type:        framework.TypeInt,
-				Default:     12,
+				Default:     5,
 				Description: `Max amount of simultaneously working instances of vcert import`,
 			},
 			"venafi_check_policy": {
@@ -590,18 +575,10 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 			Apikey:          data.Get("apikey").(string),
 			CloudURL:        data.Get("cloud_url").(string),
 		},
-		TPPImport:         data.Get("venafi_import").(bool) || data.Get("tpp_import").(bool),
+		TPPImport:         data.Get("venafi_import").(bool),
 		TPPImportTimeout:  data.Get("venafi_import_timeout").(int),
 		TPPImportWorkers:  data.Get("venafi_import_workers").(int),
 		VenafiCheckPolicy: data.Get("venafi_check_policy").(string),
-	}
-	deprecatedTimeout := data.Get("tpp_import_timeout").(int)
-	deprecatedWorkers := data.Get("tpp_import_workers").(int)
-	if deprecatedTimeout != 15 { //todo: remove deprecated
-		entry.TPPImportTimeout = deprecatedTimeout
-	}
-	if deprecatedWorkers != 3 { //todo: remove deprecated
-		entry.TPPImportWorkers = deprecatedWorkers
 	}
 	otherSANs := data.Get("allowed_other_sans").([]string)
 	if len(otherSANs) > 0 {
