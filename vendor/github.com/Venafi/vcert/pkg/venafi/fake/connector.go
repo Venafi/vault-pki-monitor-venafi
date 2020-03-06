@@ -25,6 +25,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/big"
+	"net/http"
 	"strings"
 	"time"
 
@@ -186,7 +187,7 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (pcc *certific
 		csr      *x509.CertificateRequest
 	)
 	csrBlock, _ = pem.Decode([]byte(csrPEMbytes))
-	if csrBlock == nil || csrBlock.Type != "CERTIFICATE REQUEST" {
+	if csrBlock == nil || !strings.HasSuffix(csrBlock.Type, "CERTIFICATE REQUEST") {
 		return nil, fmt.Errorf("Test-mode: could not parse requestID as base64 encoded certificate request block")
 	}
 
@@ -203,9 +204,9 @@ func (c *Connector) RetrieveCertificate(req *certificate.Request) (pcc *certific
 	var certBytes []byte
 	switch req.ChainOption {
 	case certificate.ChainOptionRootFirst:
-		certBytes = append([]byte(caCertPEM+"\n"), cert_pem...)
+		certBytes = append([]byte(CaCertPEM+"\n"), cert_pem...)
 	default:
-		certBytes = append(cert_pem, []byte(caCertPEM)...)
+		certBytes = append(cert_pem, []byte(CaCertPEM)...)
 	}
 	pcc, err = certificate.PEMCollectionFromBytes(certBytes, req.ChainOption)
 	if err != nil {
@@ -228,7 +229,10 @@ func (c *Connector) RevokeCertificate(revReq *certificate.RevocationRequest) (er
 }
 
 func (c *Connector) ReadZoneConfiguration() (config *endpoint.ZoneConfiguration, err error) {
-	return endpoint.NewZoneConfiguration(), nil
+	config = endpoint.NewZoneConfiguration()
+	policy, err := c.ReadPolicyConfiguration()
+	config.Policy = *policy
+	return
 }
 
 // RenewCertificate attempts to renew the certificate
@@ -261,4 +265,12 @@ func (c *Connector) ReadPolicyConfiguration() (policy *endpoint.Policy, err erro
 		true,
 	}
 	return
+}
+
+func (c *Connector) SetHTTPClient(client *http.Client) {
+	return
+}
+
+func (c *Connector) ListCertificates(filter endpoint.Filter) ([]certificate.CertificateInfo, error) {
+	return nil, nil
 }

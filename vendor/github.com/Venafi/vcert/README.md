@@ -30,17 +30,24 @@ git clone https://github.com/Venafi/vcert.git $GOPATH/src/github.com/Venafi/vcer
 make build
 ```
 
-## Usage example
+## Usage examples
 
-For code samples of programmatic use, please review the files in [/example](/example).
+For code samples of programmatic use, please review the files in [/examples](/examples/).
 
+### Common part
 1. In your main.go file, make the following import declarations:  `github.com/Venafi/vcert`, `github.com/Venafi/vcert/pkg/certificate`, and `github.com/Venafi/vcert/pkg/endpoint`.
-2. Create a configuration object of type `&vcert.Config` that specifies the Venafi connection details.  Solutions are typically designed to get those details from a secrets vault, .ini file, environment variables, or command line parameters.
-3. Instantiate a client by calling the `NewClient` method of the vcert class with the configuration object.
-4. Compose a certiticate request object of type `&certificate.Request`.
-5. Generate a key pair and CSR for the certificate request by calling the `GenerateRequest` method of the client.
-6. Submit the request by passing the certificate request object to the `RequestCertificate` method of the client.
-7. Use the request ID to pickup the certificate using the `RetrieveCertificate` method of the client.
+1. Create a configuration object of type `&vcert.Config` that specifies the Venafi connection details.  Solutions are typically designed to get those details from a secrets vault, .ini file, environment variables, or command line parameters.
+
+### Enroll certificate
+1. Instantiate a client by calling the `NewClient` method of the vcert class with the configuration object.
+1. Compose a certiticate request object of type `&certificate.Request`.
+1. Generate a key pair and CSR for the certificate request by calling the `GenerateRequest` method of the client.
+1. Submit the request by passing the certificate request object to the `RequestCertificate` method of the client.
+1. Use the request ID to pickup the certificate using the `RetrieveCertificate` method of the client.
+
+### New TLS listener for domain
+1. Call `vcert.Config` method `NewListener` with list of domains as arguments. For example `("test.example.com:8443", "example.com")`
+2. Use gotten `net.Listener` as argument to built-in `http.Serve` or other https servers. 
 
 Samples are in a state where you can build/execute them using the following commands (after setting the environment variables discussed later): 
 
@@ -65,7 +72,7 @@ For command line examples, please see the [Knowledge Base at support.venafi.com]
     7. (Recommended) Key Bit Strength set to 2048 or higher
     8. (Recommended) Domain Whitelisting policy appropriately assigned
 
-The requirement for the CA Template to be assigned by policy follows a long standing Venafi best practice which also met our design objective to keep the certificate request process simple for VCert users. If you require the abilty to specify the CA Template with the request you can use the TPP REST APIs but please be advised this goes against Venafi recommendations.
+The requirement for the CA Template to be assigned by policy follows a long standing Venafi best practice which also met our design objective to keep the certificate request process simple for VCert users. If you require the ability to specify the CA Template with the request you can use the TPP REST APIs but please be advised this goes against Venafi recommendations.
 
 ## Testing with Trust Protection Platform and Cloud
 
@@ -75,7 +82,7 @@ Unit tests:
 make test
 ```
 
-Integration tests for Trust Protection Platform and Cloud products require endpoint connection variables:
+Integration tests for Trust Protection Platform and Cloud products require endpoint connection variables (Venafi Cloud products display the API key and Zone values in the user interface):
 
 ```sh
 export VCERT_TPP_URL=https://tpp.venafi.example/vedsdk
@@ -89,7 +96,7 @@ make tpp_test
 ```sh
 export VCERT_CLOUD_URL=https://api.venafi.cloud/v1
 export VCERT_CLOUD_APIKEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-export VCERT_CLOUD_ZONE=Default
+export VCERT_CLOUD_ZONE=zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz
 
 make cloud_test
 ```
