@@ -436,8 +436,8 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 
 		//issue some certs
 
-		for i := 1; i < 10; i++ {
-			randCN := rand + strconv.Itoa(i) + "-import." + domain
+		for j := 1; j < 10; j++ {
+			randCN := rand + strconv.Itoa(j) + "-import." + domain
 			certs_list = append(certs_list, randCN)
 			certData := map[string]interface{}{
 				"common_name": randCN,
