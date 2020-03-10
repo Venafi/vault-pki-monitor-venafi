@@ -48,6 +48,9 @@ Example for Venafi Cloud: Default`,
 				Type:        framework.TypeString,
 				Description: `Password for web API user Example: password`,
 				Required:    true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Sensitive: true,
+				},
 			},
 			"trust_bundle_file": {
 				Type: framework.TypeString,
@@ -58,6 +61,9 @@ Example:
 			"apikey": {
 				Type:        framework.TypeString,
 				Description: `API key for Venafi Cloud. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Sensitive: true,
+				},
 			},
 			"cloud_url": {
 				Type:        framework.TypeString,
