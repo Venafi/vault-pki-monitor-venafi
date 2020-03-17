@@ -467,14 +467,14 @@ that restrictions are working):
 
 1. Export your Venafi Platform configuration variables:
     ```
-    export TPPUSER=<WebSDK User for Venafi Platform, e.g. "admin">
-    export TPPPASSWORD=<Password for WebSDK User, e.g. "password">
-    export TPPURL=<URL of Venafi Platform WebSDK, e.g. "https://venafi.example.com/vedsdk">
-    export TPPZONE=<Name of the policy folder under which all certificates will be requested>
+    export TPP_USER=<WebSDK User for Venafi Platform, e.g. "admin">
+    export TPP_PASSWORD=<Password for WebSDK User, e.g. "password">
+    export TPP_URL=<URL of Venafi Platform WebSDK, e.g. "https://venafi.example.com/vedsdk">
+    export TPP_ZONE=<Name of the policy folder under which all certificates will be requested>
     ```
 
-    * Use double-quotes if there are spaces in the policy folder name: `export TPPZONE="Vault Import"`
-    * Double escape backslashes (4 total) if you have nested policy folders: `export TPPZONE="DevOps\\\\Vault Import"`
+    * Use double-quotes if there are spaces in the policy folder name: `export TPP_ZONE="Vault Import"`
+    * Double escape backslashes (4 total) if you have nested policy folders: `export TPP_ZONE="DevOps\\\\Vault Import"`
 
 1. Run `make dev_server` to start Vault server.
 
