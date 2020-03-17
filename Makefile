@@ -99,10 +99,10 @@ mount_dev: unset
 import_config_write:
 	vault write $(MOUNT)/roles/$(IMPORT_ROLE) \
 		venafi_import="true"  \
-		tpp_url=$(TPPURL) \
-		tpp_user=$(TPPUSER) \
-		tpp_password=$(TPPPASSWORD) \
-		zone="$(TPPZONE)" \
+		tpp_url=$(TPP_URL) \
+		tpp_user=$(TPP_USER) \
+		tpp_password=$(TPP_PASSWORD) \
+		zone="$(TPP_ZONE)" \
 		$(ROLE_OPTIONS) \
 		allowed_domains=$(IMPORT_DOMAIN) \
 		allow_subdomains=true \
