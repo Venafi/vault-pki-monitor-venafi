@@ -123,8 +123,10 @@ collect_artifacts:
 	rm -rf artifcats
 	mkdir -p artifcats
 	cp -rv $(DIST_DIR)/*.zip artifcats
-	cp -rv $(DIST_DIR)/*.SHA256SUM artifcats
-	cd artifcats; sha256sum * > hashsums.SHA256SUM
+	cd artifcats; echo '```' > release.txt
+	cd artifcats; sha1sum * >> ../release.txt
+	cd artifcats; echo '```' >> release.txt
+
 
 #Docker server with consul
 docker_server_prepare:
