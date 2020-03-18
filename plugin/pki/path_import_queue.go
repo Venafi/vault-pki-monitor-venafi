@@ -257,6 +257,7 @@ func (b *backend) processImportToTPP(job Job) string {
 		PrivateKeyData:  "",
 		Password:        "",
 		Reconcile:       false,
+		CustomFields:    []certificate.CustomField{{Type: certificate.CustomFieldOrigin, Value: "HashiCorp Vault (+)"}},
 	}
 	importResp, err := cl.ImportCertificate(importReq)
 	if err != nil {

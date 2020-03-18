@@ -30,10 +30,10 @@ func getTPPRoleConfig(domain string, timeout, workers int) map[string]interface{
 		"allow_bare_domains":    true,
 		"generate_lease":        true,
 		"venafi_import":         true,
-		"tpp_url":               os.Getenv("TPPURL"),
-		"tpp_user":              os.Getenv("TPPUSER"),
-		"tpp_password":          os.Getenv("TPPPASSWORD"),
-		"zone":                  os.Getenv("TPPALLALLOWZONE"),
+		"tpp_url":               os.Getenv("TPP_URL"),
+		"tpp_user":              os.Getenv("TPP_USER"),
+		"tpp_password":          os.Getenv("TPP_PASSWORD"),
+		"zone":                  os.Getenv("TPP_ZONE"),
 		"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
 		"venafi_import_timeout": timeout,
 		"venafi_import_workers": workers,
@@ -48,9 +48,9 @@ func getCloudRoleConfig(domain string, timeout, workers int) map[string]interfac
 		"allow_bare_domains":    true,
 		"generate_lease":        true,
 		"venafi_import":         true,
-		"apikey":                os.Getenv("CLOUDAPIKEY"),
-		"cloud_url":             os.Getenv("CLOUDURL"),
-		"zone":                  os.Getenv("CLOUDZONE"),
+		"apikey":                os.Getenv("CLOUD_APIKEY"),
+		"cloud_url":             os.Getenv("CLOUD_URL"),
+		"zone":                  os.Getenv("CLOUD_ZONE"),
 		"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
 		"venafi_import_timeout": timeout,
 		"venafi_import_workers": workers,
@@ -67,11 +67,11 @@ type getConnectionFunc func(t *testing.T) endpoint.Connector
 func getTPPConnection(t *testing.T) endpoint.Connector {
 	var tppConfig = &vcert.Config{
 		ConnectorType: endpoint.ConnectorTypeTPP,
-		BaseUrl:       os.Getenv("TPPURL"),
+		BaseUrl:       os.Getenv("TPP_URL"),
 		Credentials: &endpoint.Authentication{
-			User:     os.Getenv("TPPUSER"),
-			Password: os.Getenv("TPPPASSWORD")},
-		Zone:       os.Getenv("TPPALLALLOWZONE"),
+			User:     os.Getenv("TPP_USER"),
+			Password: os.Getenv("TPP_PASSWORD")},
+		Zone:       os.Getenv("TPP_ZONE"),
 		LogVerbose: true,
 	}
 	cl, err := vcert.NewClient(tppConfig)
@@ -84,11 +84,11 @@ func getTPPConnection(t *testing.T) endpoint.Connector {
 func getCloudConnection(t *testing.T) endpoint.Connector {
 	var tppConfig = &vcert.Config{
 		ConnectorType: endpoint.ConnectorTypeCloud,
-		BaseUrl:       os.Getenv("CLOUDURL"),
+		BaseUrl:       os.Getenv("CLOUD_URL"),
 		Credentials: &endpoint.Authentication{
-			APIKey: os.Getenv("CLOUDAPIKEY"),
+			APIKey: os.Getenv("CLOUD_APIKEY"),
 		},
-		Zone:       os.Getenv("CLOUDZONE"),
+		Zone:       os.Getenv("CLOUD_ZONE"),
 		LogVerbose: true,
 	}
 	cl, err := vcert.NewClient(tppConfig)
