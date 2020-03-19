@@ -123,13 +123,13 @@ collect_artifacts:
 	rm -rf artifcats
 	mkdir -p artifcats
 	cp -rv $(DIST_DIR)/*.zip artifcats
-	cd artifcats; echo '```' > release.txt
+	cd artifcats; echo '```' > ../release.txt
 	cd artifcats; sha1sum * >> ../release.txt
-	cd artifcats; echo '```' >> release.txt
+	cd artifcats; echo '```' >> ../release.txt
 
 release:
 	go get -u github.com/tcnksm/ghr
-	ghr -prerelease -n $$RELEASE_VERSION -body="$$(cat ./release.txt)" $$RELEASE_VERSION bin/
+	ghr -prerelease -n $$RELEASE_VERSION -body="$$(cat ./release.txt)" $$RELEASE_VERSION artifcats/
 
 #Docker server with consul
 docker_server_prepare:
