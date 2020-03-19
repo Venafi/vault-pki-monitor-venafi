@@ -19,6 +19,15 @@ else
 VERSION=`git describe --abbrev=0 --tags`
 endif
 
+#define version if release is set
+ifdef RELEASE_VERSION
+ifdef BUILD_NUMBER
+VERSION=$(RELEASE_VERSION)+$(BUILD_NUMBER)
+else
+VERSION=$(RELEASE_VERSION)
+endif
+endif
+
 #test demo vars
 IMPORT_DOMAIN := import.example.com
 IMPORT_ROLE := import
