@@ -40,7 +40,7 @@ VAULT_ADDR = http://127.0.0.1:8200
 #Must be set,otherwise cloud certificates will timeout
 VAULT_CLIENT_TIMEOUT = 180s
 
-test:
+test: linter
 	VAULT_ACC=1 \
 	go test $(TEST) $(TESTARGS) -v -timeout=$(TEST_TIMEOUT) -parallel=20
 
