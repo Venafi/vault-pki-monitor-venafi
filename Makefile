@@ -19,6 +19,15 @@ else
 VERSION=`git describe --abbrev=0 --tags`
 endif
 
+#define version if release is set
+ifdef RELEASE_VERSION
+ifdef BUILD_NUMBER
+VERSION=$(RELEASE_VERSION)+$(BUILD_NUMBER)
+else
+VERSION=$(RELEASE_VERSION)
+endif
+endif
+
 #test demo vars
 IMPORT_DOMAIN := import.example.com
 IMPORT_ROLE := import
@@ -123,8 +132,13 @@ collect_artifacts:
 	rm -rf artifcats
 	mkdir -p artifcats
 	cp -rv $(DIST_DIR)/*.zip artifcats
-	cp -rv $(DIST_DIR)/*.SHA256SUM artifcats
-	cd artifcats; sha256sum * > hashsums.SHA256SUM
+	cd artifcats; echo '```' > ../release.txt
+	cd artifcats; sha256sum * >> ../release.txt
+	cd artifcats; echo '```' >> ../release.txt
+
+release:
+	go get -u github.com/tcnksm/ghr
+	ghr -prerelease -n $$RELEASE_VERSION -body="$$(cat ./release.txt)" $$RELEASE_VERSION artifcats/
 
 #Docker server with consul
 docker_server_prepare:
