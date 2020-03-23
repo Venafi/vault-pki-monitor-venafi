@@ -8,3 +8,13 @@ linters:
     - varcheck
     - unused
   enable:
+    - gosec
+
+issues:
+  exclude-rules:
+    - text: "G505"
+      linters:
+        - gosec
+    - text: "G401"
+      linters:
+        - gosec
