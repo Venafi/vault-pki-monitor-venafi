@@ -2,6 +2,7 @@ package pki
 
 import (
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -15,15 +16,18 @@ type backgroundTask struct {
 
 type taskStorageStruct struct {
 	tasks []backgroundTask
+	sync.RWMutex
 }
 
-var typeStorage taskStorageStruct
+var TaskStorage taskStorageStruct
 
 func (task *backgroundTask) cancel() {
 
 }
 
-func (s *taskStorageStruct) Register(name string, f func(), count int) error {
+func (s *taskStorageStruct) register(name string, f func(), count int) error {
+	s.Lock()
+	defer s.Unlock()
 	task := backgroundTask{name: name, f: f, workers: int64(count)}
 	for i := range s.tasks {
 		if s.tasks[i].name == task.name {
@@ -34,7 +38,9 @@ func (s *taskStorageStruct) Register(name string, f func(), count int) error {
 	return nil
 }
 
-func (s *taskStorageStruct) Del(taskName string) {
+func (s *taskStorageStruct) del(taskName string) {
+	s.Lock()
+	defer s.Unlock()
 	for i := range s.tasks {
 		if s.tasks[i].name == taskName {
 			s.tasks[i].cancel()
@@ -44,8 +50,9 @@ func (s *taskStorageStruct) Del(taskName string) {
 	}
 }
 
-func (s *taskStorageStruct) scheduler() {
+func (s *taskStorageStruct) Scheduler() {
 	for {
+		s.RLock()
 		for i := range s.tasks {
 			if s.tasks[i].currentWorkers < s.tasks[i].workers {
 				atomic.AddInt64(&s.tasks[i].currentWorkers, 1)
@@ -61,6 +68,7 @@ func (s *taskStorageStruct) scheduler() {
 				}(&s.tasks[i].currentWorkers)
 			}
 		}
+		s.RUnlock()
 		time.Sleep(time.Second)
 	}
 }
