@@ -1,24 +1,30 @@
 package pki
 
 import (
-	"context"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/logical"
+	"sync/atomic"
 	"time"
 )
 
 type backgroundTask struct {
-	name string
-	f func((storage logical.Storage, conf *logical.BackendConfig)
-	threads int
-	timeout time.Duration
+	name           string
+	f              func()
+	workers        int64
+	currentWorkers int64
 }
 
 type taskStorageStruct struct {
 	tasks []backgroundTask
 }
 
-func (s *taskStorageStruct) Register(task backgroundTask) error {
+var typeStorage taskStorageStruct
+
+func (task *backgroundTask) cancel() {
+
+}
+
+func (s *taskStorageStruct) Register(name string, f func(), count int) error {
+	task := backgroundTask{name: name, f: f, workers: int64(count)}
 	for i := range s.tasks {
 		if s.tasks[i].name == task.name {
 			return fmt.Errorf("duplicated task")
@@ -28,22 +34,31 @@ func (s *taskStorageStruct) Register(task backgroundTask) error {
 	return nil
 }
 
-func (s *taskStorageStruct) Del(taskName string) {}
-
-var typeStorage taskStorageStruct
-
-func (b *backend) scheduler(storage logical.Storage, conf *logical.BackendConfig) {
-	type runnedTask struct {
-		endTime time.Time
-		task *backgroundTask
-		cancel context.CancelFunc
+func (s *taskStorageStruct) Del(taskName string) {
+	for i := range s.tasks {
+		if s.tasks[i].name == taskName {
+			s.tasks[i].cancel()
+			s.tasks = append(s.tasks[:i], s.tasks[i+1:]...)
+			return
+		}
 	}
-	var runnedTasks []runnedTask
+}
+
+func (s *taskStorageStruct) scheduler() {
 	for {
-		currentTime := time.Now()
-		for i := range runnedTasks {
-			if runnedTasks[i].endTime.Before(currentTime) {
-				runnedTasks[i].cancel()
+		for i := range s.tasks {
+			if s.tasks[i].currentWorkers < s.tasks[i].workers {
+				atomic.AddInt64(&s.tasks[i].currentWorkers, 1)
+				go func(counter *int64) {
+					defer func(counter *int64) {
+						r := recover()
+						if r != nil {
+							//todo: log
+						}
+						atomic.AddInt64(counter, -1)
+					}(counter)
+					s.tasks[i].f()
+				}(&s.tasks[i].currentWorkers)
 			}
 		}
 		time.Sleep(time.Second)
