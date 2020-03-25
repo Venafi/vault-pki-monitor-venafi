@@ -36,7 +36,7 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (res
 		PostalCode:    []string{"122333344"},
 	}
 	//	Read previous role parameters
-	entryOriginal := &roleEntry{
+	entry := &roleEntry{
 		AllowLocalhost:   true,
 		AllowedDomains:   []string{"venafi.com"},
 		AllowBareDomains: true,
@@ -53,16 +53,14 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (res
 		StreetAddress: []string{"Venafi-old"},
 		PostalCode:    []string{"122333344-old"},
 	}
-	//  Make new entry
-	//implement merge
-	mergedEntry := entryOriginal
-	mergedEntry.OU = entryRewrite.OU
-	mergedEntry.Organization = entryRewrite.Organization
-	mergedEntry.Country = entryRewrite.Country
-	mergedEntry.Locality = entryRewrite.Locality
-	mergedEntry.Province = entryRewrite.Province
-	mergedEntry.StreetAddress = entryRewrite.StreetAddress
-	mergedEntry.PostalCode = entryRewrite.PostalCode
+	//  Rewrite entry
+	entry.OU = entryRewrite.OU
+	entry.Organization = entryRewrite.Organization
+	entry.Country = entryRewrite.Country
+	entry.Locality = entryRewrite.Locality
+	entry.Province = entryRewrite.Province
+	entry.StreetAddress = entryRewrite.StreetAddress
+	entry.PostalCode = entryRewrite.PostalCode
 
 
 
