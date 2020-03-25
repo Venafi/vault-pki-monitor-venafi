@@ -2,16 +2,23 @@ package pki
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
 )
+
+func init() {
+	go taskStorage.scheduler()
+}
 
 type backgroundTask struct {
 	name           string
 	f              func()
 	workers        int64
 	currentWorkers int64
+	interval       time.Duration
+	lastRun        time.Time
 }
 
 type taskStorageStruct struct {
@@ -19,16 +26,26 @@ type taskStorageStruct struct {
 	sync.RWMutex
 }
 
-var TaskStorage taskStorageStruct
+var taskStorage taskStorageStruct
 
 func (task *backgroundTask) cancel() {
 
 }
 
-func (s *taskStorageStruct) register(name string, f func(), count int) error {
+func (s *taskStorageStruct) getTasksNames() []string {
+	s.RLock()
+	defer s.RUnlock()
+	l := make([]string, len(s.tasks))
+	for i := range s.tasks {
+		l[i] = s.tasks[i].name
+	}
+	return l
+}
+
+func (s *taskStorageStruct) register(name string, f func(), count int, interval time.Duration) error {
 	s.Lock()
 	defer s.Unlock()
-	task := backgroundTask{name: name, f: f, workers: int64(count)}
+	task := backgroundTask{name: name, f: f, workers: int64(count), interval: interval}
 	for i := range s.tasks {
 		if s.tasks[i].name == task.name {
 			return fmt.Errorf("duplicated task")
@@ -50,23 +67,30 @@ func (s *taskStorageStruct) del(taskName string) {
 	}
 }
 
-func (s *taskStorageStruct) Scheduler() {
+func (s *taskStorageStruct) scheduler() {
 	for {
 		s.RLock()
 		for i := range s.tasks {
-			if s.tasks[i].currentWorkers < s.tasks[i].workers {
-				atomic.AddInt64(&s.tasks[i].currentWorkers, 1)
-				go func(counter *int64) {
-					defer func(counter *int64) {
-						r := recover()
-						if r != nil {
-							//todo: log
-						}
-						atomic.AddInt64(counter, -1)
-					}(counter)
-					s.tasks[i].f()
-				}(&s.tasks[i].currentWorkers)
+			if s.tasks[i].currentWorkers >= s.tasks[i].workers {
+				continue
 			}
+			if time.Since(s.tasks[i].lastRun) < s.tasks[i].interval {
+				continue
+			}
+			currentTask := &s.tasks[i]
+			atomic.AddInt64(&currentTask.currentWorkers, 1)
+			go func(counter *int64) {
+				defer func(counter *int64) {
+					r := recover()
+					if r != nil {
+						log.Printf("job failed. recover: %v\n", r)
+						//todo: better log
+					}
+					atomic.AddInt64(counter, -1)
+				}(counter)
+				currentTask.f()
+			}(&currentTask.currentWorkers)
+			currentTask.lastRun = time.Now()
 		}
 		s.RUnlock()
 		time.Sleep(time.Second)

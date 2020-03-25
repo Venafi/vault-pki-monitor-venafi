@@ -15,7 +15,6 @@ import (
 //logger := hclog.New(&hclog.LoggerOptions{})
 
 func main() {
-	go pki.TaskStorage.Scheduler()
 	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	if err := flags.Parse(os.Args[1:]); err != nil {
