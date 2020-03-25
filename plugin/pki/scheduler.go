@@ -9,7 +9,7 @@ import (
 
 type backgroundTask struct {
 	name string
-	f func((storage logical.Storage, conf *logical.BackendConfig)
+	f func(storage logical.Storage, conf *logical.BackendConfig)
 	threads int
 	timeout time.Duration
 }
