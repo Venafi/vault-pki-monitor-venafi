@@ -24,35 +24,20 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 
 	for _, roleName := range roles {
 		//	Read previous role parameters
-		entry := roleEntry{
-			AllowLocalhost:   true,
-			AllowedDomains:   []string{"venafi.com"},
-			AllowBareDomains: true,
-			AllowSubdomains:  true,
-			AllowGlobDomains: true,
-			AllowAnyName:     true,
-			EnforceHostnames: true,
-
-			OU:            []string{"DevOps-old"},
-			Organization:  []string{"Venafi-old"},
-			Country:       []string{"US-old"},
-			Locality:      []string{"Salt Lake-old"},
-			Province:      []string{"Venafi-old"},
-			StreetAddress: []string{"Venafi-old"},
-			PostalCode:    []string{"122333344-old"},
-		}
+		entry, err := b.getPKIRoleEntry(ctx, req, roleName)
+		//Get Venafi policy in entry format
+		venafiPolicy, err := b.getVenafiPoliciyParams(ctx, req, roleName)
 		//  Rewrite entry
-		entry.OU = entryRewrite.OU
-		entry.Organization = entryRewrite.Organization
-		entry.Country = entryRewrite.Country
-		entry.Locality = entryRewrite.Locality
-		entry.Province = entryRewrite.Province
-		entry.StreetAddress = entryRewrite.StreetAddress
-		entry.PostalCode = entryRewrite.PostalCode
+		entry.OU = venafiPolicy.OU
+		entry.Organization = venafiPolicy.Organization
+		entry.Country = venafiPolicy.Country
+		entry.Locality = venafiPolicy.Locality
+		entry.Province = venafiPolicy.Province
+		entry.StreetAddress = venafiPolicy.StreetAddress
+		entry.PostalCode = venafiPolicy.PostalCode
 
 		// Put new entry
-		// Store it
-		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, entryRewrite)
+		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, entry)
 		if err != nil {
 			return
 		}
@@ -87,5 +72,22 @@ func (b *backend) getVenafiPoliciyParams(ctx context.Context, req *logical.Reque
 }
 
 func (b *backend) getPKIRoleEntry(ctx context.Context, req *logical.Request, roleName string) (entry roleEntry, err error) {
+	entry = roleEntry{
+		AllowLocalhost:   true,
+		AllowedDomains:   []string{"venafi.com"},
+		AllowBareDomains: true,
+		AllowSubdomains:  true,
+		AllowGlobDomains: true,
+		AllowAnyName:     true,
+		EnforceHostnames: true,
+
+		OU:            []string{"DevOps-old"},
+		Organization:  []string{"Venafi-old"},
+		Country:       []string{"US-old"},
+		Locality:      []string{"Salt Lake-old"},
+		Province:      []string{"Venafi-old"},
+		StreetAddress: []string{"Venafi-old"},
+		PostalCode:    []string{"122333344-old"},
+	}
 	return entry, nil
 }
