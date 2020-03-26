@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -25,12 +26,6 @@ type Job struct {
 	ctx        context.Context
 	//req        *logical.Request
 	storage logical.Storage
-}
-
-//Result tructure for import queue worker
-type Result struct {
-	job    Job
-	result string
 }
 
 // This returns the list of queued for import to TPP certificates
@@ -98,8 +93,9 @@ func (b *backend) pathUpdateImportQueue(ctx context.Context, req *logical.Reques
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) fillImportQueueTask(roleName string, jobs chan Job, storage logical.Storage, conf *logical.BackendConfig) {
+func (b *backend) fillImportQueueTask(roleName string, noOfWorkers int, storage logical.Storage, conf *logical.BackendConfig) {
 	ctx := context.Background()
+	jobs := make(chan Job, 100)
 	replicationState := conf.System.ReplicationState()
 	//Checking if we are on master or on the stanby Vault server
 	isSlave := !(conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) ||
@@ -120,6 +116,23 @@ func (b *backend) fillImportQueueTask(roleName string, jobs chan Job, storage lo
 	}
 	log.Printf("Queue list on path %s has length %v", importPath, len(entries))
 
+	var wg sync.WaitGroup
+	wg.Add(noOfWorkers)
+	for i := 0; i < noOfWorkers; i++ {
+		go func() {
+			defer func() {
+				r := recover()
+				if r != nil {
+					log.Println("recover", r)
+				}
+				wg.Done()
+			}()
+			for job := range jobs {
+				result := b.processImportToTPP(job)
+				log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", job.id, job.entry, result)
+			}
+		}()
+	}
 	for i, entry := range entries {
 		log.Printf("Allocating job for entry %s", entry)
 		job := Job{
@@ -132,11 +145,14 @@ func (b *backend) fillImportQueueTask(roleName string, jobs chan Job, storage lo
 		}
 		jobs <- job
 	}
+	close(jobs)
+	wg.Wait()
+
 	return
 }
 
 func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConfig) {
-	taskStorage.register("importcontroler", func() {
+	b.taskStorage.register("importcontroler", func() {
 		b.controlImportQueue(storage, conf)
 	}, 1, time.Second)
 }
@@ -144,7 +160,6 @@ func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConf
 func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.BackendConfig) {
 	ctx := context.Background()
 	const fillQueuePrefix = "fillqueue-"
-	const importWorkersPrefix = "importworkers-"
 	roles, err := storage.List(ctx, "role/")
 	if err != nil {
 		log.Printf("Couldn't get list of roles %s", roles)
@@ -163,16 +178,12 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 			log.Printf("Unknown role %v\n", role)
 			continue
 		}
-		jobs := make(chan Job, 100)
 
-		taskStorage.register(fillQueuePrefix+roleName, func() {
+		b.taskStorage.register(fillQueuePrefix+roleName, func() {
 			log.Printf("run queue filler %s", roleName)
-			b.fillImportQueueTask(roleName, jobs, storage, conf)
+			b.fillImportQueueTask(roleName, role.TPPImportWorkers, storage, conf)
 		}, 1, time.Duration(role.TPPImportTimeout)*time.Second)
 
-		taskStorage.register(importWorkersPrefix+roleName, func() {
-			b.worker(jobs)
-		}, role.TPPImportWorkers, time.Second*3)
 	}
 	stringInSlice := func(s string, sl []string) bool {
 		for i := range sl {
@@ -182,24 +193,9 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 		}
 		return false
 	}
-	for _, taskName := range taskStorage.getTasksNames() {
-		if strings.HasPrefix(taskName, importWorkersPrefix) && !stringInSlice(strings.TrimPrefix(taskName, importWorkersPrefix), roles) {
-			taskStorage.del(taskName)
-		}
+	for _, taskName := range b.taskStorage.getTasksNames() {
 		if strings.HasPrefix(taskName, fillQueuePrefix) && !stringInSlice(strings.TrimPrefix(taskName, fillQueuePrefix), roles) {
-			taskStorage.del(taskName)
-		}
-	}
-}
-
-func (b *backend) worker(jobs chan Job) {
-	for {
-		select {
-		case job := <-jobs:
-			result := Result{job, b.processImportToTPP(job)}
-			log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", result.job.id, result.job.entry, result.result)
-		default:
-			return
+			b.taskStorage.del(taskName)
 		}
 	}
 }

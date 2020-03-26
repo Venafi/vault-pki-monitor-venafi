@@ -8,10 +8,6 @@ import (
 	"time"
 )
 
-func init() {
-	go taskStorage.scheduler()
-}
-
 type backgroundTask struct {
 	name           string
 	f              func()
@@ -25,8 +21,6 @@ type taskStorageStruct struct {
 	tasks []backgroundTask
 	sync.RWMutex
 }
-
-var taskStorage taskStorageStruct
 
 func (task *backgroundTask) cancel() {
 
