@@ -9,34 +9,24 @@ import (
 func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (response *logical.Response, err error) {
 
 	//Get role list with role sync param
+	roles, err := req.Storage.List(ctx, "role/")
+	if err != nil {
+		return
+	}
+
+	if len(roles) == 0 {
+		return
+	}
 	//name
 	//sync zone name\id
 	//sync endpoint
 
-	//For each role do:
-	roleName := "venafi-sync-role"
-	//Get role params from TPP\Cloud
-	cl, err := b.ClientVenafi(ctx, req.Storage, roleName, "role")
-	if err != nil {
-		return response, fmt.Errorf("could not create venafi client: %s", err)
-	}
 
-	zone, err := cl.ReadZoneConfiguration()
-	if err != nil {
-		return
-	}
-	//Set role parameters
-	entryRewrite := &roleEntry{
-		OU:            zone.SubjectOURegexes,
-		Organization:  []string{"Venafi"},
-		Country:       []string{zone.Country},
-		Locality:      []string{"Salt Lake"},
-		Province:      []string{"Venafi"},
-		StreetAddress: []string{"Venafi"},
-		PostalCode:    []string{"122333344"},
+	for _, roleName := range roles {
+
 	}
 	//	Read previous role parameters
-	entry := &roleEntry{
+	entry := roleEntry{
 		AllowLocalhost:   true,
 		AllowedDomains:   []string{"venafi.com"},
 		AllowBareDomains: true,
@@ -62,8 +52,6 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (res
 	entry.StreetAddress = entryRewrite.StreetAddress
 	entry.PostalCode = entryRewrite.PostalCode
 
-
-
 	// Put new entry
 	// Store it
 	jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, entryRewrite)
@@ -74,4 +62,26 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (res
 		return nil, err
 	}
 	return
+}
+
+func (b *backend) getVenafiPoliciyParams(ctx context.Context, req *logical.Request, roleName string) (entry roleEntry, err error) {
+	//Get role params from TPP\Cloud
+	cl, err := b.ClientVenafi(ctx, req.Storage, roleName, "role")
+	if err != nil {
+		return entry, fmt.Errorf("could not create venafi client: %s", err)
+	}
+
+	zone, err := cl.ReadZoneConfiguration()
+	if err != nil {
+		return
+	}
+	entry = roleEntry{
+		OU:            zone.SubjectOURegexes,
+		Organization:  []string{"Venafi"},
+		Country:       []string{zone.Country},
+		Locality:      []string{"Salt Lake"},
+		Province:      []string{"Venafi"},
+		StreetAddress: []string{"Venafi"},
+		PostalCode:    []string{"122333344"},
+	}
 }
