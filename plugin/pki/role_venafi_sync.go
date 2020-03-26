@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (response *logical.Response, err error) {
+func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err error) {
 
 	//Get role list with role sync param
 	roles, err := req.Storage.List(ctx, "role/")
@@ -23,44 +23,44 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (res
 
 
 	for _, roleName := range roles {
+		//	Read previous role parameters
+		entry := roleEntry{
+			AllowLocalhost:   true,
+			AllowedDomains:   []string{"venafi.com"},
+			AllowBareDomains: true,
+			AllowSubdomains:  true,
+			AllowGlobDomains: true,
+			AllowAnyName:     true,
+			EnforceHostnames: true,
 
-	}
-	//	Read previous role parameters
-	entry := roleEntry{
-		AllowLocalhost:   true,
-		AllowedDomains:   []string{"venafi.com"},
-		AllowBareDomains: true,
-		AllowSubdomains:  true,
-		AllowGlobDomains: true,
-		AllowAnyName:     true,
-		EnforceHostnames: true,
+			OU:            []string{"DevOps-old"},
+			Organization:  []string{"Venafi-old"},
+			Country:       []string{"US-old"},
+			Locality:      []string{"Salt Lake-old"},
+			Province:      []string{"Venafi-old"},
+			StreetAddress: []string{"Venafi-old"},
+			PostalCode:    []string{"122333344-old"},
+		}
+		//  Rewrite entry
+		entry.OU = entryRewrite.OU
+		entry.Organization = entryRewrite.Organization
+		entry.Country = entryRewrite.Country
+		entry.Locality = entryRewrite.Locality
+		entry.Province = entryRewrite.Province
+		entry.StreetAddress = entryRewrite.StreetAddress
+		entry.PostalCode = entryRewrite.PostalCode
 
-		OU:            []string{"DevOps-old"},
-		Organization:  []string{"Venafi-old"},
-		Country:       []string{"US-old"},
-		Locality:      []string{"Salt Lake-old"},
-		Province:      []string{"Venafi-old"},
-		StreetAddress: []string{"Venafi-old"},
-		PostalCode:    []string{"122333344-old"},
+		// Put new entry
+		// Store it
+		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, entryRewrite)
+		if err != nil {
+			return
+		}
+		if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+			return
+		}
 	}
-	//  Rewrite entry
-	entry.OU = entryRewrite.OU
-	entry.Organization = entryRewrite.Organization
-	entry.Country = entryRewrite.Country
-	entry.Locality = entryRewrite.Locality
-	entry.Province = entryRewrite.Province
-	entry.StreetAddress = entryRewrite.StreetAddress
-	entry.PostalCode = entryRewrite.PostalCode
 
-	// Put new entry
-	// Store it
-	jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, entryRewrite)
-	if err != nil {
-		return nil, err
-	}
-	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
-		return nil, err
-	}
 	return
 }
 
@@ -84,4 +84,8 @@ func (b *backend) getVenafiPoliciyParams(ctx context.Context, req *logical.Reque
 		StreetAddress: []string{"Venafi"},
 		PostalCode:    []string{"122333344"},
 	}
+}
+
+func (b *backend) getPKIRoleEntry(ctx context.Context, req *logical.Request, roleName string) (entry roleEntry, err error) {
+	return entry, nil
 }
