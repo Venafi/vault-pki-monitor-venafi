@@ -18,10 +18,9 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
+
 	ctx := context.Background()
 	req := &logical.Request{
-		Path:      "crl",
-		Operation: logical.ReadOperation,
 		Storage:   storage,
 	}
     err = b.roleVenafiSync(ctx,req)
