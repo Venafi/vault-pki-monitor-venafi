@@ -2,7 +2,6 @@ package pki
 
 import (
 	"context"
-	"fmt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"testing"
 )
@@ -25,9 +24,8 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 		Operation: logical.ReadOperation,
 		Storage:   storage,
 	}
-    resp, err := b.roleVenafiSync(ctx,req)
+    err = b.roleVenafiSync(ctx,req)
 	if err != nil {
 		t.Fatal(err)
 	}
-    fmt.Println(resp)
 }

@@ -26,7 +26,10 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 		//	Read previous role parameters
 		entry, err := b.getPKIRoleEntry(ctx, req, roleName)
 		//Get Venafi policy in entry format
-		venafiPolicy, err := b.getVenafiPoliciyParams(ctx, req, roleName)
+		venafiPolicy, err := b.getVenafiPolicyParams(ctx, req, roleName)
+		if err != nil {
+			return err
+		}
 		//  Rewrite entry
 		entry.OU = venafiPolicy.OU
 		entry.Organization = venafiPolicy.Organization
@@ -39,17 +42,17 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 		// Put new entry
 		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, entry)
 		if err != nil {
-			return
+			return err
 		}
 		if err := req.Storage.Put(ctx, jsonEntry); err != nil {
-			return
+			return err
 		}
 	}
 
-	return
+	return err
 }
 
-func (b *backend) getVenafiPoliciyParams(ctx context.Context, req *logical.Request, roleName string) (entry roleEntry, err error) {
+func (b *backend) getVenafiPolicyParams(ctx context.Context, req *logical.Request, roleName string) (entry roleEntry, err error) {
 	//Get role params from TPP\Cloud
 	cl, err := b.ClientVenafi(ctx, req.Storage, roleName, "role")
 	if err != nil {
@@ -69,9 +72,15 @@ func (b *backend) getVenafiPoliciyParams(ctx context.Context, req *logical.Reque
 		StreetAddress: []string{"Venafi"},
 		PostalCode:    []string{"122333344"},
 	}
+	return
 }
 
 func (b *backend) getPKIRoleEntry(ctx context.Context, req *logical.Request, roleName string) (entry roleEntry, err error) {
+	//Update role since it's settings may be changed
+	role, err := b.getRole(ctx, req.Storage, roleName)
+	if err != nil {
+		return entry, fmt.Errorf("Error getting role %v: %s\n", role, err)
+	}
 	entry = roleEntry{
 		AllowLocalhost:   true,
 		AllowedDomains:   []string{"venafi.com"},
