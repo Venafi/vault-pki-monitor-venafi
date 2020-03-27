@@ -28,6 +28,10 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 		"tpp_password":      os.Getenv("TPP_PASSWORD"),
 		"zone":              os.Getenv("TPP_ZONE"),
 		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+		"venafi_sync": true,
+		"venafi_sync_zone": os.Getenv("TPP_ZONE"),
+		"venafi_sync_policy": defaultVenafiPolicyName,
+
 	}
 
 	writePolicy(b, storage, policyData, t)
