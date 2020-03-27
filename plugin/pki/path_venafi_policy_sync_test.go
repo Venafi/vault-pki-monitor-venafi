@@ -12,6 +12,7 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 	// create the backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
+	testRoleName := "test-venafi-role"
 	config.StorageView = storage
 
 	b := Backend(config)
@@ -46,7 +47,7 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/test-venafi-role",
+		Path:      "roles/" + testRoleName,
 		Storage:   storage,
 		Data:      roleData,
 	})
@@ -106,6 +107,37 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 	err = b.roleVenafiSync(ctx, req)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	roleEntry, err := b.getPKIRoleEntry(ctx, req, testRoleName)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if roleEntry == nil {
+		t.Fatal("role entry should not be nil")
+	}
+
+	var want string
+	var have string
+
+	want = "Venafi Inc."
+	have = roleEntry.Organization[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+
+	want = "Integrations"
+	have = roleEntry.OU[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+
+	want = "example.com"
+	have = roleEntry.AllowedDomains[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
 	}
 }
 
