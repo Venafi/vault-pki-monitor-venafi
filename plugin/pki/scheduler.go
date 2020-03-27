@@ -1,7 +1,6 @@
 package pki
 
 import (
-	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -36,17 +35,16 @@ func (s *taskStorageStruct) getTasksNames() []string {
 	return l
 }
 
-func (s *taskStorageStruct) register(name string, f func(), count int, interval time.Duration) error {
+func (s *taskStorageStruct) register(name string, f func(), count int, interval time.Duration) {
 	s.Lock()
 	defer s.Unlock()
 	task := backgroundTask{name: name, f: f, workers: int64(count), interval: interval}
 	for i := range s.tasks {
 		if s.tasks[i].name == task.name {
-			return fmt.Errorf("duplicated task")
+			log.Printf("duplicated task %v", name)
 		}
 	}
 	s.tasks = append(s.tasks, task)
-	return nil
 }
 
 func (s *taskStorageStruct) del(taskName string) {
