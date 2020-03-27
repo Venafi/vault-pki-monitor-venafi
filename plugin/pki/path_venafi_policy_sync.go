@@ -73,28 +73,11 @@ func (b *backend) getVenafiPolicyParams(ctx context.Context, req *logical.Reques
 	return
 }
 
-func (b *backend) getPKIRoleEntry(ctx context.Context, req *logical.Request, roleName string) (entry roleEntry, err error) {
+func (b *backend) getPKIRoleEntry(ctx context.Context, req *logical.Request, roleName string) (entry *roleEntry, err error) {
 	//Update role since it's settings may be changed
-	role, err := b.getRole(ctx, req.Storage, roleName)
+	entry, err = b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
-		return entry, fmt.Errorf("Error getting role %v: %s\n", role, err)
-	}
-	entry = roleEntry{
-		AllowLocalhost:   true,
-		AllowedDomains:   []string{"venafi.com"},
-		AllowBareDomains: true,
-		AllowSubdomains:  true,
-		AllowGlobDomains: true,
-		AllowAnyName:     true,
-		EnforceHostnames: true,
-
-		OU:            []string{"DevOps-old"},
-		Organization:  []string{"Venafi-old"},
-		Country:       []string{"US-old"},
-		Locality:      []string{"Salt Lake-old"},
-		Province:      []string{"Venafi-old"},
-		StreetAddress: []string{"Venafi-old"},
-		PostalCode:    []string{"122333344-old"},
+		return entry, fmt.Errorf("Error getting role %v: %s\n", roleName, err)
 	}
 	return entry, nil
 }
