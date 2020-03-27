@@ -23,15 +23,11 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 
 	//write TPP policy
 	policyData := map[string]interface{}{
-		"tpp_url":           os.Getenv("TPP_URL"),
-		"tpp_user":          os.Getenv("TPP_USER"),
-		"tpp_password":      os.Getenv("TPP_PASSWORD"),
-		"zone":              os.Getenv("TPP_ZONE"),
-		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-		"venafi_sync": true,
-		"venafi_sync_zone": os.Getenv("TPP_ZONE"),
-		"venafi_sync_policy": defaultVenafiPolicyName,
-
+		"tpp_url":            os.Getenv("TPP_URL"),
+		"tpp_user":           os.Getenv("TPP_USER"),
+		"tpp_password":       os.Getenv("TPP_PASSWORD"),
+		"zone":               os.Getenv("TPP_ZONE"),
+		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
 	}
 
 	writePolicy(b, storage, policyData, t)
@@ -47,6 +43,9 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 		"max_ttl":            "4h",
 		"allow_bare_domains": true,
 		"generate_lease":     true,
+		"venafi_sync":        true,
+		"venafi_sync_zone":   os.Getenv("TPP_ZONE"),
+		"venafi_sync_policy": defaultVenafiPolicyName,
 	}
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{

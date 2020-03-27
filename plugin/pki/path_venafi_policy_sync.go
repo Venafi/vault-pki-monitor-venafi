@@ -43,10 +43,17 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 			continue
 		}
 
-		entry := replacePKIEntryWithVenafiPolicyValues(pkiRoleEntry,venafiPolicyEntry)
+		//  Replace PKI entry with Venafi policy values
+		pkiRoleEntry.OU = venafiPolicyEntry.OU
+		pkiRoleEntry.Organization = venafiPolicyEntry.Organization
+		pkiRoleEntry.Country = venafiPolicyEntry.Country
+		pkiRoleEntry.Locality = venafiPolicyEntry.Locality
+		pkiRoleEntry.Province = venafiPolicyEntry.Province
+		pkiRoleEntry.StreetAddress = venafiPolicyEntry.StreetAddress
+		pkiRoleEntry.PostalCode = venafiPolicyEntry.PostalCode
 
 		// Put new entry
-		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, entry)
+		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, pkiRoleEntry)
 		if err != nil {
 			return err
 		}
@@ -56,19 +63,6 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 	}
 
 	return err
-}
-
-func replacePKIEntryWithVenafiPolicyValues(pkiRoleEntry *roleEntry, venafiPolicyEntry roleEntry) (entry roleEntry) {
-	//  Replace PKI entry with Venafi policy values
-	pkiRoleEntry.OU = venafiPolicyEntry.OU
-	pkiRoleEntry.Organization = venafiPolicyEntry.Organization
-	pkiRoleEntry.Country = venafiPolicyEntry.Country
-	pkiRoleEntry.Locality = venafiPolicyEntry.Locality
-	pkiRoleEntry.Province = venafiPolicyEntry.Province
-	pkiRoleEntry.StreetAddress = venafiPolicyEntry.StreetAddress
-	pkiRoleEntry.PostalCode = venafiPolicyEntry.PostalCode
-
-	return entry
 }
 
 func (b *backend) getVenafiPolicyParams(ctx context.Context, req *logical.Request, policyConfig string) (entry roleEntry, err error) {
@@ -83,11 +77,11 @@ func (b *backend) getVenafiPolicyParams(ctx context.Context, req *logical.Reques
 		return
 	}
 	entry = roleEntry{
-		OU:            zone.OrganizationalUnit,
-		Organization:  []string{zone.Organization},
-		Country:       []string{zone.Country},
-		Locality:      []string{zone.Locality},
-		Province:      []string{zone.Province},
+		OU:           zone.OrganizationalUnit,
+		Organization: []string{zone.Organization},
+		Country:      []string{zone.Country},
+		Locality:     []string{zone.Locality},
+		Province:     []string{zone.Province},
 	}
 	return
 }

@@ -8,8 +8,8 @@ import (
 )
 
 type backgroundTask struct {
-	name string
-	f func(storage logical.Storage, conf *logical.BackendConfig)
+	name    string
+	f       func(storage logical.Storage, conf *logical.BackendConfig)
 	threads int
 	timeout time.Duration
 }
@@ -35,8 +35,8 @@ var typeStorage taskStorageStruct
 func (b *backend) scheduler(storage logical.Storage, conf *logical.BackendConfig) {
 	type runnedTask struct {
 		endTime time.Time
-		task *backgroundTask
-		cancel context.CancelFunc
+		task    *backgroundTask
+		cancel  context.CancelFunc
 	}
 	var runnedTasks []runnedTask
 	for {

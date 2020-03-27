@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-
 func TestVenafiPolicyCloud(t *testing.T) {
 	domain, policyData := makeVenafiCloudConfig()
 	venafiPolicyTests(t, policyData, domain)
