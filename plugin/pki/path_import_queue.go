@@ -147,8 +147,6 @@ func (b *backend) fillImportQueueTask(roleName string, noOfWorkers int, storage 
 	}
 	close(jobs)
 	wg.Wait()
-
-	return
 }
 
 func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConfig) {
