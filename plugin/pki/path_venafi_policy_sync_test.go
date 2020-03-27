@@ -151,12 +151,12 @@ func Test_backend_getPKIRoleEntry(t *testing.T) {
 		Storage: storage,
 	}
 	ctx := context.Background()
-    entry, err := b.getPKIRoleEntry(ctx, req, "test-venafi-role")
-    if entry == nil {
-    	t.Fatal("role entry should not be nil")
+	entry, err := b.getPKIRoleEntry(ctx, req, "test-venafi-role")
+	if entry == nil {
+		t.Fatal("role entry should not be nil")
 	}
-    var want string
-    var have string
+	var want string
+	var have string
 
 	want = roleData["organization"].(string)
 	have = entry.Organization[0]
@@ -176,9 +176,56 @@ func Test_backend_getPKIRoleEntry(t *testing.T) {
 		t.Fatalf("%s doesn't match %s", have, want)
 	}
 
-    want = roleData["province"].(string)
-    have = entry.Province[0]
-    if have != want {
-    	t.Fatalf("%s doesn't match %s", have, want)
+	want = roleData["province"].(string)
+	have = entry.Province[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+}
+
+func Test_backend_getVenafiPolicyParams(t *testing.T) {
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := Backend(config)
+	err := b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	//write TPP policy
+	policyData := map[string]interface{}{
+		"tpp_url":           os.Getenv("TPP_URL"),
+		"tpp_user":          os.Getenv("TPP_USER"),
+		"tpp_password":      os.Getenv("TPP_PASSWORD"),
+		"zone":              os.Getenv("TPP_ZONE"),
+		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+	}
+
+	req := &logical.Request{
+		Storage: storage,
+	}
+	ctx := context.Background()
+
+	writePolicy(b, storage, policyData, t)
+	venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, defaultVenafiPolicyName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var want string
+	var have string
+
+	want = "Venafi Inc."
+	have = venafiPolicyEntry.Organization[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+
+	want = "Integrations"
+	have = venafiPolicyEntry.OU[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
 	}
 }
