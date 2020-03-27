@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/hashicorp/vault/sdk/logical"
+	"log"
 )
 
 func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err error) {
@@ -17,30 +18,35 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 	if len(roles) == 0 {
 		return
 	}
-	//name
-	//sync zone name\id
-	//sync endpoint
-
 
 	for _, roleName := range roles {
 		//	Read previous role parameters
 		pkiRoleEntry, err := b.getPKIRoleEntry(ctx, req, roleName)
-		//Get Venafi policy in entry format
-		venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, defaultVenafiPolicyName)
 		if err != nil {
-			return err
+			log.Printf("%s", err)
+			continue
 		}
-		//  Replace PKI entry with Venafi policy values
-		pkiRoleEntry.OU = venafiPolicyEntry.OU
-		pkiRoleEntry.Organization = venafiPolicyEntry.Organization
-		pkiRoleEntry.Country = venafiPolicyEntry.Country
-		pkiRoleEntry.Locality = venafiPolicyEntry.Locality
-		pkiRoleEntry.Province = venafiPolicyEntry.Province
-		pkiRoleEntry.StreetAddress = venafiPolicyEntry.StreetAddress
-		pkiRoleEntry.PostalCode = venafiPolicyEntry.PostalCode
+
+		if pkiRoleEntry == nil {
+			log.Printf("PKI role %s is empty or does not exist", roleName)
+			continue
+		}
+
+		if !pkiRoleEntry.VenafiSync {
+			continue
+		}
+
+		//Get Venafi policy in entry format
+		venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, pkiRoleEntry.VenafiSyncPolicy)
+		if err != nil {
+			log.Printf("%s", err)
+			continue
+		}
+
+		entry := replacePKIEntryWithVenafiPolicyValues(pkiRoleEntry,venafiPolicyEntry)
 
 		// Put new entry
-		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, pkiRoleEntry)
+		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, entry)
 		if err != nil {
 			return err
 		}
@@ -50,6 +56,19 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 	}
 
 	return err
+}
+
+func replacePKIEntryWithVenafiPolicyValues(pkiRoleEntry *roleEntry, venafiPolicyEntry roleEntry) (entry roleEntry) {
+	//  Replace PKI entry with Venafi policy values
+	pkiRoleEntry.OU = venafiPolicyEntry.OU
+	pkiRoleEntry.Organization = venafiPolicyEntry.Organization
+	pkiRoleEntry.Country = venafiPolicyEntry.Country
+	pkiRoleEntry.Locality = venafiPolicyEntry.Locality
+	pkiRoleEntry.Province = venafiPolicyEntry.Province
+	pkiRoleEntry.StreetAddress = venafiPolicyEntry.StreetAddress
+	pkiRoleEntry.PostalCode = venafiPolicyEntry.PostalCode
+
+	return entry
 }
 
 func (b *backend) getVenafiPolicyParams(ctx context.Context, req *logical.Request, policyConfig string) (entry roleEntry, err error) {

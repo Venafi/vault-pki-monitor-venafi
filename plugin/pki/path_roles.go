@@ -777,6 +777,11 @@ type roleEntry struct {
 	TPPImportWorkers  int    `json:"venafi_import_workers"`
 	VenafiCheckPolicy string `json:"venafi_check_policy"`
 
+	//Options for syncing role parameters with Venafi policy
+	VenafiSync bool `json:"venafi_sync"`
+	VenafiSyncZone string `json:"venafi_sync_zone"`
+	VenafiSyncPolicy string `json:"venafi_sync_policy"`
+
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
 }
