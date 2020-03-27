@@ -26,7 +26,7 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 		//	Read previous role parameters
 		entry, err := b.getPKIRoleEntry(ctx, req, roleName)
 		//Get Venafi policy in entry format
-		venafiPolicy, err := b.getVenafiPolicyParams(ctx, req, roleName)
+		venafiPolicy, err := b.getVenafiPolicyParams(ctx, req, defaultVenafiPolicyName)
 		if err != nil {
 			return err
 		}
@@ -52,9 +52,9 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 	return err
 }
 
-func (b *backend) getVenafiPolicyParams(ctx context.Context, req *logical.Request, roleName string) (entry roleEntry, err error) {
+func (b *backend) getVenafiPolicyParams(ctx context.Context, req *logical.Request, policyConfig string) (entry roleEntry, err error) {
 	//Get role params from TPP\Cloud
-	cl, err := b.ClientVenafi(ctx, req.Storage, roleName, "role")
+	cl, err := b.ClientVenafi(ctx, req.Storage, policyConfig, "policy")
 	if err != nil {
 		return entry, fmt.Errorf("could not create venafi client: %s", err)
 	}
@@ -64,13 +64,11 @@ func (b *backend) getVenafiPolicyParams(ctx context.Context, req *logical.Reques
 		return
 	}
 	entry = roleEntry{
-		OU:            zone.SubjectOURegexes,
-		Organization:  []string{"Venafi"},
+		OU:            zone.OrganizationalUnit,
+		Organization:  []string{zone.Organization},
 		Country:       []string{zone.Country},
-		Locality:      []string{"Salt Lake"},
-		Province:      []string{"Venafi"},
-		StreetAddress: []string{"Venafi"},
-		PostalCode:    []string{"122333344"},
+		Locality:      []string{zone.Locality},
+		Province:      []string{zone.Province},
 	}
 	return
 }

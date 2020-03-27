@@ -46,7 +46,7 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/test-venafi-policy",
+		Path:      "roles/test-venafi-role",
 		Storage:   storage,
 		Data:      roleData,
 	})
