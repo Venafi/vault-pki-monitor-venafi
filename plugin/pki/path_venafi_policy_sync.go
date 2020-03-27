@@ -24,23 +24,23 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 
 	for _, roleName := range roles {
 		//	Read previous role parameters
-		entry, err := b.getPKIRoleEntry(ctx, req, roleName)
+		pkiRoleEntry, err := b.getPKIRoleEntry(ctx, req, roleName)
 		//Get Venafi policy in entry format
-		venafiPolicy, err := b.getVenafiPolicyParams(ctx, req, defaultVenafiPolicyName)
+		venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, defaultVenafiPolicyName)
 		if err != nil {
 			return err
 		}
-		//  Rewrite entry
-		entry.OU = venafiPolicy.OU
-		entry.Organization = venafiPolicy.Organization
-		entry.Country = venafiPolicy.Country
-		entry.Locality = venafiPolicy.Locality
-		entry.Province = venafiPolicy.Province
-		entry.StreetAddress = venafiPolicy.StreetAddress
-		entry.PostalCode = venafiPolicy.PostalCode
+		//  Replace PKI entry with Venafi policy values
+		pkiRoleEntry.OU = venafiPolicyEntry.OU
+		pkiRoleEntry.Organization = venafiPolicyEntry.Organization
+		pkiRoleEntry.Country = venafiPolicyEntry.Country
+		pkiRoleEntry.Locality = venafiPolicyEntry.Locality
+		pkiRoleEntry.Province = venafiPolicyEntry.Province
+		pkiRoleEntry.StreetAddress = venafiPolicyEntry.StreetAddress
+		pkiRoleEntry.PostalCode = venafiPolicyEntry.PostalCode
 
 		// Put new entry
-		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, entry)
+		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, pkiRoleEntry)
 		if err != nil {
 			return err
 		}

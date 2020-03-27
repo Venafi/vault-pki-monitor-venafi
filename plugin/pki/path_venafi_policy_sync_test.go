@@ -32,11 +32,11 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 	writePolicy(b, storage, policyData, t)
 	log.Println("Setting up role")
 	roleData := map[string]interface{}{
-		"organization":       "Venafi Inc.",
-		"ou":                 "Integration",
-		"locality":           "Salt Lake",
-		"province":           "Utah",
-		"country":            "US",
+		"organization":       "Default",
+		"ou":                 "Default",
+		"locality":           "Default",
+		"province":           "Default",
+		"country":            "Default",
 		"allowed_domains":    "example.com",
 		"allow_subdomains":   "true",
 		"max_ttl":            "4h",
@@ -101,10 +101,84 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 
 	ctx := context.Background()
 	req := &logical.Request{
-		Storage:   storage,
+		Storage: storage,
 	}
-    err = b.roleVenafiSync(ctx,req)
+	err = b.roleVenafiSync(ctx, req)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func Test_backend_getPKIRoleEntry(t *testing.T) {
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := Backend(config)
+	err := b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	roleData := map[string]interface{}{
+		"organization":       "Default",
+		"ou":                 "Default",
+		"locality":           "Default",
+		"province":           "Default",
+		"country":            "Default",
+		"allowed_domains":    "example.com",
+		"allow_subdomains":   "true",
+		"max_ttl":            "4h",
+		"allow_bare_domains": true,
+		"generate_lease":     true,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test-venafi-role",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &logical.Request{
+		Storage: storage,
+	}
+	ctx := context.Background()
+    entry, err := b.getPKIRoleEntry(ctx, req, "test-venafi-role")
+    if entry == nil {
+    	t.Fatal("role entry should not be nil")
+	}
+    var want string
+    var have string
+
+	want = roleData["organization"].(string)
+	have = entry.Organization[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+
+	want = roleData["ou"].(string)
+	have = entry.OU[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+
+	want = roleData["locality"].(string)
+	have = entry.Locality[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+
+    want = roleData["province"].(string)
+    have = entry.Province[0]
+    if have != want {
+    	t.Fatalf("%s doesn't match %s", have, want)
 	}
 }
