@@ -23,11 +23,11 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 
 	//write TPP policy
 	policyData := map[string]interface{}{
-		"tpp_url":            os.Getenv("TPP_URL"),
-		"tpp_user":           os.Getenv("TPP_USER"),
-		"tpp_password":       os.Getenv("TPP_PASSWORD"),
-		"zone":               os.Getenv("TPP_ZONE"),
-		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
+		"tpp_url":           os.Getenv("TPP_URL"),
+		"tpp_user":          os.Getenv("TPP_USER"),
+		"tpp_password":      os.Getenv("TPP_PASSWORD"),
+		"zone":              os.Getenv("TPP_ZONE"),
+		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
 	}
 
 	writePolicy(b, storage, policyData, t)
@@ -213,10 +213,10 @@ func TestSyncMultipleRolesWithPolicy(t *testing.T) {
 		t.Fatal("role entry should not be nil")
 	}
 
-    checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry)
+	checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry)
 
 	t.Log("Checking data for the second role")
-	roleEntryData, err = b.getPKIRoleEntry(ctx, req, testRoleName + "-second")
+	roleEntryData, err = b.getPKIRoleEntry(ctx, req, testRoleName+"-second")
 
 	if err != nil {
 		t.Fatal(err)
@@ -230,20 +230,20 @@ func TestSyncMultipleRolesWithPolicy(t *testing.T) {
 }
 
 var wantTPPRoleEntry = roleEntry{
-	Organization: []string{"Venafi Inc."},
-	OU: []string{"Integrations"},
-	Locality: []string{"Salt Lake"},
-	Province: []string{"Utah"},
-	Country:  []string{"US"},
+	Organization:   []string{"Venafi Inc."},
+	OU:             []string{"Integrations"},
+	Locality:       []string{"Salt Lake"},
+	Province:       []string{"Utah"},
+	Country:        []string{"US"},
 	AllowedDomains: []string{"example.com"},
 }
 
 var wantTPPRoleEntry2 = roleEntry{
-	Organization: []string{"Venafi2"},
-	OU: []string{"Integrations2"},
-	Locality: []string{"Salt2"},
-	Province: []string{"Utah2"},
-	Country:  []string{"FR"},
+	Organization:   []string{"Venafi2"},
+	OU:             []string{"Integrations2"},
+	Locality:       []string{"Salt2"},
+	Province:       []string{"Utah2"},
+	Country:        []string{"FR"},
 	AllowedDomains: []string{"example.com"},
 }
 

@@ -183,7 +183,7 @@ func writePolicyToClient(mountPoint string, client *api.Client, t *testing.T) {
 	}
 }
 
-func checkRoleEntry(t *testing.T, haveRoleEntryData roleEntry, wantRoleEntryData roleEntry,) {
+func checkRoleEntry(t *testing.T, haveRoleEntryData roleEntry, wantRoleEntryData roleEntry) {
 	var want string
 	var have string
 

@@ -360,7 +360,7 @@ Example:
 			"venafi_sync_policy": {
 				Type:        framework.TypeString,
 				Description: "Policy where to get connection details",
-				Default: defaultVenafiPolicyName,
+				Default:     defaultVenafiPolicyName,
 			},
 		},
 
