@@ -148,7 +148,7 @@ func TestSyncMultipleRolesWithPolicy(t *testing.T) {
 	}
 
 	writePolicy(b, storage, policyData, t)
-	log.Println("Setting up role")
+	t.Log("Setting up first role")
 	roleData := map[string]interface{}{
 		"organization":       "Default",
 		"ou":                 "Default",
@@ -178,7 +178,7 @@ func TestSyncMultipleRolesWithPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//Setting up second role
+	t.Log("Setting up second role")
 	roleData["venafi_sync_zone"] = os.Getenv("TPP_ZONE2")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -243,7 +243,7 @@ var wantTPPRoleEntry2 = roleEntry{
 	OU: []string{"Integrations2"},
 	Locality: []string{"Salt2"},
 	Province: []string{"Utah2"},
-	Country:  []string{"US2"},
+	Country:  []string{"FR"},
 	AllowedDomains: []string{"example.com"},
 }
 
@@ -347,7 +347,7 @@ func Test_backend_getVenafiPolicyParams(t *testing.T) {
 	ctx := context.Background()
 
 	writePolicy(b, storage, policyData, t)
-	venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, defaultVenafiPolicyName)
+	venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, defaultVenafiPolicyName, policyData["zone"].(string))
 	if err != nil {
 		t.Fatal(err)
 	}

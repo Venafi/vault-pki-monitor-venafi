@@ -37,7 +37,7 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 		}
 
 		//Get Venafi policy in entry format
-		venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, pkiRoleEntry.VenafiSyncPolicy)
+		venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, pkiRoleEntry.VenafiSyncPolicy, pkiRoleEntry.VenafiSyncZone)
 		if err != nil {
 			log.Printf("%s", err)
 			continue
@@ -65,13 +65,14 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 	return err
 }
 
-func (b *backend) getVenafiPolicyParams(ctx context.Context, req *logical.Request, policyConfig string) (entry roleEntry, err error) {
+func (b *backend) getVenafiPolicyParams(ctx context.Context, req *logical.Request, policyConfig string, syncZone string) (entry roleEntry, err error) {
 	//Get role params from TPP\Cloud
 	cl, err := b.ClientVenafi(ctx, req.Storage, policyConfig, "policy")
 	if err != nil {
 		return entry, fmt.Errorf("could not create venafi client: %s", err)
 	}
 
+	cl.SetZone(syncZone)
 	zone, err := cl.ReadZoneConfiguration()
 	if err != nil {
 		return
