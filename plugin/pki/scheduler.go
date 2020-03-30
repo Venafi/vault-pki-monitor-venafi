@@ -42,6 +42,7 @@ func (s *taskStorageStruct) register(name string, f func(), count int, interval 
 	for i := range s.tasks {
 		if s.tasks[i].name == task.name {
 			log.Printf("duplicated task %v", name)
+			return
 		}
 	}
 	s.tasks = append(s.tasks, task)
@@ -59,7 +60,11 @@ func (s *taskStorageStruct) del(taskName string) {
 	}
 }
 
-func (s *taskStorageStruct) scheduler() {
+func (s *taskStorageStruct) init() {
+	go s.loop()
+}
+
+func (s *taskStorageStruct) loop() {
 	for {
 		s.RLock()
 		for i := range s.tasks {

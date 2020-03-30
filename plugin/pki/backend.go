@@ -98,7 +98,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	if b.storage == nil {
 		log.Println("Can't start queue when storage is nil")
 	} else {
-		go b.taskStorage.scheduler()
+		b.taskStorage.init()
 		b.importToTPP(b.storage, conf)
 	}
 
