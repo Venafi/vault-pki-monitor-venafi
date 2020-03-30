@@ -112,36 +112,17 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	roleEntry, err := b.getPKIRoleEntry(ctx, req, testRoleName)
+	roleEntryData, err := b.getPKIRoleEntry(ctx, req, testRoleName)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if roleEntry == nil {
+	if roleEntryData == nil {
 		t.Fatal("role entry should not be nil")
 	}
 
-	var want string
-	var have string
-
-	want = "Venafi Inc."
-	have = roleEntry.Organization[0]
-	if have != want {
-		t.Fatalf("%s doesn't match %s", have, want)
-	}
-
-	want = "Integrations"
-	have = roleEntry.OU[0]
-	if have != want {
-		t.Fatalf("%s doesn't match %s", have, want)
-	}
-
-	want = "example.com"
-	have = roleEntry.AllowedDomains[0]
-	if have != want {
-		t.Fatalf("%s doesn't match %s", have, want)
-	}
+	checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry)
 }
 
 func TestSyncMultipleRolesWithPolicy(t *testing.T) {
@@ -179,6 +160,9 @@ func TestSyncMultipleRolesWithPolicy(t *testing.T) {
 		"max_ttl":            "4h",
 		"allow_bare_domains": true,
 		"generate_lease":     true,
+		"venafi_sync":        true,
+		"venafi_sync_zone":   os.Getenv("TPP_ZONE"),
+		"venafi_sync_policy": defaultVenafiPolicyName,
 	}
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -194,43 +178,16 @@ func TestSyncMultipleRolesWithPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rootData := map[string]interface{}{
-		"common_name":  "ca.some.domain",
-		"organization": "Venafi Inc.",
-		"ou":           "Integration",
-		"locality":     "Salt Lake",
-		"province":     "Utah",
-		"country":      "US",
-		"ttl":          "6h",
-	}
-
+	//Setting up second role
+	roleData["venafi_sync_zone"] = os.Getenv("TPP_ZONE2")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "root/generate/internal",
+		Path:      "roles/" + testRoleName + "-second",
 		Storage:   storage,
-		Data:      rootData,
+		Data:      roleData,
 	})
 	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to generate internal root CA, %#v", resp)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// config urls
-	urlsData := map[string]interface{}{
-		"issuing_certificates":    "http://127.0.0.1:8200/v1/pki/ca",
-		"crl_distribution_points": "http://127.0.0.1:8200/v1/pki/crl",
-	}
-
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config/urls",
-		Storage:   storage,
-		Data:      urlsData,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to config urls, %#v", resp)
+		t.Fatalf("failed to create a role, %#v", resp)
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -245,36 +202,49 @@ func TestSyncMultipleRolesWithPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	roleEntry, err := b.getPKIRoleEntry(ctx, req, testRoleName)
+	t.Log("Checking data for the first role")
+	roleEntryData, err := b.getPKIRoleEntry(ctx, req, testRoleName)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if roleEntry == nil {
+	if roleEntryData == nil {
 		t.Fatal("role entry should not be nil")
 	}
 
-	var want string
-	var have string
+    checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry)
 
-	want = "Venafi Inc."
-	have = roleEntry.Organization[0]
-	if have != want {
-		t.Fatalf("%s doesn't match %s", have, want)
+	t.Log("Checking data for the second role")
+	roleEntryData, err = b.getPKIRoleEntry(ctx, req, testRoleName + "-second")
+
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	want = "Integrations"
-	have = roleEntry.OU[0]
-	if have != want {
-		t.Fatalf("%s doesn't match %s", have, want)
+	if roleEntryData == nil {
+		t.Fatal("role entry should not be nil")
 	}
 
-	want = "example.com"
-	have = roleEntry.AllowedDomains[0]
-	if have != want {
-		t.Fatalf("%s doesn't match %s", have, want)
-	}
+	checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry2)
+}
+
+var wantTPPRoleEntry = roleEntry{
+	Organization: []string{"Venafi Inc."},
+	OU: []string{"Integrations"},
+	Locality: []string{"Salt Lake"},
+	Province: []string{"Utah"},
+	Country:  []string{"US"},
+	AllowedDomains: []string{"example.com"},
+}
+
+var wantTPPRoleEntry2 = roleEntry{
+	Organization: []string{"Venafi2"},
+	OU: []string{"Integrations2"},
+	Locality: []string{"Salt2"},
+	Province: []string{"Utah2"},
+	Country:  []string{"US2"},
+	AllowedDomains: []string{"example.com"},
 }
 
 func Test_backend_getPKIRoleEntry(t *testing.T) {
@@ -385,13 +355,13 @@ func Test_backend_getVenafiPolicyParams(t *testing.T) {
 	var want string
 	var have string
 
-	want = "Venafi Inc."
+	want = wantTPPRoleEntry.Organization[0]
 	have = venafiPolicyEntry.Organization[0]
 	if have != want {
 		t.Fatalf("%s doesn't match %s", have, want)
 	}
 
-	want = "Integrations"
+	want = wantTPPRoleEntry.OU[0]
 	have = venafiPolicyEntry.OU[0]
 	if have != want {
 		t.Fatalf("%s doesn't match %s", have, want)

@@ -182,3 +182,44 @@ func writePolicyToClient(mountPoint string, client *api.Client, t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func checkRoleEntry(t *testing.T, haveRoleEntryData roleEntry, wantRoleEntryData roleEntry,) {
+	var want string
+	var have string
+
+	want = wantRoleEntryData.OU[0]
+	have = haveRoleEntryData.OU[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+
+	want = wantRoleEntryData.Organization[0]
+	have = haveRoleEntryData.Organization[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+
+	want = wantRoleEntryData.Country[0]
+	have = haveRoleEntryData.Country[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+
+	want = wantRoleEntryData.Locality[0]
+	have = haveRoleEntryData.Locality[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+
+	want = wantRoleEntryData.Province[0]
+	have = haveRoleEntryData.Province[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+
+	want = wantRoleEntryData.AllowedDomains[0]
+	have = haveRoleEntryData.AllowedDomains[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+}
