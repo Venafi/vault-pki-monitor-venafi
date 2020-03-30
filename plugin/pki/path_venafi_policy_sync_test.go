@@ -3,12 +3,51 @@ package pki
 import (
 	"context"
 	"github.com/hashicorp/vault/sdk/logical"
-	"log"
 	"os"
 	"testing"
 )
 
-func TestSyncRoleWithPolicy(t *testing.T) {
+var policyTPPData = map[string]interface{}{
+	"tpp_url":           os.Getenv("TPP_URL"),
+	"tpp_user":          os.Getenv("TPP_USER"),
+	"tpp_password":      os.Getenv("TPP_PASSWORD"),
+	"zone":              os.Getenv("TPP_ZONE"),
+	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+}
+
+var wantTPPRoleEntry = roleEntry{
+	Organization:   []string{"Venafi Inc."},
+	OU:             []string{"Integrations"},
+	Locality:       []string{"Salt Lake"},
+	Province:       []string{"Utah"},
+	Country:        []string{"US"},
+	AllowedDomains: []string{"example.com"},
+}
+
+var wantTPPRoleEntry2 = roleEntry{
+	Organization:   []string{"Venafi2"},
+	OU:             []string{"Integrations2"},
+	Locality:       []string{"Salt2"},
+	Province:       []string{"Utah2"},
+	Country:        []string{"FR"},
+	AllowedDomains: []string{"example.com"},
+}
+
+var roleData = map[string]interface{}{
+	"organization":       "Default",
+	"ou":                 "Default",
+	"locality":           "Default",
+	"province":           "Default",
+	"country":            "Default",
+	"allowed_domains":    "example.com",
+	"allow_subdomains":   "true",
+	"max_ttl":            "4h",
+	"allow_bare_domains": true,
+	"generate_lease":     true,
+	"venafi_sync":        true,
+}
+
+func TestSyncRoleWithTPPPolicy(t *testing.T) {
 	// create the backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
@@ -22,31 +61,9 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 	}
 
 	//write TPP policy
-	policyData := map[string]interface{}{
-		"tpp_url":           os.Getenv("TPP_URL"),
-		"tpp_user":          os.Getenv("TPP_USER"),
-		"tpp_password":      os.Getenv("TPP_PASSWORD"),
-		"zone":              os.Getenv("TPP_ZONE"),
-		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-	}
-
-	writePolicy(b, storage, policyData, t)
-	log.Println("Setting up role")
-	roleData := map[string]interface{}{
-		"organization":       "Default",
-		"ou":                 "Default",
-		"locality":           "Default",
-		"province":           "Default",
-		"country":            "Default",
-		"allowed_domains":    "example.com",
-		"allow_subdomains":   "true",
-		"max_ttl":            "4h",
-		"allow_bare_domains": true,
-		"generate_lease":     true,
-		"venafi_sync":        true,
-		"venafi_sync_zone":   os.Getenv("TPP_ZONE"),
-		"venafi_sync_policy": defaultVenafiPolicyName,
-	}
+	writePolicy(b, storage, policyTPPData, t)
+	roleData["venafi_sync_zone"] = os.Getenv("TPP_ZONE")
+	roleData["venafi_sync_policy"] = defaultVenafiPolicyName
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -56,48 +73,6 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 	})
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to create a role, %#v", resp)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rootData := map[string]interface{}{
-		"common_name":  "ca.some.domain",
-		"organization": "Venafi Inc.",
-		"ou":           "Integration",
-		"locality":     "Salt Lake",
-		"province":     "Utah",
-		"country":      "US",
-		"ttl":          "6h",
-	}
-
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "root/generate/internal",
-		Storage:   storage,
-		Data:      rootData,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to generate internal root CA, %#v", resp)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// config urls
-	urlsData := map[string]interface{}{
-		"issuing_certificates":    "http://127.0.0.1:8200/v1/pki/ca",
-		"crl_distribution_points": "http://127.0.0.1:8200/v1/pki/crl",
-	}
-
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config/urls",
-		Storage:   storage,
-		Data:      urlsData,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to config urls, %#v", resp)
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -122,10 +97,11 @@ func TestSyncRoleWithPolicy(t *testing.T) {
 		t.Fatal("role entry should not be nil")
 	}
 
+	t.Log("Checking modified role entry")
 	checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry)
 }
 
-func TestSyncMultipleRolesWithPolicy(t *testing.T) {
+func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 	// create the backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
@@ -138,32 +114,11 @@ func TestSyncMultipleRolesWithPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//write TPP policy
-	policyData := map[string]interface{}{
-		"tpp_url":           os.Getenv("TPP_URL"),
-		"tpp_user":          os.Getenv("TPP_USER"),
-		"tpp_password":      os.Getenv("TPP_PASSWORD"),
-		"zone":              os.Getenv("TPP_ZONE"),
-		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-	}
-
-	writePolicy(b, storage, policyData, t)
+	writePolicy(b, storage, policyTPPData, t)
 	t.Log("Setting up first role")
-	roleData := map[string]interface{}{
-		"organization":       "Default",
-		"ou":                 "Default",
-		"locality":           "Default",
-		"province":           "Default",
-		"country":            "Default",
-		"allowed_domains":    "example.com",
-		"allow_subdomains":   "true",
-		"max_ttl":            "4h",
-		"allow_bare_domains": true,
-		"generate_lease":     true,
-		"venafi_sync":        true,
-		"venafi_sync_zone":   os.Getenv("TPP_ZONE"),
-		"venafi_sync_policy": defaultVenafiPolicyName,
-	}
+
+	roleData["venafi_sync_zone"] = os.Getenv("TPP_ZONE")
+	roleData["venafi_sync_policy"] = defaultVenafiPolicyName
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -229,24 +184,6 @@ func TestSyncMultipleRolesWithPolicy(t *testing.T) {
 	checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry2)
 }
 
-var wantTPPRoleEntry = roleEntry{
-	Organization:   []string{"Venafi Inc."},
-	OU:             []string{"Integrations"},
-	Locality:       []string{"Salt Lake"},
-	Province:       []string{"Utah"},
-	Country:        []string{"US"},
-	AllowedDomains: []string{"example.com"},
-}
-
-var wantTPPRoleEntry2 = roleEntry{
-	Organization:   []string{"Venafi2"},
-	OU:             []string{"Integrations2"},
-	Locality:       []string{"Salt2"},
-	Province:       []string{"Utah2"},
-	Country:        []string{"FR"},
-	AllowedDomains: []string{"example.com"},
-}
-
 func Test_backend_getPKIRoleEntry(t *testing.T) {
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -257,19 +194,6 @@ func Test_backend_getPKIRoleEntry(t *testing.T) {
 	err := b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	roleData := map[string]interface{}{
-		"organization":       "Default",
-		"ou":                 "Default",
-		"locality":           "Default",
-		"province":           "Default",
-		"country":            "Default",
-		"allowed_domains":    "example.com",
-		"allow_subdomains":   "true",
-		"max_ttl":            "4h",
-		"allow_bare_domains": true,
-		"generate_lease":     true,
 	}
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -332,22 +256,15 @@ func Test_backend_getVenafiPolicyParams(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//write TPP policy
-	policyData := map[string]interface{}{
-		"tpp_url":           os.Getenv("TPP_URL"),
-		"tpp_user":          os.Getenv("TPP_USER"),
-		"tpp_password":      os.Getenv("TPP_PASSWORD"),
-		"zone":              os.Getenv("TPP_ZONE"),
-		"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-	}
 
+	//write TPP policy
 	req := &logical.Request{
 		Storage: storage,
 	}
 	ctx := context.Background()
 
-	writePolicy(b, storage, policyData, t)
-	venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, defaultVenafiPolicyName, policyData["zone"].(string))
+	writePolicy(b, storage, policyTPPData, t)
+	venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, defaultVenafiPolicyName, policyTPPData["zone"].(string))
 	if err != nil {
 		t.Fatal(err)
 	}
