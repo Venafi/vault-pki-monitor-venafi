@@ -52,6 +52,16 @@ var wantTPPRoleEntry2 = roleEntry{
 	KeyUsage:       []string{"CertSign"},
 }
 
+var wantTPPRoleEntryNoSync = roleEntry{
+	Organization:   []string{"Default"},
+	OU:             []string{"Default"},
+	Locality:       []string{"Default"},
+	Province:       []string{"Default"},
+	Country:        []string{"Default"},
+	AllowedDomains: []string{"example.com"},
+	KeyUsage:       []string{"CertSign"},
+}
+
 var roleData = map[string]interface{}{
 	"organization":       "Default",
 	"ou":                 "Default",
@@ -151,7 +161,7 @@ func TestIntegrationSyncRoleWithPolicy(t *testing.T) {
 
 	ctx := context.Background()
 
-	t.Log("Sleeping to wait while scheduler excute sync task")
+	t.Log("Sleeping to wait while scheduler execute sync task")
 	time.Sleep(5 * time.Second)
 
 	t.Log("Checking role entry")
@@ -267,6 +277,21 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	t.Log("Setting up third role without sync")
+	roleData["venafi_sync"] = false
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + testRoleName + "-third",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	ctx := context.Background()
 	err = b.syncWithVenafiPolicy(storage, config)
 	if err != nil {
@@ -298,6 +323,19 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 	}
 
 	checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry2)
+
+	t.Log("Checking data for the third role")
+	roleEntryData, err = b.getPKIRoleEntry(ctx, storage, testRoleName+"-third")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if roleEntryData == nil {
+		t.Fatal("role entry should not be nil")
+	}
+
+	checkRoleEntry(t, *roleEntryData, wantTPPRoleEntryNoSync)
 }
 
 func Test_backend_getPKIRoleEntry(t *testing.T) {

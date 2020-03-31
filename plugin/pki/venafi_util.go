@@ -217,7 +217,33 @@ func checkRoleEntry(t *testing.T, haveRoleEntryData roleEntry, wantRoleEntryData
 		t.Fatalf("%s doesn't match %s", have, want)
 	}
 
-	if len(haveRoleEntryData.AllowedDomains) > 0 {
-		t.Fatalf("%s should be empty", haveRoleEntryData.AllowedDomains)
+	if !testEqStrginSlice(wantRoleEntryData.AllowedDomains, haveRoleEntryData.AllowedDomains) {
+		t.Fatalf("%s doesn't match %s", wantRoleEntryData.AllowedDomains, haveRoleEntryData.AllowedDomains)
 	}
+
+	want = wantRoleEntryData.KeyUsage[0]
+	have = haveRoleEntryData.KeyUsage[0]
+	if have != want {
+		t.Fatalf("%s doesn't match %s", have, want)
+	}
+}
+
+func testEqStrginSlice(a, b []string) bool {
+
+	// If one is nil, the other must also be nil.
+	if (a == nil) != (b == nil) {
+		return false;
+	}
+
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
 }
