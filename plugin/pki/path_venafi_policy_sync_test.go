@@ -162,7 +162,7 @@ func TestIntegrationSyncRoleWithPolicy(t *testing.T) {
 	ctx := context.Background()
 
 	t.Log("Sleeping to wait while scheduler execute sync task")
-	time.Sleep(5 * time.Second)
+	time.Sleep(25 * time.Second)
 
 	t.Log("Checking role entry")
 	roleEntryData, err := b.getPKIRoleEntry(ctx, storage, testRoleName)
