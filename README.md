@@ -469,7 +469,7 @@ venafi_sync parameter to `true`, there're also other parameters for synchronisat
 | `venafi_sync_zone`      | string  | Venafi zone to get role parameters                                            |           |
 | `venafi_sync_policy`    | string  | Policy where to get Venafi connection details for policy synchronization      | "default" |
 
-Example:_
+Example:  
 1. Configure venafi policy:
 
     ```
@@ -491,22 +491,22 @@ Example:_
     ```
 
 1. Wait about a 15 seconds, role values ( OU, O, L, ST, and C) should be filled:
-
-```
-$ vault read pki/roles/tpp-sync-role
-Key                                   Value
----                                   -----
-.....
-country                               [US]
-.....
-locality                              [Salt Lake]
-.....
-organization                          [Venafi Inc.]
-ou                                    [Integrations]
-......
-province                              [Utah]
-......
-```
+    
+    ```
+    $ vault read pki/roles/tpp-sync-role
+    Key                                   Value
+    ---                                   -----
+    .....
+    country                               [US]
+    .....
+    locality                              [Salt Lake]
+    .....
+    organization                          [Venafi Inc.]
+    ou                                    [Integrations]
+    ......
+    province                              [Utah]
+    ......
+    ```
 
 ## Developer Quickstart (Linux only)
 
