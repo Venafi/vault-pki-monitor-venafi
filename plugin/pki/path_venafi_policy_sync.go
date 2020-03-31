@@ -3,26 +3,37 @@ package pki
 import (
 	"context"
 	"fmt"
+	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
 	"time"
 )
 
 func (b *backend) syncWithVenafiPolicyRegister(storage logical.Storage, conf *logical.BackendConfig) {
+	log.Println("registering poicy sync controller")
 	b.taskStorage.register("policy-sync-controller", func() {
-		b.syncWithVenafiPolicyController(storage)
+		b.syncWithVenafiPolicyController(storage, conf)
 	}, 1, time.Second)
 }
 
-func (b *backend) syncWithVenafiPolicyController(storage logical.Storage) {
-	err := b.syncWithVenafiPolicy(storage)
+func (b *backend) syncWithVenafiPolicyController(storage logical.Storage, conf *logical.BackendConfig) {
+	err := b.syncWithVenafiPolicy(storage, conf)
 	if err != nil {
 		log.Printf("%s", err)
 	}
 }
 
-func (b *backend) syncWithVenafiPolicy(storage logical.Storage) (err error) {
-
+func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.BackendConfig) (err error) {
+	replicationState := conf.System.ReplicationState()
+	//Checking if we are on master or on the stanby Vault server
+	isSlave := !(conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) ||
+		replicationState.HasState(hconsts.ReplicationDRSecondary) ||
+		replicationState.HasState(hconsts.ReplicationPerformanceStandby)
+	if isSlave {
+		log.Println("We're on slave. Sleeping")
+		return
+	}
+	log.Println("We're on master. Starting to import certificates")
 	ctx := context.Background()
 	//Get role list with role sync param
 	roles, err := storage.List(ctx, "role/")

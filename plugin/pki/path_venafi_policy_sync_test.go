@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"os"
 	"testing"
+	"time"
 )
 
 var policyTPPData = map[string]interface{}{
@@ -15,10 +16,10 @@ var policyTPPData = map[string]interface{}{
 	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
 }
 
-var policyCloudData =  map[string]interface{}{
-	"apikey":                os.Getenv("CLOUD_APIKEY"),
-	"cloud_url":             os.Getenv("CLOUD_URL"),
-	"zone":                  os.Getenv("CLOUD_ZONE_RESTRICTED"),
+var policyCloudData = map[string]interface{}{
+	"apikey":    os.Getenv("CLOUD_APIKEY"),
+	"cloud_url": os.Getenv("CLOUD_URL"),
+	"zone":      os.Getenv("CLOUD_ZONE_RESTRICTED"),
 }
 
 var wantTPPRoleEntry = roleEntry{
@@ -28,7 +29,7 @@ var wantTPPRoleEntry = roleEntry{
 	Province:       []string{"Utah"},
 	Country:        []string{"US"},
 	AllowedDomains: []string{},
-	KeyUsage: []string{"CertSign"},
+	KeyUsage:       []string{"CertSign"},
 }
 
 var wantCloudRoleEntry = roleEntry{
@@ -38,7 +39,7 @@ var wantCloudRoleEntry = roleEntry{
 	Province:       []string{"Utah"},
 	Country:        []string{"US"},
 	AllowedDomains: []string{},
-	KeyUsage: []string{"CertSign"},
+	KeyUsage:       []string{"CertSign"},
 }
 
 var wantTPPRoleEntry2 = roleEntry{
@@ -48,7 +49,7 @@ var wantTPPRoleEntry2 = roleEntry{
 	Province:       []string{"Utah2"},
 	Country:        []string{"FR"},
 	AllowedDomains: []string{},
-	KeyUsage: []string{"CertSign"},
+	KeyUsage:       []string{"CertSign"},
 }
 
 var roleData = map[string]interface{}{
@@ -60,7 +61,7 @@ var roleData = map[string]interface{}{
 	"allowed_domains":    "example.com",
 	"allow_subdomains":   "true",
 	"max_ttl":            "4h",
-	"key_usage": "CertSign",
+	"key_usage":          "CertSign",
 	"allow_bare_domains": true,
 	"generate_lease":     true,
 	"venafi_sync":        true,
@@ -98,11 +99,62 @@ func TestSyncRoleWithTPPPolicy(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err = b.syncWithVenafiPolicy(storage)
+	err = b.syncWithVenafiPolicy(storage, config)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	roleEntryData, err := b.getPKIRoleEntry(ctx, storage, testRoleName)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if roleEntryData == nil {
+		t.Fatal("role entry should not be nil")
+	}
+
+	t.Log("Checking modified role entry")
+	checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry)
+}
+
+func TestIntegrationSyncRoleWithPolicy(t *testing.T) {
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	testRoleName := "test-venafi-role"
+	config.StorageView = storage
+
+	b := Backend(config)
+	err := b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//write TPP policy
+	writePolicy(b, storage, policyTPPData, t)
+	roleData["venafi_sync_zone"] = os.Getenv("TPP_ZONE")
+	roleData["venafi_sync_policy"] = defaultVenafiPolicyName
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + testRoleName,
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	t.Log("Sleeping to wait while scheduler excute sync task")
+	time.Sleep(5 * time.Second)
+
+	t.Log("Checking role entry")
 	roleEntryData, err := b.getPKIRoleEntry(ctx, storage, testRoleName)
 
 	if err != nil {
@@ -149,7 +201,7 @@ func TestSyncRoleWithCloudPolicy(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err = b.syncWithVenafiPolicy(storage)
+	err = b.syncWithVenafiPolicy(storage, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +268,7 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err = b.syncWithVenafiPolicy(storage)
+	err = b.syncWithVenafiPolicy(storage, config)
 	if err != nil {
 		t.Fatal(err)
 	}
