@@ -217,9 +217,7 @@ func checkRoleEntry(t *testing.T, haveRoleEntryData roleEntry, wantRoleEntryData
 		t.Fatalf("%s doesn't match %s", have, want)
 	}
 
-	want = wantRoleEntryData.AllowedDomains[0]
-	have = haveRoleEntryData.AllowedDomains[0]
-	if have != want {
-		t.Fatalf("%s doesn't match %s", have, want)
+	if len(haveRoleEntryData.AllowedDomains) > 0 {
+		t.Fatalf("%s should be empty", haveRoleEntryData.AllowedDomains)
 	}
 }

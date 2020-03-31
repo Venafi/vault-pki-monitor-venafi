@@ -37,7 +37,8 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 		}
 
 		//Get Venafi policy in entry format
-		venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, pkiRoleEntry.VenafiSyncPolicy, pkiRoleEntry.VenafiSyncZone)
+		venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, pkiRoleEntry.VenafiSyncPolicy,
+			pkiRoleEntry.VenafiSyncZone)
 		if err != nil {
 			log.Printf("%s", err)
 			continue
@@ -51,6 +52,12 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 		pkiRoleEntry.Province = venafiPolicyEntry.Province
 		pkiRoleEntry.StreetAddress = venafiPolicyEntry.StreetAddress
 		pkiRoleEntry.PostalCode = venafiPolicyEntry.PostalCode
+
+		//does not have to configure the role to limit domains
+		// because the Venafi policy already constrains that area
+		pkiRoleEntry.AllowAnyName = true
+		pkiRoleEntry.AllowedDomains = []string{}
+		pkiRoleEntry.AllowSubdomains = true
 
 		// Put new entry
 		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, pkiRoleEntry)

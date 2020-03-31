@@ -36,7 +36,8 @@ var wantCloudRoleEntry = roleEntry{
 	Locality:       []string{"Salt Lake"},
 	Province:       []string{"Utah"},
 	Country:        []string{"US"},
-	AllowedDomains: []string{"example.com"},
+	AllowedDomains: []string{},
+	KeyUsage: []string{"CertSign"},
 }
 
 var wantTPPRoleEntry2 = roleEntry{
@@ -45,7 +46,8 @@ var wantTPPRoleEntry2 = roleEntry{
 	Locality:       []string{"Salt2"},
 	Province:       []string{"Utah2"},
 	Country:        []string{"FR"},
-	AllowedDomains: []string{"example.com"},
+	AllowedDomains: []string{},
+	KeyUsage: []string{"CertSign"},
 }
 
 var roleData = map[string]interface{}{
@@ -57,6 +59,7 @@ var roleData = map[string]interface{}{
 	"allowed_domains":    "example.com",
 	"allow_subdomains":   "true",
 	"max_ttl":            "4h",
+	"key_usage": "CertSign",
 	"allow_bare_domains": true,
 	"generate_lease":     true,
 	"venafi_sync":        true,
