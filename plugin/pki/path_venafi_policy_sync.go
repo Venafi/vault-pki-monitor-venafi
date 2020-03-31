@@ -5,12 +5,23 @@ import (
 	"fmt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
+	"time"
 )
 
-func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err error) {
+func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.BackendConfig) {
+	b.taskStorage.register("policy-sync-controller", func() {
+		err := b.roleVenafiSync(storage)
+		if err != nil {
+			return
+		}
+	}, 1, time.Second)
+}
 
+func (b *backend) roleVenafiSync(storage logical.Storage,) (err error) {
+
+	ctx := context.Background()
 	//Get role list with role sync param
-	roles, err := req.Storage.List(ctx, "role/")
+	roles, err := storage.List(ctx, "role/")
 	if err != nil {
 		return
 	}
@@ -21,7 +32,7 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 
 	for _, roleName := range roles {
 		//	Read previous role parameters
-		pkiRoleEntry, err := b.getPKIRoleEntry(ctx, req, roleName)
+		pkiRoleEntry, err := b.getPKIRoleEntry(ctx, storage, roleName)
 		if err != nil {
 			log.Printf("%s", err)
 			continue
@@ -37,7 +48,7 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 		}
 
 		//Get Venafi policy in entry format
-		venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, pkiRoleEntry.VenafiSyncPolicy,
+		venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, pkiRoleEntry.VenafiSyncPolicy,
 			pkiRoleEntry.VenafiSyncZone)
 		if err != nil {
 			log.Printf("%s", err)
@@ -64,7 +75,7 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 		if err != nil {
 			return err
 		}
-		if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+		if err := storage.Put(ctx, jsonEntry); err != nil {
 			return err
 		}
 	}
@@ -72,9 +83,9 @@ func (b *backend) roleVenafiSync(ctx context.Context, req *logical.Request) (err
 	return err
 }
 
-func (b *backend) getVenafiPolicyParams(ctx context.Context, req *logical.Request, policyConfig string, syncZone string) (entry roleEntry, err error) {
+func (b *backend) getVenafiPolicyParams(ctx context.Context, storage logical.Storage, policyConfig string, syncZone string) (entry roleEntry, err error) {
 	//Get role params from TPP\Cloud
-	cl, err := b.ClientVenafi(ctx, req.Storage, policyConfig, "policy")
+	cl, err := b.ClientVenafi(ctx, storage, policyConfig, "policy")
 	if err != nil {
 		return entry, fmt.Errorf("could not create venafi client: %s", err)
 	}
@@ -94,9 +105,9 @@ func (b *backend) getVenafiPolicyParams(ctx context.Context, req *logical.Reques
 	return
 }
 
-func (b *backend) getPKIRoleEntry(ctx context.Context, req *logical.Request, roleName string) (entry *roleEntry, err error) {
+func (b *backend) getPKIRoleEntry(ctx context.Context, storage logical.Storage, roleName string) (entry *roleEntry, err error) {
 	//Update role since it's settings may be changed
-	entry, err = b.getRole(ctx, req.Storage, roleName)
+	entry, err = b.getRole(ctx, storage, roleName)
 	if err != nil {
 		return entry, fmt.Errorf("Error getting role %v: %s\n", roleName, err)
 	}

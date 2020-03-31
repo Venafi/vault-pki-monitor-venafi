@@ -98,15 +98,12 @@ func TestSyncRoleWithTPPPolicy(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	req := &logical.Request{
-		Storage: storage,
-	}
-	err = b.roleVenafiSync(ctx, req)
+	err = b.roleVenafiSync(storage)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	roleEntryData, err := b.getPKIRoleEntry(ctx, req, testRoleName)
+	roleEntryData, err := b.getPKIRoleEntry(ctx, storage, testRoleName)
 
 	if err != nil {
 		t.Fatal(err)
@@ -152,15 +149,12 @@ func TestSyncRoleWithCloudPolicy(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	req := &logical.Request{
-		Storage: storage,
-	}
-	err = b.roleVenafiSync(ctx, req)
+	err = b.roleVenafiSync(storage)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	roleEntryData, err := b.getPKIRoleEntry(ctx, req, testRoleName)
+	roleEntryData, err := b.getPKIRoleEntry(ctx, storage, testRoleName)
 
 	if err != nil {
 		t.Fatal(err)
@@ -222,16 +216,13 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	req := &logical.Request{
-		Storage: storage,
-	}
-	err = b.roleVenafiSync(ctx, req)
+	err = b.roleVenafiSync(storage)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Log("Checking data for the first role")
-	roleEntryData, err := b.getPKIRoleEntry(ctx, req, testRoleName)
+	roleEntryData, err := b.getPKIRoleEntry(ctx, storage, testRoleName)
 
 	if err != nil {
 		t.Fatal(err)
@@ -244,7 +235,7 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 	checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry)
 
 	t.Log("Checking data for the second role")
-	roleEntryData, err = b.getPKIRoleEntry(ctx, req, testRoleName+"-second")
+	roleEntryData, err = b.getPKIRoleEntry(ctx, storage, testRoleName+"-second")
 
 	if err != nil {
 		t.Fatal(err)
@@ -282,11 +273,8 @@ func Test_backend_getPKIRoleEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := &logical.Request{
-		Storage: storage,
-	}
 	ctx := context.Background()
-	entry, err := b.getPKIRoleEntry(ctx, req, "test-venafi-role")
+	entry, err := b.getPKIRoleEntry(ctx, storage, "test-venafi-role")
 	if entry == nil {
 		t.Fatal("role entry should not be nil")
 	}
@@ -331,13 +319,10 @@ func Test_backend_getVenafiPolicyParams(t *testing.T) {
 	}
 
 	//write TPP policy
-	req := &logical.Request{
-		Storage: storage,
-	}
 	ctx := context.Background()
 
 	writePolicy(b, storage, policyTPPData, t)
-	venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, req, defaultVenafiPolicyName, policyTPPData["zone"].(string))
+	venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, defaultVenafiPolicyName, policyTPPData["zone"].(string))
 	if err != nil {
 		t.Fatal(err)
 	}
