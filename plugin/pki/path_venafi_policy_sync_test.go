@@ -27,7 +27,8 @@ var wantTPPRoleEntry = roleEntry{
 	Locality:       []string{"Salt Lake"},
 	Province:       []string{"Utah"},
 	Country:        []string{"US"},
-	AllowedDomains: []string{"example.com"},
+	AllowedDomains: []string{},
+	KeyUsage: []string{"CertSign"},
 }
 
 var wantCloudRoleEntry = roleEntry{
