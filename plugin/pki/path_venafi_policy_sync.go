@@ -10,10 +10,10 @@ import (
 )
 
 func (b *backend) syncWithVenafiPolicyRegister(storage logical.Storage, conf *logical.BackendConfig) {
-	log.Println("registering poicy sync controller")
+	log.Println("registering policy sync controller")
 	b.taskStorage.register("policy-sync-controller", func() {
 		b.syncWithVenafiPolicyController(storage, conf)
-	}, 1, time.Second)
+	}, 1, time.Second * 15)
 }
 
 func (b *backend) syncWithVenafiPolicyController(storage logical.Storage, conf *logical.BackendConfig) {
@@ -115,7 +115,7 @@ func (b *backend) getVenafiPolicyParams(ctx context.Context, storage logical.Sto
 	cl.SetZone(syncZone)
 	zone, err := cl.ReadZoneConfiguration()
 	if err != nil {
-		return
+		return entry, fmt.Errorf("could not read zone configuration: %s", err)
 	}
 	entry = roleEntry{
 		OU:           zone.OrganizationalUnit,

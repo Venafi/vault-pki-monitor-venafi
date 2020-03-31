@@ -301,8 +301,7 @@ for "generate_lease".`,
 				Type: framework.TypeString,
 				Description: `Name of Venafi Platform or Cloud policy. 
 Example for Platform: testpolicy\\vault
-Example for Venafi Cloud: Default`,
-				Default: `Default`,
+Example for Venafi Cloud: e33f3e40-4e7e-11ea-8da3-b3c196ebeb0b`,
 			},
 			"tpp_user": {
 				Type:        framework.TypeString,
