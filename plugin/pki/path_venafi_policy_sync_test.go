@@ -98,7 +98,7 @@ func TestSyncRoleWithTPPPolicy(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err = b.roleVenafiSync(storage)
+	err = b.syncWithVenafiPolicy(storage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestSyncRoleWithCloudPolicy(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err = b.roleVenafiSync(storage)
+	err = b.syncWithVenafiPolicy(storage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +216,7 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err = b.roleVenafiSync(storage)
+	err = b.syncWithVenafiPolicy(storage)
 	if err != nil {
 		t.Fatal(err)
 	}

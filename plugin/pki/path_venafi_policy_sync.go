@@ -8,16 +8,20 @@ import (
 	"time"
 )
 
-func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.BackendConfig) {
+func (b *backend) syncWithVenafiPolicyRegister(storage logical.Storage, conf *logical.BackendConfig) {
 	b.taskStorage.register("policy-sync-controller", func() {
-		err := b.roleVenafiSync(storage)
-		if err != nil {
-			return
-		}
+		b.syncWithVenafiPolicyController(storage)
 	}, 1, time.Second)
 }
 
-func (b *backend) roleVenafiSync(storage logical.Storage,) (err error) {
+func (b *backend) syncWithVenafiPolicyController(storage logical.Storage) {
+	err := b.syncWithVenafiPolicy(storage)
+	if err != nil {
+		log.Printf("%s", err)
+	}
+}
+
+func (b *backend) syncWithVenafiPolicy(storage logical.Storage) (err error) {
 
 	ctx := context.Background()
 	//Get role list with role sync param
