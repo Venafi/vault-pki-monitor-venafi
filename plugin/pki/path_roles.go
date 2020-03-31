@@ -350,7 +350,7 @@ Example:
 			"venafi_sync": {
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: `Set it to true to sync policy values with Venafi policy`,
+				Description: `Set it to true to sync PKI role values ( OU, O, L, ST, and C) with Venafi policy`,
 			},
 			"venafi_sync_zone": {
 				Type:        framework.TypeString,
@@ -358,7 +358,7 @@ Example:
 			},
 			"venafi_sync_policy": {
 				Type:        framework.TypeString,
-				Description: "Policy where to get connection details",
+				Description: "Policy where to get Venafi connection details for policy synchronization",
 				Default:     defaultVenafiPolicyName,
 			},
 		},

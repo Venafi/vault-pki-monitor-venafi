@@ -261,7 +261,7 @@ The following options are supported (note: this list can also be viewed from the
 | Parameter               | Type    | Description                                                                   | Default   |
 | ----------------------- | ------- | ------------------------------------------------------------------------------| --------- |
 | `venafi_import`         | bool    | Controls whether certificates are forwarded to the Venafi Platform or Venafi Cloud            | `true`    |
-| `zone`                  | string  | Venafi Platform policy folder where certificates will be imported; for Venafi Cloud this is the endpoint that the certificates will be sent to.             | "Default" |
+| `zone`                  | string  | Venafi Platform policy folder where certificates will be imported; for Venafi Cloud this is the endpoint that the certificates will be sent to.             | |
 | `tpp_url`               | string  | Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk")                     |           |
 | `tpp_username`          | string  | Venafi Platform WebSDK account username                                       |           |
 | `tpp_password`          | string  | Venafi Platform WebSDK account password                                       |           |
@@ -460,6 +460,53 @@ that restrictions are working):
 ### See it at asciinema:
 
 [![asciicast](https://asciinema.org/a/T6DKJ1gu2B2s22AIglJCsxTkd.svg)](https://asciinema.org/a/T6DKJ1gu2B2s22AIglJCsxTkd)
+
+
+### Venafi Policy Synchronization
+You can automatically synchronize PKI role values ( OU, O, L, ST, and C) with Venafi policy. To do so you need to set
+venafi_sync parameter to `true`, there're also other parameters for synchronisation:_
+| `venafi_sync`           | bool    | Set it to true to sync PKI role values ( OU, O, L, ST, and C) with Venafi policy | false |
+| `venafi_sync_zone`      | string  | Venafi zone to get role parameters                                            |           |
+| `venafi_sync_policy`    | string  | Policy where to get Venafi connection details for policy synchronization      | "default" |
+
+Example:_
+1. Configure venafi policy:
+
+    ```
+    vault write pki/venafi-policy/tpp \ 
+        tpp_url="https://tpp.example.com/vedsdk" \
+        tpp_user="admin" \
+        tpp_password="strongPassword" \ 
+        zone="devops\\vcert" \
+        trust_bundle_file="/opt/venafi/bundle.pem"
+    ```
+
+1. Create a role with sync parameters:
+
+    ```
+    vault write pki/roles/tpp-sync-role \
+            venafi_sync=true \
+            venafi_sync_zone="devops\\vcert" \
+            venafi_sync_policy="tpp"
+    ```
+
+1. Wait about a 15 seconds, role values ( OU, O, L, ST, and C) should be filled:
+
+```
+$ vault read pki/roles/tpp-sync-role
+Key                                   Value
+---                                   -----
+.....
+country                               [US]
+.....
+locality                              [Salt Lake]
+.....
+organization                          [Venafi Inc.]
+ou                                    [Integrations]
+......
+province                              [Utah]
+......
+```
 
 ## Developer Quickstart (Linux only)
 
