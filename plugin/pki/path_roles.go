@@ -347,18 +347,9 @@ Example:
 				Default:     defaultVenafiPolicyName,
 				Description: `Which Venafi policy check to use`,
 			},
-			"venafi_sync": {
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: `Set it to true to sync PKI role values ( OU, O, L, ST, and C) with Venafi policy`,
-			},
-			"venafi_sync_zone": {
-				Type:        framework.TypeString,
-				Description: "Venafi zone to get role parameters",
-			},
 			"venafi_sync_policy": {
 				Type:        framework.TypeString,
-				Description: "Policy where to get Venafi connection details for policy synchronization",
+				Description: "If set PKI role will be synchronized with Venafi zone specified in the policy.",
 				Default:     defaultVenafiPolicyName,
 			},
 		},
@@ -592,7 +583,6 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		TPPImportTimeout:  data.Get("venafi_import_timeout").(int),
 		TPPImportWorkers:  data.Get("venafi_import_workers").(int),
 		VenafiCheckPolicy: data.Get("venafi_check_policy").(string),
-		VenafiSync:        data.Get("venafi_sync").(bool),
 		VenafiSyncPolicy:  data.Get("venafi_sync_policy").(string),
 	}
 	otherSANs := data.Get("allowed_other_sans").([]string)
@@ -793,7 +783,6 @@ type roleEntry struct {
 	VenafiCheckPolicy string `json:"venafi_check_policy"`
 
 	//Options for syncing role parameters with Venafi policy
-	VenafiSync       bool   `json:"venafi_sync"`
 	VenafiSyncPolicy string `json:"venafi_sync_policy"`
 
 	// Used internally for signing intermediates
@@ -849,7 +838,6 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"venafi_import_timeout": r.TPPImportTimeout,
 		"venafi_import_workers": r.TPPImportWorkers,
 		"venafi_check_policy":   r.VenafiCheckPolicy,
-		"venafi_sync":           r.VenafiSync,
 		"venafi_sync_policy":    r.VenafiSyncPolicy,
 	}
 	if r.MaxPathLength != nil {

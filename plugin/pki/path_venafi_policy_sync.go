@@ -58,19 +58,12 @@ func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.Ba
 			continue
 		}
 
-		if !pkiRoleEntry.VenafiSync {
+		//Get Venafi policy in entry format
+		if pkiRoleEntry.VenafiSyncPolicy == "" {
 			continue
 		}
 
-		//Get Venafi policy in entry format
-		var syncPolicy string
-		if pkiRoleEntry.VenafiSyncPolicy != "" {
-			syncPolicy = pkiRoleEntry.VenafiSyncPolicy
-		} else {
-			syncPolicy = defaultVenafiPolicyName
-		}
-
-		entry, err := storage.Get(ctx, venafiPolicyPath+syncPolicy)
+		entry, err := storage.Get(ctx, venafiPolicyPath+pkiRoleEntry.VenafiSyncPolicy)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -89,7 +82,7 @@ func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.Ba
 
 		venafiSyncZone := venafiConfig.Zone
 
-		venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, syncPolicy,
+		venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, pkiRoleEntry.VenafiSyncPolicy,
 			venafiSyncZone)
 		if err != nil {
 			log.Printf("%s", err)

@@ -82,7 +82,6 @@ var roleData = map[string]interface{}{
 	"key_usage":          "CertSign",
 	"allow_bare_domains": true,
 	"generate_lease":     true,
-	"venafi_sync":        true,
 }
 
 func TestSyncRoleWithTPPPolicy(t *testing.T) {
@@ -284,7 +283,7 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 	}
 
 	t.Log("Setting up third role without sync")
-	roleData["venafi_sync"] = false
+	roleData["venafi_sync_policy"] = ""
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + testRoleName + "-third",
@@ -300,7 +299,6 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 
 	t.Log("Setting up fourth role")
 	writePolicy(b, storage, policyTPPData2, t, "tpp2-policy")
-	roleData["venafi_sync"] = true
 	roleData["venafi_sync_policy"] = "tpp2-policy"
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
