@@ -268,7 +268,8 @@ The following options are supported (note: this list can also be viewed from the
 | `trust_bundle_file`     | string  | PEM trust bundle for Venafi Platform server certificate                       |           |
 | `venafi_import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
 | `venafi_import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 12        |
-| `venafi_check_policy`   | string  | Which Venafi policy check to use                                              | "default" |
+| `venafi_check_policy`   | string  | Which Venafi policy check to use                                              |  |
+| `venafi_sync_policy`    | string  | Policy where to get Venafi connection details for policy synchronization      |  |
 
 ### Import Queue
 After a certificate has been signed by the Vault CA it is added to the import queue. Processing of certificates in the queue
@@ -465,10 +466,6 @@ that restrictions are working):
 ### Venafi Policy Synchronization
 You can automatically synchronize PKI role values ( OU, O, L, ST, and C) with Venafi policy. To do so you need to set
 venafi_sync_policy parameter to the venafi enforcement policy name, where to get parameters for synchronisation:  
-
-| Parameter               | Type    | Description                                                                   | Default   |
-| ----------------------- | ------- | ------------------------------------------------------------------------------| --------- |
-| `venafi_sync_policy`    | string  | Policy where to get Venafi connection details for policy synchronization      | "default" |
 
 Example:  
 1. Configure venafi policy:
