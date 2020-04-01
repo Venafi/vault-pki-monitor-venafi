@@ -10,14 +10,14 @@ import (
 	"time"
 )
 
-const venafiSyncPolicyListPath = "venafi-sync-policy"
+const venafiSyncPolicyListPath = "venafi-sync-policies"
 
 func pathVenafiPolicySync(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: venafiSyncPolicyListPath,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathReadVenafiPolicySync,
+			logical.ReadOperation: b.pathReadVenafiPolicySync,
 		},
 
 		HelpSynopsis:    "",
@@ -29,18 +29,20 @@ func pathVenafiPolicySync(b *backend) *framework.Path {
 
 func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
 	//Get role list with role sync param
+	log.Println("starting to read sync  roles")
 	roles, err := req.Storage.List(ctx, "role/")
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if len(roles) == 0 {
-		return
+		return nil, fmt.Errorf("No roles found in storage")
 	}
 
 	var entries []string
 
 	for _, roleName := range roles {
+		log.Println("looking role ", roleName)
 		//	Read previous role parameters
 		pkiRoleEntry, err := b.getPKIRoleEntry(ctx, req.Storage, roleName)
 		if err != nil {
@@ -57,7 +59,7 @@ func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Req
 			continue
 		} else {
 			var entry []string
-			entry = append(entry, fmt.Sprintf("%s: sync policy: %s", roleName, pkiRoleEntry.VenafiSyncPolicy))
+			entry = append(entry, fmt.Sprintf("role: %s sync policy: %s", roleName, pkiRoleEntry.VenafiSyncPolicy))
 			entries = append(entries, entry...)
 		}
 	}

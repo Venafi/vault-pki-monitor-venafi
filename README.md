@@ -504,9 +504,9 @@ Example:
     ......
     ```
     
-1. To check what roles are syncing with Venafi run read operation on pki/venafi-sync-policy path:
+1. To check what roles are syncing with Venafi run read operation on pki/venafi-sync-policies path:
     ```
-    $ vault list pki/venafi-sync-policy
+    $ vault list pki/venafi-sync-policies
     ```
 
 ## Developer Quickstart (Linux only)
