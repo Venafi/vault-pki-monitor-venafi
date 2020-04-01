@@ -507,6 +507,9 @@ Example:
 1. To check what roles are syncing with Venafi run read operation on pki/venafi-sync-policies path:
     ```
     $ vault read pki/venafi-sync-policies
+    Key     Value
+    ---     -----
+    keys    [role: tpp-sync-role sync policy: tpp]
     ```
 
 ## Developer Quickstart (Linux only)
