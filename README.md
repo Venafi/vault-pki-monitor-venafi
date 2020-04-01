@@ -464,7 +464,8 @@ that restrictions are working):
 
 ### Venafi Policy Synchronization
 You can automatically synchronize PKI role values ( OU, O, L, ST, and C) with Venafi policy. To do so you need to set
-venafi_sync_policy parameter to the venafi enforcement policy name, where to get parameters for synchronisation:_
+venafi_sync_policy parameter to the venafi enforcement policy name, where to get parameters for synchronisation:  
+
 | `venafi_sync_policy`    | string  | Policy where to get Venafi connection details for policy synchronization      | "default" |
 
 Example:  
