@@ -503,6 +503,11 @@ Example:
     province                              [Utah]
     ......
     ```
+    
+1. To check what roles are syncing with Venafi run read operation on pki/venafi-sync-policy path:
+    ```
+    $ vault list pki/venafi-sync-policy
+    ```
 
 ## Developer Quickstart (Linux only)
 

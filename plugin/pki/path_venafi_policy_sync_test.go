@@ -371,6 +371,25 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 	}
 
 	checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry2)
+
+    //	List roles with sync
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      venafiSyncPolicyListPath,
+		Storage:   storage,
+	})
+
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to list roles, %#v", resp)
+	}
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Data["keys"] == nil {
+		t.Fatalf("Expected there will be roles in the keys list")
+	}
 }
 
 func Test_backend_getPKIRoleEntry(t *testing.T) {
