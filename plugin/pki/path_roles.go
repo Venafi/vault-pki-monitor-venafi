@@ -593,7 +593,6 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		TPPImportWorkers:  data.Get("venafi_import_workers").(int),
 		VenafiCheckPolicy: data.Get("venafi_check_policy").(string),
 		VenafiSync:        data.Get("venafi_sync").(bool),
-		VenafiSyncZone:    data.Get("venafi_sync_zone").(string),
 		VenafiSyncPolicy:  data.Get("venafi_sync_policy").(string),
 	}
 	otherSANs := data.Get("allowed_other_sans").([]string)
@@ -795,7 +794,6 @@ type roleEntry struct {
 
 	//Options for syncing role parameters with Venafi policy
 	VenafiSync       bool   `json:"venafi_sync"`
-	VenafiSyncZone   string `json:"venafi_sync_zone"`
 	VenafiSyncPolicy string `json:"venafi_sync_policy"`
 
 	// Used internally for signing intermediates
@@ -852,7 +850,6 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"venafi_import_workers": r.TPPImportWorkers,
 		"venafi_check_policy":   r.VenafiCheckPolicy,
 		"venafi_sync":           r.VenafiSync,
-		"venafi_sync_zone":      r.VenafiSyncZone,
 		"venafi_sync_policy":    r.VenafiSyncPolicy,
 	}
 	if r.MaxPathLength != nil {

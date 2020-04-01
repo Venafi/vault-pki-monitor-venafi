@@ -156,11 +156,11 @@ func makeVenafiTPPConfig() (domain string, policyData map[string]interface{}) {
 	return
 }
 
-func writePolicy(b *backend, storage logical.Storage, policyData map[string]interface{}, t *testing.T) *logical.Response {
+func writePolicy(b *backend, storage logical.Storage, policyData map[string]interface{}, t *testing.T, policyName string) *logical.Response {
 	log.Println("Writing Venafi policy configuration")
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      venafiPolicyPath + defaultVenafiPolicyName,
+		Path:      venafiPolicyPath + policyName,
 		Storage:   storage,
 		Data:      policyData,
 	})
@@ -232,7 +232,7 @@ func testEqStrginSlice(a, b []string) bool {
 
 	// If one is nil, the other must also be nil.
 	if (a == nil) != (b == nil) {
-		return false;
+		return false
 	}
 
 	if len(a) != len(b) {

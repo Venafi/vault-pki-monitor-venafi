@@ -13,7 +13,7 @@ func (b *backend) syncWithVenafiPolicyRegister(storage logical.Storage, conf *lo
 	log.Println("registering policy sync controller")
 	b.taskStorage.register("policy-sync-controller", func() {
 		b.syncWithVenafiPolicyController(storage, conf)
-	}, 1, time.Second * 15)
+	}, 1, time.Second*15)
 }
 
 func (b *backend) syncWithVenafiPolicyController(storage logical.Storage, conf *logical.BackendConfig) {
@@ -70,8 +70,27 @@ func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.Ba
 			syncPolicy = defaultVenafiPolicyName
 		}
 
+		entry, err := storage.Get(ctx, venafiPolicyPath+syncPolicy)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		if entry == nil {
+			log.Println("entry is nil")
+			continue
+		}
+
+		var venafiConfig venafiConnectionConfig
+		if err := entry.DecodeJSON(&venafiConfig); err != nil {
+			log.Printf("error reading Venafi policy configuration: %s", err)
+			continue
+		}
+
+		venafiSyncZone := venafiConfig.Zone
+
 		venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, syncPolicy,
-			pkiRoleEntry.VenafiSyncZone)
+			venafiSyncZone)
 		if err != nil {
 			log.Printf("%s", err)
 			continue

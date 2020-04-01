@@ -62,7 +62,7 @@ func venafiPolicyWriteAndReadTest(t *testing.T, policyData map[string]interface{
 	// create the backend
 	b, storage := createBackendWithStorage(t)
 
-	resp := writePolicy(b, storage, policyData, t)
+	resp := writePolicy(b, storage, policyData, t, defaultVenafiPolicyName)
 
 	log.Println("After write policy should be on output")
 	for key, value := range resp.Data {
@@ -138,7 +138,7 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 	// create the backend
 	rand := randSeq(9)
 	b, storage := createBackendWithStorage(t)
-	writePolicy(b, storage, policyData, t)
+	writePolicy(b, storage, policyData, t, defaultVenafiPolicyName)
 
 	log.Println("Setting up role")
 	roleData := map[string]interface{}{
