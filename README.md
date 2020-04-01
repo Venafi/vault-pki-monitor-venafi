@@ -464,11 +464,10 @@ that restrictions are working):
 
 
 ### Venafi Policy Synchronization
-You can automatically synchronize PKI role values ( OU, O, L, ST, and C) with Venafi policy. To do so you need to set
-venafi_sync_policy parameter to the venafi enforcement policy name, where to get parameters for synchronisation:  
-
-Example:  
-1. Configure venafi policy:
+You can automatically synchronize PKI role values (e.g. OU, O, L, ST, and C) with Venafi policy. To do so, simply set the
+`venafi_sync_policy` parameter to the Venafi enforcement policy name as shown in the following example:  
+ 
+1. Configure Venafi policy:
 
     ```
     vault write pki/venafi-policy/tpp \ 
@@ -479,15 +478,15 @@ Example:
         trust_bundle_file="/opt/venafi/bundle.pem"
     ```
 
-1. Create a role with sync parameters:
+1. Create a role with the sync parameter:
 
     ```
     vault write pki/roles/tpp-sync-role \
-            venafi_sync_policy="tpp"
+        venafi_sync_policy="tpp"
     ```
 
-1. Wait about a 15 seconds, role values ( OU, O, L, ST, and C) should be filled:
-    
+1. After approximately 15 seconds the role values should be synchronized with Venafi policy:
+
     ```
     $ vault read pki/roles/tpp-sync-role
     Key                                   Value
@@ -504,7 +503,8 @@ Example:
     ......
     ```
     
-1. To check what roles are syncing with Venafi run read operation on pki/venafi-sync-policies path:
+1. To check which roles are synchronizing with Venafi policy, read from the _pki/venafi-sync-policies_ path:
+
     ```
     $ vault read pki/venafi-sync-policies
     Key     Value
