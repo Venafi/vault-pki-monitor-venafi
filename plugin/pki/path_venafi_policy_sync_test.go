@@ -53,7 +53,7 @@ var wantCloudRoleEntry = roleEntry{
 var wantTPPRoleEntry2 = roleEntry{
 	Organization:   []string{"Venafi2"},
 	OU:             []string{"Integrations2"},
-	Locality:       []string{"Salt2"},
+	Locality:       []string{"Default"},
 	Province:       []string{"Utah2"},
 	Country:        []string{"FR"},
 	AllowedDomains: []string{},
@@ -98,7 +98,7 @@ func TestSyncRoleWithTPPPolicy(t *testing.T) {
 	}
 
 	//write TPP policy
-	writePolicy(b, storage, policyTPPData, t, defaultVenafiPolicyName)
+	writePolicy(b, storage, policyTPPData2, t, defaultVenafiPolicyName)
 	roleData["venafi_sync_policy"] = defaultVenafiPolicyName
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -131,7 +131,7 @@ func TestSyncRoleWithTPPPolicy(t *testing.T) {
 	}
 
 	t.Log("Checking modified role entry")
-	checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry)
+	checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry2)
 }
 
 func TestIntegrationSyncRoleWithPolicy(t *testing.T) {
@@ -374,7 +374,7 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 
     //	List roles with sync
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.ListOperation,
+		Operation: logical.ReadOperation,
 		Path:      venafiSyncPolicyListPath,
 		Storage:   storage,
 	})

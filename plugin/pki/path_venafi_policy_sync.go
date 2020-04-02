@@ -147,19 +147,21 @@ func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.Ba
 		}
 
 		//  Replace PKI entry with Venafi policy values
-		pkiRoleEntry.OU = venafiPolicyEntry.OU
-		pkiRoleEntry.Organization = venafiPolicyEntry.Organization
-		pkiRoleEntry.Country = venafiPolicyEntry.Country
-		pkiRoleEntry.Locality = venafiPolicyEntry.Locality
-		pkiRoleEntry.Province = venafiPolicyEntry.Province
-		pkiRoleEntry.StreetAddress = venafiPolicyEntry.StreetAddress
-		pkiRoleEntry.PostalCode = venafiPolicyEntry.PostalCode
+		replacePKIValue(&pkiRoleEntry.OU, &venafiPolicyEntry.OU)
+		replacePKIValue(&pkiRoleEntry.Organization, &venafiPolicyEntry.Organization)
+		replacePKIValue(&pkiRoleEntry.Country,&venafiPolicyEntry.Country)
+		replacePKIValue(&pkiRoleEntry.Locality,&venafiPolicyEntry.Locality)
+		replacePKIValue(&pkiRoleEntry.Province, &venafiPolicyEntry.Province)
+		replacePKIValue(&pkiRoleEntry.StreetAddress,&venafiPolicyEntry.StreetAddress)
+		replacePKIValue(&pkiRoleEntry.PostalCode, &venafiPolicyEntry.PostalCode)
 
 		//does not have to configure the role to limit domains
 		// because the Venafi policy already constrains that area
 		pkiRoleEntry.AllowAnyName = true
 		pkiRoleEntry.AllowedDomains = []string{}
 		pkiRoleEntry.AllowSubdomains = true
+		//TODO: we need to sync key settings as well. But before it we need to add key type to zone configuration
+		//in vcert SDK
 
 		// Put new entry
 		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, pkiRoleEntry)
@@ -172,6 +174,15 @@ func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.Ba
 	}
 
 	return err
+}
+
+func replacePKIValue(original *[]string, zone *[]string) {
+	if len(*zone) > 0 {
+		if (*zone)[0] != "" {
+			*original = *zone
+		}
+
+	}
 }
 
 func (b *backend) getVenafiPolicyParams(ctx context.Context, storage logical.Storage, policyConfig string, syncZone string) (entry roleEntry, err error) {
