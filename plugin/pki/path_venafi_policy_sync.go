@@ -19,9 +19,6 @@ func pathVenafiPolicySync(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.pathReadVenafiPolicySync,
 		},
-
-		HelpSynopsis:    "",
-		HelpDescription: "",
 	}
 	ret.Fields = addNonCACommonFields(map[string]*framework.FieldSchema{})
 	return ret
@@ -57,11 +54,12 @@ func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Req
 		//Get Venafi policy in entry format
 		if pkiRoleEntry.VenafiSyncPolicy == "" {
 			continue
-		} else {
-			var entry []string
-			entry = append(entry, fmt.Sprintf("role: %s sync policy: %s", roleName, pkiRoleEntry.VenafiSyncPolicy))
-			entries = append(entries, entry...)
 		}
+
+		var entry []string
+		entry = append(entry, fmt.Sprintf("role: %s sync policy: %s", roleName, pkiRoleEntry.VenafiSyncPolicy))
+		entries = append(entries, entry...)
+
 	}
 	return logical.ListResponse(entries), nil
 }
@@ -69,15 +67,11 @@ func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Req
 func (b *backend) syncWithVenafiPolicyRegister(storage logical.Storage, conf *logical.BackendConfig) {
 	log.Println("registering policy sync controller")
 	b.taskStorage.register("policy-sync-controller", func() {
-		b.syncWithVenafiPolicyController(storage, conf)
+		err := b.syncWithVenafiPolicy(storage, conf)
+		if err != nil {
+			log.Printf("%s", err)
+		}
 	}, 1, time.Second*15)
-}
-
-func (b *backend) syncWithVenafiPolicyController(storage logical.Storage, conf *logical.BackendConfig) {
-	err := b.syncWithVenafiPolicy(storage, conf)
-	if err != nil {
-		log.Printf("%s", err)
-	}
 }
 
 func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.BackendConfig) (err error) {
@@ -137,23 +131,21 @@ func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.Ba
 			continue
 		}
 
-		venafiSyncZone := venafiConfig.Zone
-
 		venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, pkiRoleEntry.VenafiSyncPolicy,
-			venafiSyncZone)
+			venafiConfig.Zone)
 		if err != nil {
 			log.Printf("%s", err)
 			continue
 		}
 
 		//  Replace PKI entry with Venafi policy values
-		replacePKIValue(&pkiRoleEntry.OU, &venafiPolicyEntry.OU)
-		replacePKIValue(&pkiRoleEntry.Organization, &venafiPolicyEntry.Organization)
-		replacePKIValue(&pkiRoleEntry.Country,&venafiPolicyEntry.Country)
-		replacePKIValue(&pkiRoleEntry.Locality,&venafiPolicyEntry.Locality)
-		replacePKIValue(&pkiRoleEntry.Province, &venafiPolicyEntry.Province)
-		replacePKIValue(&pkiRoleEntry.StreetAddress,&venafiPolicyEntry.StreetAddress)
-		replacePKIValue(&pkiRoleEntry.PostalCode, &venafiPolicyEntry.PostalCode)
+		replacePKIValue(&pkiRoleEntry.OU, venafiPolicyEntry.OU)
+		replacePKIValue(&pkiRoleEntry.Organization, venafiPolicyEntry.Organization)
+		replacePKIValue(&pkiRoleEntry.Country, venafiPolicyEntry.Country)
+		replacePKIValue(&pkiRoleEntry.Locality, venafiPolicyEntry.Locality)
+		replacePKIValue(&pkiRoleEntry.Province, venafiPolicyEntry.Province)
+		replacePKIValue(&pkiRoleEntry.StreetAddress, venafiPolicyEntry.StreetAddress)
+		replacePKIValue(&pkiRoleEntry.PostalCode, venafiPolicyEntry.PostalCode)
 
 		//does not have to configure the role to limit domains
 		// because the Venafi policy already constrains that area
@@ -176,10 +168,10 @@ func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.Ba
 	return err
 }
 
-func replacePKIValue(original *[]string, zone *[]string) {
-	if len(*zone) > 0 {
-		if (*zone)[0] != "" {
-			*original = *zone
+func replacePKIValue(original *[]string, zone []string) {
+	if len(zone) > 0 {
+		if zone[0] != "" {
+			*original = zone
 		}
 
 	}

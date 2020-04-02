@@ -372,7 +372,7 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 
 	checkRoleEntry(t, *roleEntryData, wantTPPRoleEntry2)
 
-    //	List roles with sync
+	//	List roles with sync
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      venafiSyncPolicyListPath,
