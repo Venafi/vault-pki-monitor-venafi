@@ -158,10 +158,12 @@ func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.Ba
 		// Put new entry
 		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, pkiRoleEntry)
 		if err != nil {
-			return err
+			log.Printf("Error creating json entry for storage: %s", err)
+			continue
 		}
 		if err := storage.Put(ctx, jsonEntry); err != nil {
-			return err
+			log.Printf("Error putting entry to storage: %s", err)
+			continue
 		}
 	}
 
