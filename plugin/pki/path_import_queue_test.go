@@ -126,7 +126,7 @@ func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnec
 		t.Fatal(err)
 	}
 
-	writePolicy(b, storage, policy, t)
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -248,7 +248,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t)
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, defaultVenafiPolicyName)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -337,9 +337,6 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		//req.Thumbprint = "111111"
 
 		cl := getTPPConnection(t)
-		if err != nil {
-			t.Fatalf("could not connect to endpoint: %s", err)
-		}
 		pcc, err := cl.RetrieveCertificate(req)
 		if err != nil {
 			t.Fatalf("could not retrieve certificate using requestId %s: %s", req.PickupID, err)
@@ -373,7 +370,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t)
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, defaultVenafiPolicyName)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -488,9 +485,6 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		//req.Thumbprint = "111111"
 
 		cl := getTPPConnection(t)
-		if err != nil {
-			t.Fatalf("could not connect to endpoint: %s", err)
-		}
 		pcc, err := cl.RetrieveCertificate(req)
 		if err != nil {
 			t.Fatalf("could not retrieve certificate using requestId %s: %s", req.PickupID, err)

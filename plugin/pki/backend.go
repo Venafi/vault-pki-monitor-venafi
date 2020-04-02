@@ -80,6 +80,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathVenafiPolicy(&b),
 			pathVenafiPolicyContent(&b),
 			pathVenafiPolicyList(&b),
+			pathVenafiPolicySync(&b),
 			pathRevoke(&b),
 			pathTidy(&b),
 		},
@@ -100,6 +101,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	} else {
 		b.taskStorage.init()
 		b.importToTPP(b.storage, conf)
+		b.syncWithVenafiPolicyRegister(b.storage, conf)
 	}
 
 	return &b

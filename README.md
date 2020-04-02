@@ -261,14 +261,15 @@ The following options are supported (note: this list can also be viewed from the
 | Parameter               | Type    | Description                                                                   | Default   |
 | ----------------------- | ------- | ------------------------------------------------------------------------------| --------- |
 | `venafi_import`         | bool    | Controls whether certificates are forwarded to the Venafi Platform or Venafi Cloud            | `true`    |
-| `zone`                  | string  | Venafi Platform policy folder where certificates will be imported; for Venafi Cloud this is the endpoint that the certificates will be sent to.             | "Default" |
+| `zone`                  | string  | Venafi Platform policy folder where certificates will be imported; for Venafi Cloud this is the endpoint that the certificates will be sent to.             | |
 | `tpp_url`               | string  | Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk")                     |           |
 | `tpp_username`          | string  | Venafi Platform WebSDK account username                                       |           |
 | `tpp_password`          | string  | Venafi Platform WebSDK account password                                       |           |
 | `trust_bundle_file`     | string  | PEM trust bundle for Venafi Platform server certificate                       |           |
 | `venafi_import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
 | `venafi_import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 12        |
-| `venafi_check_policy`   | string  | Which Venafi policy check to use                                              | "default" |
+| `venafi_check_policy`   | string  | Which Venafi policy check to use                                              |  |
+| `venafi_sync_policy`    | string  | Policy where to get Venafi connection details for policy synchronization      |  |
 
 ### Import Queue
 After a certificate has been signed by the Vault CA it is added to the import queue. Processing of certificates in the queue
@@ -460,6 +461,56 @@ that restrictions are working):
 ### See it at asciinema:
 
 [![asciicast](https://asciinema.org/a/T6DKJ1gu2B2s22AIglJCsxTkd.svg)](https://asciinema.org/a/T6DKJ1gu2B2s22AIglJCsxTkd)
+
+
+### Venafi Policy Synchronization
+You can automatically synchronize PKI role values (e.g. OU, O, L, ST, and C) with Venafi policy. To do so, simply set the
+`venafi_sync_policy` parameter to the Venafi enforcement policy name as shown in the following example:  
+ 
+1. Configure Venafi policy:
+
+    ```
+    vault write pki/venafi-policy/tpp \ 
+        tpp_url="https://tpp.example.com/vedsdk" \
+        tpp_user="admin" \
+        tpp_password="strongPassword" \ 
+        zone="devops\\vcert" \
+        trust_bundle_file="/opt/venafi/bundle.pem"
+    ```
+
+1. Create a role with the sync parameter:
+
+    ```
+    vault write pki/roles/tpp-sync-role \
+        venafi_sync_policy="tpp"
+    ```
+
+1. After approximately 15 seconds the role values should be synchronized with Venafi policy:
+
+    ```
+    $ vault read pki/roles/tpp-sync-role
+    Key                                   Value
+    ---                                   -----
+    .....
+    country                               [US]
+    .....
+    locality                              [Salt Lake]
+    .....
+    organization                          [Venafi Inc.]
+    ou                                    [Integrations]
+    ......
+    province                              [Utah]
+    ......
+    ```
+    
+1. To check which roles are synchronizing with Venafi policy, read from the _pki/venafi-sync-policies_ path:
+
+    ```
+    $ vault read pki/venafi-sync-policies
+    Key     Value
+    ---     -----
+    keys    [role: tpp-sync-role sync policy: tpp]
+    ```
 
 ## Developer Quickstart (Linux only)
 

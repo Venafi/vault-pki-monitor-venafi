@@ -301,8 +301,7 @@ for "generate_lease".`,
 				Type: framework.TypeString,
 				Description: `Name of Venafi Platform or Cloud policy. 
 Example for Platform: testpolicy\\vault
-Example for Venafi Cloud: Default`,
-				Default: `Default`,
+Example for Venafi Cloud: e33f3e40-4e7e-11ea-8da3-b3c196ebeb0b`,
 			},
 			"tpp_user": {
 				Type:        framework.TypeString,
@@ -347,6 +346,11 @@ Example:
 				Type:        framework.TypeString,
 				Default:     defaultVenafiPolicyName,
 				Description: `Which Venafi policy check to use`,
+			},
+			"venafi_sync_policy": {
+				Type:        framework.TypeString,
+				Description: "If set PKI role will be synchronized with Venafi zone specified in the policy.",
+				Default:     defaultVenafiPolicyName,
 			},
 		},
 
@@ -579,6 +583,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		TPPImportTimeout:  data.Get("venafi_import_timeout").(int),
 		TPPImportWorkers:  data.Get("venafi_import_workers").(int),
 		VenafiCheckPolicy: data.Get("venafi_check_policy").(string),
+		VenafiSyncPolicy:  data.Get("venafi_sync_policy").(string),
 	}
 	otherSANs := data.Get("allowed_other_sans").([]string)
 	if len(otherSANs) > 0 {
@@ -777,6 +782,9 @@ type roleEntry struct {
 	TPPImportWorkers  int    `json:"venafi_import_workers"`
 	VenafiCheckPolicy string `json:"venafi_check_policy"`
 
+	//Options for syncing role parameters with Venafi policy
+	VenafiSyncPolicy string `json:"venafi_sync_policy"`
+
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
 }
@@ -830,6 +838,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"venafi_import_timeout": r.TPPImportTimeout,
 		"venafi_import_workers": r.TPPImportWorkers,
 		"venafi_check_policy":   r.VenafiCheckPolicy,
+		"venafi_sync_policy":    r.VenafiSyncPolicy,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength
