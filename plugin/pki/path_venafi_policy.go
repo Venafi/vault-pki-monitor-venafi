@@ -158,22 +158,37 @@ func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logi
 		return err
 	}
 	for _, policyName := range policies {
-		//name := data.Get("name").(string)
-
-		policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
-		if err != nil {
-			fmt.Println(err)
+		//Skip if we have repeated policy name with / at the end
+		if !strings.Contains(policyName, "/") {
 			continue
 		}
 
-		policyEntry, err := savePolicyEntry(policy, policyName, ctx, storage)
+		policyConfig, err := b.getPolicyConfig(ctx, storage, policyName)
 		if err != nil {
-			fmt.Println(err)
+			log.Printf("Error getting policy config %s: %s", policyName, err)
 			continue
 		}
+		if policyConfig == nil {
+			log.Printf("Policy config for %s is empty", policyName)
+		}
 
-		respData := formPolicyRespData(*policyEntry)
-		log.Println(respData)
+
+		if policyConfig.AutoRefresh {
+			policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			policyEntry, err := savePolicyEntry(policy, policyName, ctx, storage)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			respData := formPolicyRespData(*policyEntry)
+			log.Println(respData)
+		}
 	}
 	return nil
 }
