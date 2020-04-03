@@ -159,11 +159,11 @@ func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logi
 	}
 	for _, policyName := range policies {
 		//Skip if we have repeated policy name with / at the end
-		if !strings.Contains(policyName, "/") {
+		if strings.Contains(policyName, "/") {
 			continue
 		}
 
-		policyConfig, err := b.getPolicyConfig(ctx, storage,  venafiPolicyPath+policyName+"/policy")
+		policyConfig, err := b.getPolicyConfig(ctx, storage,  policyName)
 		if err != nil {
 			log.Printf("Error getting policy config %s: %s", policyName, err)
 			continue
