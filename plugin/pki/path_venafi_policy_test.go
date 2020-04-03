@@ -568,6 +568,11 @@ func TestVenafiPolicyAutoRefresh(t *testing.T) {
 	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, "tpp-policy")
 	t.Log("writing Cloud configuration")
 	writePolicy(b, storage, venafiTestCloudConfigAllAllow, t, "cloud-policy")
+	t.Log("writing TPP no refresh policy")
+	writePolicy(b, storage, venafiTestTPPConfigNoRefresh, t, "tpp-policy-no-refresh")
+	t.Log("writing bad data policy")
+	writePolicy(b, storage, venafiTestConfigBadData, t, "policy-bad-data")
+
 	err := b.refreshVenafiPolicyContent(storage, config)
 	if err != nil {
 		t.Fatal(err)

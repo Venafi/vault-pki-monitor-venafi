@@ -163,13 +163,14 @@ func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logi
 			continue
 		}
 
-		policyConfig, err := b.getPolicyConfig(ctx, storage, policyName)
+		policyConfig, err := b.getPolicyConfig(ctx, storage,  venafiPolicyPath+policyName+"/policy")
 		if err != nil {
 			log.Printf("Error getting policy config %s: %s", policyName, err)
 			continue
 		}
 		if policyConfig == nil {
 			log.Printf("Policy config for %s is empty", policyName)
+			continue
 		}
 
 

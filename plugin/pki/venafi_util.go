@@ -112,6 +112,22 @@ var venafiTestTPPConfigAllAllow = map[string]interface{}{
 	"tpp_password":      os.Getenv("TPP_PASSWORD"),
 	"zone":              os.Getenv("TPP_ZONE"),
 	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+	"auto_refresh": true,
+}
+
+var venafiTestTPPConfigNoRefresh = map[string]interface{}{
+	"tpp_url":           os.Getenv("TPP_URL"),
+	"tpp_user":          os.Getenv("TPP_USER"),
+	"tpp_password":      os.Getenv("TPP_PASSWORD"),
+	"zone":              os.Getenv("TPP_ZONE"),
+	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+	"auto_refresh": false,
+}
+
+var venafiTestConfigBadData = map[string]interface{}{
+	"cloud_url": os.Getenv("CLOUD_URL"),
+	"apikey":    os.Getenv("CLOUD_APIKEY"),
+	"zone":      os.Getenv("CLOUD_ZONE_RESTRICTED"),
 }
 
 var venafiTestTPPConfigRestricted = map[string]interface{}{
@@ -120,17 +136,20 @@ var venafiTestTPPConfigRestricted = map[string]interface{}{
 	"tpp_password":      os.Getenv("TPP_PASSWORD"),
 	"zone":              os.Getenv("TPP_ZONE_RESTRICTED"),
 	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+	"auto_refresh": true,
 }
 
 var venafiTestCloudConfigRestricted = map[string]interface{}{
 	"cloud_url": os.Getenv("CLOUD_URL"),
 	"apikey":    os.Getenv("CLOUD_APIKEY"),
 	"zone":      os.Getenv("CLOUD_ZONE_RESTRICTED"),
+	"auto_refresh": true,
 }
 var venafiTestCloudConfigAllAllow = map[string]interface{}{
 	"cloud_url": os.Getenv("CLOUD_URL"),
 	"apikey":    os.Getenv("CLOUD_APIKEY"),
 	"zone":      os.Getenv("CLOUD_ZONE"),
+	"auto_refresh": true,
 }
 
 var venafiTPPCreateSimplePolicyStep = logicaltest.TestStep{
