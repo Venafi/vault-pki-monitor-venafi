@@ -10,6 +10,7 @@ import (
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/hashicorp/vault/sdk/framework"
+	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
 	"strings"
@@ -140,18 +141,32 @@ func (b *backend) refreshVenafiPolicyContentRegister(storage logical.Storage, co
 }
 
 func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logical.BackendConfig) (err error) {
+	replicationState := conf.System.ReplicationState()
+	//Checking if we are on master or on the stanby Vault server
+	isSlave := !(conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) ||
+		replicationState.HasState(hconsts.ReplicationDRSecondary) ||
+		replicationState.HasState(hconsts.ReplicationPerformanceStandby)
+	if isSlave {
+		log.Println("We're on slave. Sleeping")
+		return
+	}
+	log.Println("We're on master.Refreshing policies")
+
 	ctx := context.Background()
-	policies := []string{"1", "2", "3"}
-	for _, name := range policies {
+	policies, err := storage.List(ctx, venafiPolicyPath)
+	if err != nil {
+		return err
+	}
+	for _, policyName := range policies {
 		//name := data.Get("name").(string)
 
-		policy, err := b.getPolicyFromVenafi(ctx, storage, name)
+		policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
 
-		policyEntry, err := savePolicyEntry(policy, name, ctx, storage)
+		policyEntry, err := savePolicyEntry(policy, policyName, ctx, storage)
 		if err != nil {
 			fmt.Println(err)
 			continue

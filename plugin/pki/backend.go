@@ -102,6 +102,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		b.taskStorage.init()
 		b.importToTPP(b.storage, conf)
 		b.syncWithVenafiPolicyRegister(b.storage, conf)
+		b.refreshVenafiPolicyContentRegister(b.storage, conf)
 	}
 
 	return &b

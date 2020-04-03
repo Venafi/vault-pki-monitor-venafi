@@ -85,6 +85,7 @@ func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.Ba
 		return
 	}
 	log.Println("We're on master. Starting to synchronise policy")
+
 	ctx := context.Background()
 	//Get role list with role sync param
 	roles, err := storage.List(ctx, "role/")

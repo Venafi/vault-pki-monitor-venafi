@@ -559,3 +559,18 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 	}
 
 }
+
+func TestVenafiPolicyAutoRefresh(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
+	config := logical.TestBackendConfig()
+
+	t.Log("writing TPP configuration")
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, "tpp-policy")
+	//t.Log("writing Cloud configuration")
+	//writePolicy(b, storage, venafiTestCloudConfigAllAllow, t, "cloud-policy")
+
+	err := b.refreshVenafiPolicyContent(storage, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
