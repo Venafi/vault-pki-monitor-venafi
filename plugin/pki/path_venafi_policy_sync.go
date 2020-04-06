@@ -69,14 +69,12 @@ func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Req
 func (b *backend) syncWithVenafiPolicyRegister(storage logical.Storage, conf *logical.BackendConfig) {
 	log.Println("registering policy sync controller")
 
-	var timeout int
+	timeout := 15
 	env := os.Getenv("VAULT_VENAFI_SYNC_POLICY_TIMEOUT")
 	if env != "" {
 		t, err := strconv.Atoi(env)
 		if err == nil {
 			timeout = t
-		} else {
-			timeout = 15
 		}
 	}
 

@@ -153,14 +153,12 @@ func (b *backend) fillImportQueueTask(roleName string, noOfWorkers int, storage 
 
 func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConfig) {
 
-	var timeout int
+	timeout := 1
 	env := os.Getenv("VAULT_VENAFI_IMPORT_TIMEOUT")
 	if env != "" {
 		t, err := strconv.Atoi(env)
 		if err == nil {
 			timeout = t
-		} else {
-			timeout = 1
 		}
 	}
 
