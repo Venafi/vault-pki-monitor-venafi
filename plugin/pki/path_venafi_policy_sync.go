@@ -7,6 +7,8 @@ import (
 	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
+	"os"
+	"strconv"
 	"time"
 )
 
@@ -66,12 +68,24 @@ func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Req
 
 func (b *backend) syncWithVenafiPolicyRegister(storage logical.Storage, conf *logical.BackendConfig) {
 	log.Println("registering policy sync controller")
+
+	var timeout int
+	env := os.Getenv("VAULT_VENAFI_SYNC_POLICY_TIMEOUT")
+	if env != "" {
+		t, err := strconv.Atoi(env)
+		if err == nil {
+			timeout = t
+		} else {
+			timeout = 15
+		}
+	}
+
 	b.taskStorage.register("policy-sync-controller", func() {
 		err := b.syncWithVenafiPolicy(storage, conf)
 		if err != nil {
 			log.Printf("%s", err)
 		}
-	}, 1, time.Second*15)
+	}, 1, time.Second*time.Duration(timeout))
 }
 
 func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.BackendConfig) (err error) {

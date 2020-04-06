@@ -13,6 +13,8 @@ import (
 	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -132,12 +134,25 @@ func pathVenafiPolicyList(b *backend) *framework.Path {
 
 func (b *backend) refreshVenafiPolicyContentRegister(storage logical.Storage, conf *logical.BackendConfig) {
 	log.Println("registering policy sync controller")
+
+	var timeout int
+	env := os.Getenv("VAULT_VENAFI_POLICY_REFRESH_TIMEOUT")
+	if env != "" {
+		t, err := strconv.Atoi(env)
+		if err == nil {
+			timeout = t
+		} else {
+			timeout = 15
+		}
+	}
+
+
 	b.taskStorage.register("policy-refresh-controller", func() {
 		err := b.refreshVenafiPolicyContent(storage, conf)
 		if err != nil {
 			log.Printf("%s", err)
 		}
-	}, 1, time.Second*15)
+	}, 1, time.Second*time.Duration(timeout))
 }
 
 func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logical.BackendConfig) (err error) {
@@ -158,12 +173,14 @@ func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logi
 		return err
 	}
 	for _, policyName := range policies {
+		log.Printf("Starting policy refresh for %s", policyName)
 		//Skip if we have repeated policy name with / at the end
 		if strings.Contains(policyName, "/") {
+			log.Printf("Policy %s ending with /, skipping", policyName)
 			continue
 		}
 
-		policyConfig, err := b.getPolicyConfig(ctx, storage,  policyName)
+		policyConfig, err := b.getPolicyConfig(ctx, storage, policyName)
 		if err != nil {
 			log.Printf("Error getting policy config %s: %s", policyName, err)
 			continue
@@ -173,22 +190,20 @@ func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logi
 			continue
 		}
 
-
 		if policyConfig.AutoRefresh {
+			log.Printf("Auto refresh enabled for policy %s. Getting policy from Venafi", policyName)
 			policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
 			if err != nil {
-				fmt.Println(err)
+				log.Printf("Error getting policy %s from Venafi: %s", policyName, err)
 				continue
 			}
 
-			policyEntry, err := savePolicyEntry(policy, policyName, ctx, storage)
+			log.Printf("Saving policy %s", policyName)
+			_, err = savePolicyEntry(policy, policyName, ctx, storage)
 			if err != nil {
-				fmt.Println(err)
+				log.Printf("Error saving policy: %s", err)
 				continue
 			}
-
-			respData := formPolicyRespData(*policyEntry)
-			log.Println(respData)
 		}
 	}
 	return nil
@@ -344,7 +359,7 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 	}
 	return map[string]interface{}{
 		"subject_cn_regexes":         policy.SubjectCNRegexes,
-		"subject_o_regexes":         policy.SubjectORegexes,
+		"subject_o_regexes":          policy.SubjectORegexes,
 		"subject_ou_regexes":         policy.SubjectOURegexes,
 		"subject_st_regexes":         policy.SubjectSTRegexes,
 		"subject_l_regexes":          policy.SubjectLRegexes,
@@ -412,6 +427,7 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		"tpp_user":          config.TPPUser,
 		"trust_bundle_file": config.TrustBundleFile,
 		"cloud_url":         config.CloudURL,
+		"auto_refresh":      config.AutoRefresh,
 	}
 
 	return &logical.Response{
