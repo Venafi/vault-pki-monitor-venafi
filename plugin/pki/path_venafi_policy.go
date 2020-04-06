@@ -344,7 +344,7 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 	}
 	return map[string]interface{}{
 		"subject_cn_regexes":         policy.SubjectCNRegexes,
-		"subject_or_regexes":         policy.SubjectORegexes,
+		"subject_o_regexes":         policy.SubjectORegexes,
 		"subject_ou_regexes":         policy.SubjectOURegexes,
 		"subject_st_regexes":         policy.SubjectSTRegexes,
 		"subject_l_regexes":          policy.SubjectLRegexes,
@@ -664,7 +664,7 @@ type venafiPolicyConfigEntry struct {
 
 type venafiPolicyEntry struct {
 	SubjectCNRegexes         []string                           `json:"subject_cn_regexes"`
-	SubjectORegexes          []string                           `json:"subject_or_regexes"`
+	SubjectORegexes          []string                           `json:"subject_o_regexes"`
 	SubjectOURegexes         []string                           `json:"subject_ou_regexes"`
 	SubjectSTRegexes         []string                           `json:"subject_st_regexes"`
 	SubjectLRegexes          []string                           `json:"subject_l_regexes"`
