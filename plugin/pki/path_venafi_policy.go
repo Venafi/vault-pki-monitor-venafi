@@ -409,10 +409,8 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 	respData := map[string]interface{}{
 		"tpp_url":           config.TPPURL,
 		"zone":              config.Zone,
-		"tpp_password":      config.TPPPassword,
 		"tpp_user":          config.TPPUser,
 		"trust_bundle_file": config.TrustBundleFile,
-		"apikey":            config.Apikey,
 		"cloud_url":         config.CloudURL,
 	}
 

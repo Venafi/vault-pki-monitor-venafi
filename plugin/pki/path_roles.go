@@ -831,7 +831,6 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		//Role options added for Venafi Platform import
 		"tpp_url":               r.TPPURL,
 		"zone":                  r.Zone,
-		"tpp_password":          r.TPPPassword,
 		"tpp_user":              r.TPPUser,
 		"venafi_import":         r.TPPImport,
 		"trust_bundle_file":     r.TrustBundleFile,
