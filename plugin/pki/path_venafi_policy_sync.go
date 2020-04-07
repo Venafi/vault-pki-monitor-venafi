@@ -68,22 +68,12 @@ func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Req
 
 func (b *backend) syncWithVenafiPolicyRegister(storage logical.Storage, conf *logical.BackendConfig) {
 	log.Println("registering policy sync controller")
-
-	timeout := 15
-	env := os.Getenv("VAULT_VENAFI_SYNC_POLICY_TIMEOUT")
-	if env != "" {
-		t, err := strconv.Atoi(env)
-		if err == nil {
-			timeout = t
-		}
-	}
-
 	b.taskStorage.register("policy-sync-controller", func() {
 		err := b.syncWithVenafiPolicy(storage, conf)
 		if err != nil {
 			log.Printf("%s", err)
 		}
-	}, 1, time.Second*time.Duration(timeout))
+	}, 1, time.Second*15)
 }
 
 func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.BackendConfig) (err error) {

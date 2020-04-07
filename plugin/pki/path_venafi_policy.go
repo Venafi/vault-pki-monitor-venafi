@@ -13,8 +13,6 @@ import (
 	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -82,8 +80,8 @@ https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 Also you can use constants from this module (like 1, 5,8) direct or use OIDs (like 1.3.6.1.5.5.7.3.4)`,
 			},
 			"auto_refresh": {
-				Type:        framework.TypeBool,
-				Default:     true,
+				Type:        framework.TypeInt,
+				Default:     15,
 				Description: `Automatically update policy from Venafi`,
 			},
 		},
@@ -134,23 +132,12 @@ func pathVenafiPolicyList(b *backend) *framework.Path {
 
 func (b *backend) refreshVenafiPolicyContentRegister(storage logical.Storage, conf *logical.BackendConfig) {
 	log.Println("registering policy sync controller")
-
-	timeout := 15
-	env := os.Getenv("VAULT_VENAFI_POLICY_REFRESH_TIMEOUT")
-	if env != "" {
-		t, err := strconv.Atoi(env)
-		if err == nil {
-			timeout = t
-		}
-	}
-
-
 	b.taskStorage.register("policy-refresh-controller", func() {
 		err := b.refreshVenafiPolicyContent(storage, conf)
 		if err != nil {
 			log.Printf("%s", err)
 		}
-	}, 1, time.Second*time.Duration(timeout))
+	}, 1, time.Second*15)
 }
 
 func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logical.BackendConfig) (err error) {
@@ -171,6 +158,10 @@ func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logi
 		return err
 	}
 	for _, policyName := range policies {
+		//check policy update interval
+		//check last policy updated
+		//update if needed
+		//save policy update time
 		log.Printf("Starting policy refresh for %s", policyName)
 		//Skip if we have repeated policy name with / at the end
 		if strings.Contains(policyName, "/") {
@@ -188,7 +179,9 @@ func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logi
 			continue
 		}
 
-		if policyConfig.AutoRefresh {
+		if !policyConfig.AutoRefresh {
+			continue
+		} else {
 			log.Printf("Auto refresh enabled for policy %s. Getting policy from Venafi", policyName)
 			policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
 			if err != nil {

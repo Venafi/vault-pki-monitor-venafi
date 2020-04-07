@@ -12,8 +12,6 @@ import (
 	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
-	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -153,19 +151,9 @@ func (b *backend) fillImportQueueTask(roleName string, noOfWorkers int, storage 
 
 func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConfig) {
 
-	timeout := 1
-	env := os.Getenv("VAULT_VENAFI_IMPORT_TIMEOUT")
-	if env != "" {
-		t, err := strconv.Atoi(env)
-		if err == nil {
-			timeout = t
-		}
-	}
-
-
 	b.taskStorage.register("importcontroler", func() {
 		b.controlImportQueue(storage, conf)
-	}, 1, time.Second*time.Duration(timeout))
+	}, 1, time.Second*1)
 }
 
 func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.BackendConfig) {
