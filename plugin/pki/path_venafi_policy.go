@@ -81,8 +81,8 @@ Also you can use constants from this module (like 1, 5,8) direct or use OIDs (li
 			},
 			"auto_refresh_interval": {
 				Type:        framework.TypeInt,
-				Default:     15,
-				Description: `Interval policy update from Venafi. Set it to 0 to disable uatomatic policy update`,
+				Default:     60,
+				Description: `Interval of policy update from Venafi in seconds. Set it to 0 to disable automatic policy update`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -177,42 +177,43 @@ func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logi
 		}
 
 		//check policy update interval
-		if venafiPolicyConfig.AutoRefresh == 0 {
+		if venafiPolicyConfig.AutoRefreshInterval == 0 {
 			continue
 		} else {
 			//check last policy updated
 			timePassed := time.Now().Unix() - venafiPolicyConfig.LastPolicyUpdateTime
 
-			//update if needed
-			if (timePassed / 60) > venafiPolicyConfig.AutoRefresh {
-
-				log.Printf("Auto refresh enabled for policy %s. Getting policy from Venafi", policyName)
-				policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
-				if err != nil {
-					log.Printf("Error getting policy %s from Venafi: %s", policyName, err)
-					continue
-				}
-
-				log.Printf("Saving policy %s", policyName)
-				_, err = savePolicyEntry(policy, policyName, ctx, storage)
-				if err != nil {
-					log.Printf("Error saving policy: %s", err)
-					continue
-				}
-
-				venafiPolicyConfig.LastPolicyUpdateTime = time.Now().Unix()
-
-				jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+policyName, venafiPolicyConfig)
-				if err != nil {
-					log.Printf("Error converting policy config into JSON: %s", err)
-					continue
-				}
-				if err := storage.Put(ctx, jsonEntry); err != nil {
-					log.Printf("Error saving policy last update time: %s", err)
-					continue
-				}
-
+			//update only if needed
+			if (timePassed) < venafiPolicyConfig.AutoRefreshInterval {
+				continue
 			}
+
+			log.Printf("Auto refresh enabled for policy %s. Getting policy from Venafi", policyName)
+			policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
+			if err != nil {
+				log.Printf("Error getting policy %s from Venafi: %s", policyName, err)
+				continue
+			}
+
+			log.Printf("Saving policy %s", policyName)
+			_, err = savePolicyEntry(policy, policyName, ctx, storage)
+			if err != nil {
+				log.Printf("Error saving policy: %s", err)
+				continue
+			}
+
+			venafiPolicyConfig.LastPolicyUpdateTime = time.Now().Unix()
+
+			jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+policyName, venafiPolicyConfig)
+			if err != nil {
+				log.Printf("Error converting policy config into JSON: %s", err)
+				continue
+			}
+			if err := storage.Put(ctx, jsonEntry); err != nil {
+				log.Printf("Error saving policy last update time: %s", err)
+				continue
+			}
+
 		}
 	}
 	return nil
@@ -281,7 +282,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 			TPPUser:         data.Get("tpp_user").(string),
 			TrustBundleFile: data.Get("trust_bundle_file").(string),
 		},
-		AutoRefresh: int64(data.Get("auto_refresh_interval").(int)),
+		AutoRefreshInterval: int64(data.Get("auto_refresh_interval").(int)),
 	}
 	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
 	venafiPolicyConfig.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
@@ -436,7 +437,7 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		"tpp_user":              config.TPPUser,
 		"trust_bundle_file":     config.TrustBundleFile,
 		"cloud_url":             config.CloudURL,
-		"auto_refresh_interval": config.AutoRefresh,
+		"auto_refresh_interval": config.AutoRefreshInterval,
 	}
 
 	return &logical.Response{
@@ -684,7 +685,7 @@ func (b *backend) getVenafiPolicyConfig(ctx context.Context, s logical.Storage, 
 type venafiPolicyConfigEntry struct {
 	venafiConnectionConfig
 	ExtKeyUsage          []x509.ExtKeyUsage `json:"ext_key_usage"`
-	AutoRefresh          int64              `json:"auto_refresh_interval"`
+	AutoRefreshInterval  int64              `json:"auto_refresh_interval"`
 	LastPolicyUpdateTime int64              `json:"last_policy_update_time"`
 }
 

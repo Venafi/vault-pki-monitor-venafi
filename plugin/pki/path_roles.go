@@ -352,6 +352,11 @@ Example:
 				Description: "If set PKI role will be synchronized with Venafi zone specified in the policy.",
 				Default:     defaultVenafiPolicyName,
 			},
+			"venafi_sync_policy_interval": {
+				Type:        framework.TypeString,
+				Description: "If set PKI role will be synchronized with Venafi zone specified in the policy.",
+				Default:     60,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -784,6 +789,8 @@ type roleEntry struct {
 
 	//Options for syncing role parameters with Venafi policy
 	VenafiSyncPolicy string `json:"venafi_sync_policy"`
+	VenafiSyncPolicyInterval int64 `json:"venafi_sync_policy_interval"`
+	VenafiSyncPolicyLastUpdated int64 `json:"venafi_sync_policy_last_updated"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool

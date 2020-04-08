@@ -115,6 +115,14 @@ func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.Ba
 			continue
 		}
 
+		//check last policy updated
+		timePassed := time.Now().Unix() - pkiRoleEntry.VenafiSyncPolicyLastUpdated
+
+		//update only if needed
+		if (timePassed) < pkiRoleEntry.VenafiSyncPolicyInterval {
+			continue
+		}
+
 		entry, err := storage.Get(ctx, venafiPolicyPath+pkiRoleEntry.VenafiSyncPolicy)
 		if err != nil {
 			log.Println(err)
@@ -155,6 +163,9 @@ func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.Ba
 		pkiRoleEntry.AllowSubdomains = true
 		//TODO: we need to sync key settings as well. But before it we need to add key type to zone configuration
 		//in vcert SDK
+
+		//set new last updated
+		pkiRoleEntry.VenafiSyncPolicyLastUpdated = time.Now().Unix()
 
 		// Put new entry
 		jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, pkiRoleEntry)
