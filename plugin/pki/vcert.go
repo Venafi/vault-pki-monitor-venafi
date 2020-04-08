@@ -34,7 +34,7 @@ func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, configNam
 		return role.venafiConnectionConfig.getConnection()
 
 	} else if configType == "policy" {
-		policy, err := b.getPolicyConfig(ctx, s, configName)
+		policy, err := b.getVenafiPolicyConfig(ctx, s, configName)
 		if err != nil {
 			return nil, err
 		}

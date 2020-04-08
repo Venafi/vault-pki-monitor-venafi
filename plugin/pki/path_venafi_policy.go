@@ -79,10 +79,10 @@ https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 -- simply drop the "ExtKeyUsage" part of the name.
 Also you can use constants from this module (like 1, 5,8) direct or use OIDs (like 1.3.6.1.5.5.7.3.4)`,
 			},
-			"auto_refresh": {
+			"auto_refresh_interval": {
 				Type:        framework.TypeInt,
 				Default:     15,
-				Description: `Automatically update policy from Venafi`,
+				Description: `Interval policy update from Venafi. Set it to 0 to disable uatomatic policy update`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -158,10 +158,7 @@ func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logi
 		return err
 	}
 	for _, policyName := range policies {
-		//check policy update interval
-		//check last policy updated
-		//update if needed
-		//save policy update time
+
 		log.Printf("Starting policy refresh for %s", policyName)
 		//Skip if we have repeated policy name with / at the end
 		if strings.Contains(policyName, "/") {
@@ -169,31 +166,52 @@ func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logi
 			continue
 		}
 
-		policyConfig, err := b.getPolicyConfig(ctx, storage, policyName)
+		venafiPolicyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policyName)
 		if err != nil {
 			log.Printf("Error getting policy config %s: %s", policyName, err)
 			continue
 		}
-		if policyConfig == nil {
+		if venafiPolicyConfig == nil {
 			log.Printf("Policy config for %s is empty", policyName)
 			continue
 		}
 
-		if !policyConfig.AutoRefresh {
+		//check policy update interval
+		if venafiPolicyConfig.AutoRefresh == 0 {
 			continue
 		} else {
-			log.Printf("Auto refresh enabled for policy %s. Getting policy from Venafi", policyName)
-			policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
-			if err != nil {
-				log.Printf("Error getting policy %s from Venafi: %s", policyName, err)
-				continue
-			}
+			//check last policy updated
+			timePassed := time.Now().Unix() - venafiPolicyConfig.LastPolicyUpdateTime
 
-			log.Printf("Saving policy %s", policyName)
-			_, err = savePolicyEntry(policy, policyName, ctx, storage)
-			if err != nil {
-				log.Printf("Error saving policy: %s", err)
-				continue
+			//update if needed
+			if (timePassed / 60) > venafiPolicyConfig.AutoRefresh {
+
+				log.Printf("Auto refresh enabled for policy %s. Getting policy from Venafi", policyName)
+				policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
+				if err != nil {
+					log.Printf("Error getting policy %s from Venafi: %s", policyName, err)
+					continue
+				}
+
+				log.Printf("Saving policy %s", policyName)
+				_, err = savePolicyEntry(policy, policyName, ctx, storage)
+				if err != nil {
+					log.Printf("Error saving policy: %s", err)
+					continue
+				}
+
+				venafiPolicyConfig.LastPolicyUpdateTime = time.Now().Unix()
+
+				jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+policyName, venafiPolicyConfig)
+				if err != nil {
+					log.Printf("Error converting policy config into JSON: %s", err)
+					continue
+				}
+				if err := storage.Put(ctx, jsonEntry); err != nil {
+					log.Printf("Error saving policy last update time: %s", err)
+					continue
+				}
+
 			}
 		}
 	}
@@ -253,7 +271,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	name := data.Get("name").(string)
 
 	log.Printf("Write policy endpoint configuration into storage")
-	configEntry := &venafiPolicyConfigEntry{
+	venafiPolicyConfig := &venafiPolicyConfigEntry{
 		venafiConnectionConfig: venafiConnectionConfig{
 			TPPURL:          data.Get("tpp_url").(string),
 			CloudURL:        data.Get("cloud_url").(string),
@@ -263,17 +281,17 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 			TPPUser:         data.Get("tpp_user").(string),
 			TrustBundleFile: data.Get("trust_bundle_file").(string),
 		},
-		AutoRefresh: data.Get("auto_refresh").(bool),
+		AutoRefresh: int64(data.Get("auto_refresh_interval").(int)),
 	}
 	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
-	configEntry.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
+	venafiPolicyConfig.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
 	if err != nil {
 		return
 	}
-	if configEntry.Apikey == "" && (configEntry.TPPURL == "" || configEntry.TPPUser == "" || configEntry.TPPPassword == "") {
+	if venafiPolicyConfig.Apikey == "" && (venafiPolicyConfig.TPPURL == "" || venafiPolicyConfig.TPPUser == "" || venafiPolicyConfig.TPPPassword == "") {
 		return logical.ErrorResponse("Invalid mode. apikey or tpp credentials required"), nil
 	}
-	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+name, configEntry)
+	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+name, venafiPolicyConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -413,12 +431,12 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 
 	//Send config to the user output
 	respData := map[string]interface{}{
-		"tpp_url":           config.TPPURL,
-		"zone":              config.Zone,
-		"tpp_user":          config.TPPUser,
-		"trust_bundle_file": config.TrustBundleFile,
-		"cloud_url":         config.CloudURL,
-		"auto_refresh":      config.AutoRefresh,
+		"tpp_url":               config.TPPURL,
+		"zone":                  config.Zone,
+		"tpp_user":              config.TPPUser,
+		"trust_bundle_file":     config.TrustBundleFile,
+		"cloud_url":             config.CloudURL,
+		"auto_refresh_interval": config.AutoRefresh,
 	}
 
 	return &logical.Response{
@@ -647,7 +665,7 @@ func checkAgainstVenafiPolicy(
 	return nil
 }
 
-func (b *backend) getPolicyConfig(ctx context.Context, s logical.Storage, n string) (*venafiPolicyConfigEntry, error) {
+func (b *backend) getVenafiPolicyConfig(ctx context.Context, s logical.Storage, n string) (*venafiPolicyConfigEntry, error) {
 	entry, err := s.Get(ctx, venafiPolicyPath+n)
 	if err != nil {
 		return nil, err
@@ -665,8 +683,9 @@ func (b *backend) getPolicyConfig(ctx context.Context, s logical.Storage, n stri
 
 type venafiPolicyConfigEntry struct {
 	venafiConnectionConfig
-	ExtKeyUsage []x509.ExtKeyUsage `json:"ext_key_usage"`
-	AutoRefresh bool               `json:"auto_refresh"`
+	ExtKeyUsage          []x509.ExtKeyUsage `json:"ext_key_usage"`
+	AutoRefresh          int64              `json:"auto_refresh_interval"`
+	LastPolicyUpdateTime int64              `json:"last_policy_update_time"`
 }
 
 type venafiPolicyEntry struct {

@@ -107,21 +107,21 @@ bOcvXbCN3l5HIY76e+6FbLGGCvNKcgNpSAAPYJg=
 `
 
 var venafiTestTPPConfigAllAllow = map[string]interface{}{
-	"tpp_url":           os.Getenv("TPP_URL"),
-	"tpp_user":          os.Getenv("TPP_USER"),
-	"tpp_password":      os.Getenv("TPP_PASSWORD"),
-	"zone":              os.Getenv("TPP_ZONE"),
-	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-	"auto_refresh":      true,
+	"tpp_url":               os.Getenv("TPP_URL"),
+	"tpp_user":              os.Getenv("TPP_USER"),
+	"tpp_password":          os.Getenv("TPP_PASSWORD"),
+	"zone":                  os.Getenv("TPP_ZONE"),
+	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
+	"auto_refresh_interval": true,
 }
 
 var venafiTestTPPConfigNoRefresh = map[string]interface{}{
-	"tpp_url":           os.Getenv("TPP_URL"),
-	"tpp_user":          os.Getenv("TPP_USER"),
-	"tpp_password":      os.Getenv("TPP_PASSWORD"),
-	"zone":              os.Getenv("TPP_ZONE"),
-	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-	"auto_refresh":      false,
+	"tpp_url":               os.Getenv("TPP_URL"),
+	"tpp_user":              os.Getenv("TPP_USER"),
+	"tpp_password":          os.Getenv("TPP_PASSWORD"),
+	"zone":                  os.Getenv("TPP_ZONE"),
+	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
+	"auto_refresh_interval": false,
 }
 
 var venafiTestConfigBadData = map[string]interface{}{
@@ -131,25 +131,25 @@ var venafiTestConfigBadData = map[string]interface{}{
 }
 
 var venafiTestTPPConfigRestricted = map[string]interface{}{
-	"tpp_url":           os.Getenv("TPP_URL"),
-	"tpp_user":          os.Getenv("TPP_USER"),
-	"tpp_password":      os.Getenv("TPP_PASSWORD"),
-	"zone":              os.Getenv("TPP_ZONE_RESTRICTED"),
-	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-	"auto_refresh":      true,
+	"tpp_url":               os.Getenv("TPP_URL"),
+	"tpp_user":              os.Getenv("TPP_USER"),
+	"tpp_password":          os.Getenv("TPP_PASSWORD"),
+	"zone":                  os.Getenv("TPP_ZONE_RESTRICTED"),
+	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
+	"auto_refresh_interval": true,
 }
 
 var venafiTestCloudConfigRestricted = map[string]interface{}{
-	"cloud_url":    os.Getenv("CLOUD_URL"),
-	"apikey":       os.Getenv("CLOUD_APIKEY"),
-	"zone":         os.Getenv("CLOUD_ZONE_RESTRICTED"),
-	"auto_refresh": true,
+	"cloud_url":             os.Getenv("CLOUD_URL"),
+	"apikey":                os.Getenv("CLOUD_APIKEY"),
+	"zone":                  os.Getenv("CLOUD_ZONE_RESTRICTED"),
+	"auto_refresh_interval": true,
 }
 var venafiTestCloudConfigAllAllow = map[string]interface{}{
-	"cloud_url":    os.Getenv("CLOUD_URL"),
-	"apikey":       os.Getenv("CLOUD_APIKEY"),
-	"zone":         os.Getenv("CLOUD_ZONE"),
-	"auto_refresh": true,
+	"cloud_url":             os.Getenv("CLOUD_URL"),
+	"apikey":                os.Getenv("CLOUD_APIKEY"),
+	"zone":                  os.Getenv("CLOUD_ZONE"),
+	"auto_refresh_interval": true,
 }
 
 var venafiTPPCreateSimplePolicyStep = logicaltest.TestStep{

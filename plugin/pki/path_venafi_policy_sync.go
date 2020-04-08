@@ -7,8 +7,6 @@ import (
 	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
-	"os"
-	"strconv"
 	"time"
 )
 
