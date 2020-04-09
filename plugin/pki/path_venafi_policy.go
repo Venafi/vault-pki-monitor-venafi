@@ -10,11 +10,10 @@ import (
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/hashicorp/vault/sdk/framework"
-	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
+
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
 	"strings"
-	"time"
 )
 
 const venafiPolicyPath = "venafi-policy/"
@@ -79,11 +78,6 @@ https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 -- simply drop the "ExtKeyUsage" part of the name.
 Also you can use constants from this module (like 1, 5,8) direct or use OIDs (like 1.3.6.1.5.5.7.3.4)`,
 			},
-			"auto_refresh_interval": {
-				Type:        framework.TypeInt,
-				Default:     60,
-				Description: `Interval of policy update from Venafi in seconds. Set it to 0 to disable automatic policy update`,
-			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathUpdateVenafiPolicy,
@@ -130,92 +124,43 @@ func pathVenafiPolicyList(b *backend) *framework.Path {
 	return ret
 }
 
-func (b *backend) refreshVenafiPolicyContentRegister(storage logical.Storage, conf *logical.BackendConfig) {
-	log.Println("registering policy sync controller")
-	b.taskStorage.register("policy-refresh-controller", func() {
-		err := b.refreshVenafiPolicyContent(storage, conf)
-		if err != nil {
-			log.Printf("%s", err)
-		}
-	}, 1, time.Second*15)
-}
-
-func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logical.BackendConfig) (err error) {
-	replicationState := conf.System.ReplicationState()
-	//Checking if we are on master or on the stanby Vault server
-	isSlave := !(conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) ||
-		replicationState.HasState(hconsts.ReplicationDRSecondary) ||
-		replicationState.HasState(hconsts.ReplicationPerformanceStandby)
-	if isSlave {
-		log.Println("We're on slave. Sleeping")
-		return
-	}
-	log.Println("We're on master.Refreshing policies")
+func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, policyName string) (err error) {
 
 	ctx := context.Background()
-	policies, err := storage.List(ctx, venafiPolicyPath)
+
+	venafiPolicyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policyName)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error getting policy config %s: %s", policyName, err)
+
 	}
-	for _, policyName := range policies {
-
-		log.Printf("Starting policy refresh for %s", policyName)
-		//Skip if we have repeated policy name with / at the end
-		if strings.Contains(policyName, "/") {
-			log.Printf("Policy %s ending with /, skipping", policyName)
-			continue
-		}
-
-		venafiPolicyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policyName)
-		if err != nil {
-			log.Printf("Error getting policy config %s: %s", policyName, err)
-			continue
-		}
-		if venafiPolicyConfig == nil {
-			log.Printf("Policy config for %s is empty", policyName)
-			continue
-		}
-
-		//check policy update interval
-		if venafiPolicyConfig.AutoRefreshInterval == 0 {
-			continue
-		} else {
-			//check last policy updated
-			timePassed := time.Now().Unix() - venafiPolicyConfig.LastPolicyUpdateTime
-
-			//update only if needed
-			if (timePassed) < venafiPolicyConfig.AutoRefreshInterval {
-				continue
-			}
-
-			log.Printf("Auto refresh enabled for policy %s. Getting policy from Venafi", policyName)
-			policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
-			if err != nil {
-				log.Printf("Error getting policy %s from Venafi: %s", policyName, err)
-				continue
-			}
-
-			log.Printf("Saving policy %s", policyName)
-			_, err = savePolicyEntry(policy, policyName, ctx, storage)
-			if err != nil {
-				log.Printf("Error saving policy: %s", err)
-				continue
-			}
-
-			venafiPolicyConfig.LastPolicyUpdateTime = time.Now().Unix()
-
-			jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+policyName, venafiPolicyConfig)
-			if err != nil {
-				log.Printf("Error converting policy config into JSON: %s", err)
-				continue
-			}
-			if err := storage.Put(ctx, jsonEntry); err != nil {
-				log.Printf("Error saving policy last update time: %s", err)
-				continue
-			}
-
-		}
+	if venafiPolicyConfig == nil {
+		return fmt.Errorf("Policy config for %s is empty", policyName)
 	}
+
+	log.Printf("Auto refresh enabled for policy %s. Getting policy from Venafi", policyName)
+	policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
+	if err != nil {
+		return fmt.Errorf("Error getting policy %s from Venafi: %s", policyName, err)
+
+	}
+
+	log.Printf("Saving policy %s", policyName)
+	_, err = savePolicyEntry(policy, policyName, ctx, storage)
+	if err != nil {
+		return fmt.Errorf("Error saving policy: %s", err)
+
+	}
+
+	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+policyName, venafiPolicyConfig)
+	if err != nil {
+		return fmt.Errorf("Error converting policy config into JSON: %s", err)
+
+	}
+	if err := storage.Put(ctx, jsonEntry); err != nil {
+		return fmt.Errorf("Error saving policy last update time: %s", err)
+
+	}
+
 	return nil
 }
 
@@ -282,7 +227,6 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 			TPPUser:         data.Get("tpp_user").(string),
 			TrustBundleFile: data.Get("trust_bundle_file").(string),
 		},
-		AutoRefreshInterval: int64(data.Get("auto_refresh_interval").(int)),
 	}
 	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
 	venafiPolicyConfig.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
@@ -432,12 +376,11 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 
 	//Send config to the user output
 	respData := map[string]interface{}{
-		"tpp_url":               config.TPPURL,
-		"zone":                  config.Zone,
-		"tpp_user":              config.TPPUser,
-		"trust_bundle_file":     config.TrustBundleFile,
-		"cloud_url":             config.CloudURL,
-		"auto_refresh_interval": config.AutoRefreshInterval,
+		"tpp_url":           config.TPPURL,
+		"zone":              config.Zone,
+		"tpp_user":          config.TPPUser,
+		"trust_bundle_file": config.TrustBundleFile,
+		"cloud_url":         config.CloudURL,
 	}
 
 	return &logical.Response{
@@ -685,8 +628,6 @@ func (b *backend) getVenafiPolicyConfig(ctx context.Context, s logical.Storage, 
 type venafiPolicyConfigEntry struct {
 	venafiConnectionConfig
 	ExtKeyUsage          []x509.ExtKeyUsage `json:"ext_key_usage"`
-	AutoRefreshInterval  int64              `json:"auto_refresh_interval"`
-	LastPolicyUpdateTime int64              `json:"last_policy_update_time"`
 }
 
 type venafiPolicyEntry struct {

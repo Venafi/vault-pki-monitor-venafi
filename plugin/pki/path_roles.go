@@ -788,9 +788,9 @@ type roleEntry struct {
 	VenafiCheckPolicy string `json:"venafi_check_policy"`
 
 	//Options for syncing role parameters with Venafi policy
-	VenafiSyncPolicy string `json:"venafi_sync_policy"`
-	VenafiSyncPolicyInterval int64 `json:"venafi_sync_policy_interval"`
-	VenafiSyncPolicyLastUpdated int64 `json:"venafi_sync_policy_last_updated"`
+	VenafiSyncPolicy            string `json:"venafi_sync_policy"`
+	VenafiSyncPolicyInterval    int64  `json:"venafi_sync_policy_interval"`
+	VenafiSyncPolicyLastUpdated int64  `json:"venafi_sync_policy_last_updated"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool

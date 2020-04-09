@@ -64,17 +64,17 @@ func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Req
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) syncWithVenafiPolicyRegister(storage logical.Storage, conf *logical.BackendConfig) {
+func (b *backend) syncRoleWithVenafiPolicyRegister(storage logical.Storage, conf *logical.BackendConfig) {
 	log.Println("registering policy sync controller")
 	b.taskStorage.register("policy-sync-controller", func() {
-		err := b.syncWithVenafiPolicy(storage, conf)
+		err := b.syncRoleWithVenafiPolicy(storage, conf)
 		if err != nil {
 			log.Printf("%s", err)
 		}
 	}, 1, time.Second*15)
 }
 
-func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.BackendConfig) (err error) {
+func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logical.BackendConfig) (err error) {
 	replicationState := conf.System.ReplicationState()
 	//Checking if we are on master or on the stanby Vault server
 	isSlave := !(conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) ||
@@ -115,6 +115,11 @@ func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.Ba
 			continue
 		}
 
+		//Refresh Venafi policy regexes
+		err = b.refreshVenafiPolicyContent(storage, pkiRoleEntry.VenafiSyncPolicy)
+		if err != nil {
+			log.Printf("Errore refreshing venafi policy content: %s", err)
+		}
 		//check last policy updated
 		timePassed := time.Now().Unix() - pkiRoleEntry.VenafiSyncPolicyLastUpdated
 

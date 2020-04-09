@@ -562,7 +562,6 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 
 func TestVenafiPolicyAutoRefresh(t *testing.T) {
 	b, storage := createBackendWithStorage(t)
-	config := logical.TestBackendConfig()
 
 	t.Log("writing TPP configuration")
 	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, "tpp-policy")
@@ -573,8 +572,27 @@ func TestVenafiPolicyAutoRefresh(t *testing.T) {
 	t.Log("writing bad data policy")
 	writePolicy(b, storage, venafiTestConfigBadData, t, "policy-bad-data")
 
-	err := b.refreshVenafiPolicyContent(storage, config)
+	err := b.refreshVenafiPolicyContent(storage, "tpp-policy")
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	err = b.refreshVenafiPolicyContent(storage, "tpp-policy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = b.refreshVenafiPolicyContent(storage, "cloud-policy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = b.refreshVenafiPolicyContent(storage, "tpp-policy-no-refresh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = b.refreshVenafiPolicyContent(storage, "policy-bad-data")
+	if err != nil {
+		t.Fatal(err)
+
+	}
+
 }
