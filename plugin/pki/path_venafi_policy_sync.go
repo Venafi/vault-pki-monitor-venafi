@@ -64,17 +64,17 @@ func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Req
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) syncWithVenafiPolicyRegister(storage logical.Storage, conf *logical.BackendConfig) {
-	log.Println("registering policy sync controller")
-	b.taskStorage.register("policy-sync-controller", func() {
-		err := b.syncWithVenafiPolicy(storage, conf)
-		if err != nil {
-			log.Printf("%s", err)
-		}
-	}, 1, time.Second*15)
-}
+//func (b *backend) syncPKIRoleWithVenafiPolicyRegister(storage logical.Storage, conf *logical.BackendConfig) {
+//	log.Println("registering policy sync controller")
+//	b.taskStorage.register("policy-sync-controller", func() {
+//		err := b.syncPKIRoleWithVenafiPolicy(storage, conf)
+//		if err != nil {
+//			log.Printf("%s", err)
+//		}
+//	}, 1, time.Second*15)
+//}
 
-func (b *backend) syncWithVenafiPolicy(storage logical.Storage, conf *logical.BackendConfig) (err error) {
+func (b *backend) syncPKIRoleWithVenafiPolicyOld(storage logical.Storage, conf *logical.BackendConfig) (err error) {
 	replicationState := conf.System.ReplicationState()
 	//Checking if we are on master or on the stanby Vault server
 	isSlave := !(conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) ||

@@ -573,7 +573,7 @@ func TestVenafiPolicyAutoRefresh(t *testing.T) {
 	t.Log("writing bad data policy")
 	writePolicy(b, storage, venafiTestConfigBadData, t, "policy-bad-data")
 
-	err := b.refreshVenafiPolicyContent(storage, config)
+	err := b.refreshVenafiPoliciesContent(storage, config)
 	if err != nil {
 		t.Fatal(err)
 	}

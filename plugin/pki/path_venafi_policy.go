@@ -84,6 +84,11 @@ Also you can use constants from this module (like 1, 5,8) direct or use OIDs (li
 				Default:     60,
 				Description: `Interval of policy update from Venafi in seconds. Set it to 0 to disable automatic policy update`,
 			},
+			"roles": {
+				Type:        framework.TypeCommaStringSlice,
+				Default:     []string{},
+				Description: "",
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathUpdateVenafiPolicy,
@@ -130,17 +135,19 @@ func pathVenafiPolicyList(b *backend) *framework.Path {
 	return ret
 }
 
-func (b *backend) refreshVenafiPolicyContentRegister(storage logical.Storage, conf *logical.BackendConfig) {
+func (b *backend) refreshVenafiPoliciesContentRegister(storage logical.Storage, conf *logical.BackendConfig) {
 	log.Println("registering policy sync controller")
 	b.taskStorage.register("policy-refresh-controller", func() {
-		err := b.refreshVenafiPolicyContent(storage, conf)
+		err := b.refreshVenafiPoliciesContent(storage, conf)
 		if err != nil {
 			log.Printf("%s", err)
 		}
 	}, 1, time.Second*15)
 }
 
-func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logical.BackendConfig) (err error) {
+func (b *backend) refreshVenafiPoliciesContent(storage logical.Storage, conf *logical.BackendConfig) (err error) {
+	ctx := context.Background()
+
 	replicationState := conf.System.ReplicationState()
 	//Checking if we are on master or on the stanby Vault server
 	isSlave := !(conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) ||
@@ -152,13 +159,12 @@ func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logi
 	}
 	log.Println("We're on master.Refreshing policies")
 
-	ctx := context.Background()
 	policies, err := storage.List(ctx, venafiPolicyPath)
 	if err != nil {
 		return err
 	}
 	for _, policyName := range policies {
-
+		ctx := context.Background()
 		log.Printf("Starting policy refresh for %s", policyName)
 		//Skip if we have repeated policy name with / at the end
 		if strings.Contains(policyName, "/") {
@@ -178,44 +184,72 @@ func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, conf *logi
 
 		//check policy update interval
 		if venafiPolicyConfig.AutoRefreshInterval == 0 {
+			log.Printf("Autorefresh is disabled for policy %s", policyName)
 			continue
-		} else {
-			//check last policy updated
-			timePassed := time.Now().Unix() - venafiPolicyConfig.LastPolicyUpdateTime
-
-			//update only if needed
-			if (timePassed) < venafiPolicyConfig.AutoRefreshInterval {
-				continue
-			}
-
-			log.Printf("Auto refresh enabled for policy %s. Getting policy from Venafi", policyName)
-			policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
-			if err != nil {
-				log.Printf("Error getting policy %s from Venafi: %s", policyName, err)
-				continue
-			}
-
-			log.Printf("Saving policy %s", policyName)
-			_, err = savePolicyEntry(policy, policyName, ctx, storage)
-			if err != nil {
-				log.Printf("Error saving policy: %s", err)
-				continue
-			}
-
-			venafiPolicyConfig.LastPolicyUpdateTime = time.Now().Unix()
-
-			jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+policyName, venafiPolicyConfig)
-			if err != nil {
-				log.Printf("Error converting policy config into JSON: %s", err)
-				continue
-			}
-			if err := storage.Put(ctx, jsonEntry); err != nil {
-				log.Printf("Error saving policy last update time: %s", err)
-				continue
-			}
-
 		}
+
+		//check last policy updated
+		timePassed := time.Now().Unix() - venafiPolicyConfig.LastPolicyUpdateTime
+
+		//update only if needed
+		if (timePassed) < venafiPolicyConfig.AutoRefreshInterval {
+			log.Printf("Time did not come for updating %s policy", policyName)
+			continue
+		}
+
+		err = b.refreshVenafiPolicyContent(ctx, storage, policyName, venafiPolicyConfig)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		//sync with Venafi roles associated with this policy
+
+		//find associated roles
+		//Get role list with role sync param
+		roles := venafiPolicyConfig.Roles
+
+		if len(roles) == 0 {
+			return err
+		}
+
+		for _, roleName := range roles {
+			err = b.syncPKIRoleWithVenafiPolicy(ctx, storage, roleName, policyName, venafiPolicyConfig.Zone)
+		}
+
 	}
+	return err
+}
+
+func (b *backend) refreshVenafiPolicyContent(ctx context.Context, storage logical.Storage, policyName string, venafiPolicyConfig *venafiPolicyConfigEntry) (err error) {
+
+	//TODO: maybe we should pass context as a parameter. Investigate
+
+	log.Printf("Auto refresh enabled for policy %s. Getting policy from Venafi", policyName)
+	policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
+	if err != nil {
+		return fmt.Errorf("Error getting policy %s from Venafi: %s", policyName, err)
+	}
+
+	log.Printf("Saving policy %s", policyName)
+	_, err = savePolicyEntry(policy, policyName, ctx, storage)
+	if err != nil {
+		return fmt.Errorf("Error saving policy: %s", err)
+
+	}
+
+	venafiPolicyConfig.LastPolicyUpdateTime = time.Now().Unix()
+
+	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+policyName, venafiPolicyConfig)
+	if err != nil {
+		return fmt.Errorf("Error converting policy config into JSON: %s", err)
+
+	}
+	if err := storage.Put(ctx, jsonEntry); err != nil {
+		return fmt.Errorf("Error saving policy last update time: %s", err)
+
+	}
+
 	return nil
 }
 
@@ -247,6 +281,55 @@ func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.
 	return &logical.Response{
 		Data: respData,
 	}, nil
+}
+
+func (b *backend) syncPKIRoleWithVenafiPolicy(ctx context.Context, storage logical.Storage, roleName string, policyName string, zone string) (err error) {
+	//	Read previous role parameters
+	pkiRoleEntry, err := b.getPKIRoleEntry(ctx, storage, roleName)
+	if err != nil {
+		return err
+	}
+
+	if pkiRoleEntry == nil {
+		return fmt.Errorf("PKI role %s is empty or does not exist", roleName)
+	}
+
+	venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, policyName,
+		zone)
+	if err != nil {
+		return err
+	}
+
+	//  Replace PKI entry with Venafi policy values
+	replacePKIValue(&pkiRoleEntry.OU, venafiPolicyEntry.OU)
+	replacePKIValue(&pkiRoleEntry.Organization, venafiPolicyEntry.Organization)
+	replacePKIValue(&pkiRoleEntry.Country, venafiPolicyEntry.Country)
+	replacePKIValue(&pkiRoleEntry.Locality, venafiPolicyEntry.Locality)
+	replacePKIValue(&pkiRoleEntry.Province, venafiPolicyEntry.Province)
+	replacePKIValue(&pkiRoleEntry.StreetAddress, venafiPolicyEntry.StreetAddress)
+	replacePKIValue(&pkiRoleEntry.PostalCode, venafiPolicyEntry.PostalCode)
+
+	//does not have to configure the role to limit domains
+	// because the Venafi policy already constrains that area
+	pkiRoleEntry.AllowAnyName = true
+	pkiRoleEntry.AllowedDomains = []string{}
+	pkiRoleEntry.AllowSubdomains = true
+	//TODO: we need to sync key settings as well. But before it we need to add key type to zone configuration
+	//in vcert SDK
+
+	//set new last updated
+	pkiRoleEntry.VenafiSyncPolicyLastUpdated = time.Now().Unix()
+
+	// Put new entry
+	jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, pkiRoleEntry)
+	if err != nil {
+		return fmt.Errorf("Error creating json entry for storage: %s", err)
+	}
+	if err := storage.Put(ctx, jsonEntry); err != nil {
+		return fmt.Errorf("Error putting entry to storage: %s", err)
+	}
+
+	return nil
 }
 
 func (b *backend) pathUpdateVenafiPolicyContent(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -687,6 +770,7 @@ type venafiPolicyConfigEntry struct {
 	ExtKeyUsage          []x509.ExtKeyUsage `json:"ext_key_usage"`
 	AutoRefreshInterval  int64              `json:"auto_refresh_interval"`
 	LastPolicyUpdateTime int64              `json:"last_policy_update_time"`
+	Roles                []string           `json:"roles"`
 }
 
 type venafiPolicyEntry struct {
