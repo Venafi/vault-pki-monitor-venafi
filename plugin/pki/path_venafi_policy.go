@@ -790,5 +790,45 @@ type venafiPolicyEntry struct {
 	AllowKeyReuse            bool                               `json:"allow_key_reuse"`
 }
 
+func replacePKIValue(original *[]string, zone []string) {
+	if len(zone) > 0 {
+		if zone[0] != "" {
+			*original = zone
+		}
+
+	}
+}
+
+func (b *backend) getVenafiPolicyParams(ctx context.Context, storage logical.Storage, policyConfig string, syncZone string) (entry roleEntry, err error) {
+	//Get role params from TPP\Cloud
+	cl, err := b.ClientVenafi(ctx, storage, policyConfig, "policy")
+	if err != nil {
+		return entry, fmt.Errorf("could not create venafi client: %s", err)
+	}
+
+	cl.SetZone(syncZone)
+	zone, err := cl.ReadZoneConfiguration()
+	if err != nil {
+		return entry, fmt.Errorf("could not read zone configuration: %s", err)
+	}
+	entry = roleEntry{
+		OU:           zone.OrganizationalUnit,
+		Organization: []string{zone.Organization},
+		Country:      []string{zone.Country},
+		Locality:     []string{zone.Locality},
+		Province:     []string{zone.Province},
+	}
+	return
+}
+
+func (b *backend) getPKIRoleEntry(ctx context.Context, storage logical.Storage, roleName string) (entry *roleEntry, err error) {
+	//Update role since it's settings may be changed
+	entry, err = b.getRole(ctx, storage, roleName)
+	if err != nil {
+		return entry, fmt.Errorf("Error getting role %v: %s\n", roleName, err)
+	}
+	return entry, nil
+}
+
 const pathVenafiPolicySyn = `help here`
 const pathVenafiPolicyDesc = `description here`
