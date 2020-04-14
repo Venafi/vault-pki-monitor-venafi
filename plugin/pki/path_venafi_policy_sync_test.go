@@ -9,19 +9,21 @@ import (
 )
 
 var policyTPPData = map[string]interface{}{
-	"tpp_url":           os.Getenv("TPP_URL"),
-	"tpp_user":          os.Getenv("TPP_USER"),
-	"tpp_password":      os.Getenv("TPP_PASSWORD"),
-	"zone":              os.Getenv("TPP_ZONE"),
-	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+	"tpp_url":                  os.Getenv("TPP_URL"),
+	"tpp_user":                 os.Getenv("TPP_USER"),
+	"tpp_password":             os.Getenv("TPP_PASSWORD"),
+	"zone":                     os.Getenv("TPP_ZONE"),
+	"trust_bundle_file":        os.Getenv("TRUST_BUNDLE"),
+	"policy_enforcement_roles": "test-venafi-role",
 }
 
 var policyTPPData2 = map[string]interface{}{
-	"tpp_url":           os.Getenv("TPP_URL"),
-	"tpp_user":          os.Getenv("TPP_USER"),
-	"tpp_password":      os.Getenv("TPP_PASSWORD"),
-	"zone":              os.Getenv("TPP_ZONE2"),
-	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+	"tpp_url":                  os.Getenv("TPP_URL"),
+	"tpp_user":                 os.Getenv("TPP_USER"),
+	"tpp_password":             os.Getenv("TPP_PASSWORD"),
+	"zone":                     os.Getenv("TPP_ZONE2"),
+	"trust_bundle_file":        os.Getenv("TRUST_BUNDLE"),
+	"policy_enforcement_roles": "test-venafi-role",
 }
 
 var policyCloudData = map[string]interface{}{
@@ -88,7 +90,7 @@ func TestSyncRoleWithTPPPolicy(t *testing.T) {
 	// create the backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
-	testRoleName := "test-venafi-role"
+	testRoleName := policyTPPData2["policy_enforcement_roles"].(string)
 	testPolicyName := defaultVenafiPolicyName
 	config.StorageView = storage
 
@@ -139,7 +141,7 @@ func TestIntegrationSyncRoleWithPolicy(t *testing.T) {
 	// create the backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
-	testRoleName := "test-venafi-role"
+	testRoleName := policyTPPData["policy_enforcement_roles"].(string)
 	config.StorageView = storage
 
 	b := Backend(config)
@@ -317,7 +319,7 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err = b.syncPKIRoleWithVenafiPolicy(ctx, storage, testRoleName + "-fourth", "tpp2-policy", policyTPPData2["zone"].(string))
+	err = b.syncPKIRoleWithVenafiPolicy(ctx, storage, testRoleName+"-fourth", "tpp2-policy", policyTPPData2["zone"].(string))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -134,7 +134,8 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
         tpp_user="local:admin" \
         tpp_password="password" \
         zone="DevOps\\Default" \
-        trust_bundle_file="/opt/venafi/bundle.pem"
+        trust_bundle_file="/opt/venafi/bundle.pem" \
+        roles="tpp"
     ```
     2. For the Cloud:
     ```
@@ -155,6 +156,10 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     |`tpp_user`             |string   | Web API user for Venafi Platform                                            |`admin`|
     |`trust_bundle_file`    |string   | Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server.|`"/full/path/to/chain.pem"`|
     |`zone`                 |string   | Name of Venafi Platform policy or Venafi Cloud Zone ID.                     |`testpolicy\\vault`|
+    |`policy_enforcement_roles`                |string   | List of roles where policy enfrcement is enabled                            |`tpp`|
+    |`venafi_defaults_roles`                |string   | List of roles where policy enfrcement is enabled                            |`tpp`|
+    |`import_roles`                |string   | List of roles where policy enfrcement is enabled                            |`tpp`|
+
     
     <!--TODO: add scheduled update script with prod ready security example here.-->
 

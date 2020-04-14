@@ -84,10 +84,30 @@ Also you can use constants from this module (like 1, 5,8) direct or use OIDs (li
 				Default:     60,
 				Description: `Interval of policy update from Venafi in seconds. Set it to 0 to disable automatic policy update`,
 			},
-			"roles": {
+			"policy_enforcement_roles": {
 				Type:        framework.TypeCommaStringSlice,
 				Default:     []string{},
-				Description: "",
+				Description: "Roles list for policy check",
+			},
+			"venafi_defaults_roles": {
+				Type:        framework.TypeCommaStringSlice,
+				Default:     []string{},
+				Description: "Roles list for filing with default values from Venafi",
+			},
+			"import_roles": {
+				Type:        framework.TypeCommaStringSlice,
+				Default:     []string{},
+				Description: "Roles list for import to Venafi",
+			},
+			"venafi_import_timeout": {
+				Type:        framework.TypeInt,
+				Default:     15,
+				Description: `Timeout in second to rerun import queue`,
+			},
+			"venafi_import_workers": {
+				Type:        framework.TypeInt,
+				Default:     5,
+				Description: `Max amount of simultaneously working instances of vcert import`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -207,7 +227,7 @@ func (b *backend) refreshVenafiPoliciesContent(storage logical.Storage, conf *lo
 
 		//find associated roles
 		//Get role list with role sync param
-		roles := venafiPolicyConfig.Roles
+		roles := venafiPolicyConfig.PolicyEnforcementRoles
 
 		if len(roles) == 0 {
 			return err
@@ -365,7 +385,12 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 			TPPUser:         data.Get("tpp_user").(string),
 			TrustBundleFile: data.Get("trust_bundle_file").(string),
 		},
-		AutoRefreshInterval: int64(data.Get("auto_refresh_interval").(int)),
+		AutoRefreshInterval:    int64(data.Get("auto_refresh_interval").(int)),
+		PolicyEnforcementRoles: data.Get("policy_enforcement_roles").([]string),
+		VenafiDefaultsRoles:    data.Get("venafi_defaults_roles").([]string),
+		ImportRoles:            data.Get("import_roles").([]string),
+		TPPImportTimeout:       data.Get("venafi_import_timeout").(int),
+		TPPImportWorkers:       data.Get("venafi_import_workers").(int),
 	}
 	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
 	venafiPolicyConfig.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
@@ -391,6 +416,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return nil, err
 	}
+	//TODO: prevent different venafi policies from refelistrencing the same roles
 	//Send policy to the user output
 	respData := formPolicyRespData(*policyEntry)
 
@@ -515,12 +541,17 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 
 	//Send config to the user output
 	respData := map[string]interface{}{
-		"tpp_url":               config.TPPURL,
-		"zone":                  config.Zone,
-		"tpp_user":              config.TPPUser,
-		"trust_bundle_file":     config.TrustBundleFile,
-		"cloud_url":             config.CloudURL,
-		"auto_refresh_interval": config.AutoRefreshInterval,
+		"tpp_url":                  config.TPPURL,
+		"zone":                     config.Zone,
+		"tpp_user":                 config.TPPUser,
+		"trust_bundle_file":        config.TrustBundleFile,
+		"cloud_url":                config.CloudURL,
+		"auto_refresh_interval":    config.AutoRefreshInterval,
+		"policy_enforcement_roles": config.PolicyEnforcementRoles,
+		"venafi_defaults_roles":    config.VenafiDefaultsRoles,
+		"import_roles":             config.ImportRoles,
+		"venafi_import_timeout":    config.TPPImportTimeout,
+		"venafi_import_workers":    config.TPPImportWorkers,
 	}
 
 	return &logical.Response{
@@ -767,10 +798,14 @@ func (b *backend) getVenafiPolicyConfig(ctx context.Context, s logical.Storage, 
 
 type venafiPolicyConfigEntry struct {
 	venafiConnectionConfig
-	ExtKeyUsage          []x509.ExtKeyUsage `json:"ext_key_usage"`
-	AutoRefreshInterval  int64              `json:"auto_refresh_interval"`
-	LastPolicyUpdateTime int64              `json:"last_policy_update_time"`
-	Roles                []string           `json:"roles"`
+	ExtKeyUsage            []x509.ExtKeyUsage `json:"ext_key_usage"`
+	AutoRefreshInterval    int64              `json:"auto_refresh_interval"`
+	LastPolicyUpdateTime   int64              `json:"last_policy_update_time"`
+	PolicyEnforcementRoles []string           `json:"policy_enforcement_roles"`
+	VenafiDefaultsRoles    []string           `json:"venafi_defaults_roles"`
+	ImportRoles            []string           `json:"import_roles"`
+	TPPImportTimeout       int                `json:"venafi_import_timeout"`
+	TPPImportWorkers       int                `json:"venafi_import_workers"`
 }
 
 type venafiPolicyEntry struct {
