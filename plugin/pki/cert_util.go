@@ -811,7 +811,7 @@ func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
 		if venafiPolciyCheck {
 			//Calling Venafi policy check before performing any checks
 			log.Println("Checking creation bundle against Venafi policy")
-			err := checkAgainstVenafiPolicy(data.req, data.role, isCA, data.csr, cn, []string{}, emailAddresses, dnsNames)
+			err := b.checkAgainstVenafiPolicy(data.req, data.role, isCA, data.csr, cn, []string{}, emailAddresses, dnsNames)
 			// i think
 			if err != nil {
 				return errutil.UserError{Err: err.Error()}

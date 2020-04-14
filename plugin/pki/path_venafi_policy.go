@@ -493,7 +493,7 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 
 func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Storage, policyConfig string) (policy *endpoint.Policy, err error) {
 	log.Printf("Creating Venafi client")
-	cl, err := b.ClientVenafi(ctx, storage, policyConfig, "policy")
+	cl, err := b.ClientVenafi(ctx, storage, policyConfig, "policy", venafiRoleFunctionNone)
 	if err != nil {
 		return
 	}
@@ -596,7 +596,7 @@ func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request
 	return logical.ListResponse(entries), nil
 }
 
-func checkAgainstVenafiPolicy(
+func (b *backend) checkAgainstVenafiPolicy(
 	req *logical.Request,
 	role *roleEntry,
 	isCA bool,
@@ -803,6 +803,7 @@ type venafiPolicyConfigEntry struct {
 	ImportRoles            []string           `json:"import_roles"`
 	TPPImportTimeout       int                `json:"venafi_import_timeout"`
 	TPPImportWorkers       int                `json:"venafi_import_workers"`
+	PolicyName string `json:"policy_name"`
 }
 
 type venafiPolicyEntry struct {
@@ -833,7 +834,7 @@ func replacePKIValue(original *[]string, zone []string) {
 
 func (b *backend) getVenafiPolicyParams(ctx context.Context, storage logical.Storage, policyConfig string, syncZone string) (entry roleEntry, err error) {
 	//Get role params from TPP\Cloud
-	cl, err := b.ClientVenafi(ctx, storage, policyConfig, "policy")
+	cl, err := b.ClientVenafi(ctx, storage, policyConfig, "policy", venafiRoleFunctionNone)
 	if err != nil {
 		return entry, fmt.Errorf("could not create venafi client: %s", err)
 	}
@@ -865,19 +866,34 @@ func (b *backend) getPKIRoleEntry(ctx context.Context, storage logical.Storage, 
 type venafiRoleFunction int
 
 const (
-	venafiRoleFunctionImport venafiRoleFunction = iota
+	venafiRoleFunctionNone venafiRoleFunction = iota
+	venafiRoleFunctionImport
 	venafiRoleFunctionPolicyEnforcement
 	venafiRoleFunctionDefaults
 )
+func (b *backend) getVenafiPolicyForRole(ctx context.Context, storage logical.Storage, roleName string) (policy venafiPolicyEntry, err error) {
+	//policies, err := storage.List(ctx, venafiPolicyPath)
+	//if err != nil {
+	//	return policy, err
+	//}
+	//
+	//policyConfig := b.getVenafiPolicyConfig(ctx, storage, roleName)
+	//for _,policy := range policies {
+	//	if sliceContains(policyConfig.PolicyEnforcementRoles, roleName) {
+	//		break
+	//	}
+	//}
+	return policy, err
+}
 
 func (b *backend) getVenafiPolicyConfigForRole(ctx context.Context, storage logical.Storage, roleName string, function venafiRoleFunction) (policyConfig *venafiPolicyConfigEntry, err error) {
 
-	//TODO: implement me
 	policies, err := storage.List(ctx, venafiPolicyPath)
 	if err != nil {
 		return policyConfig, err
 	}
 	for _,policy := range policies {
+		//TODO: skip policies with / at the end
 		policyConfig,err = b.getVenafiPolicyConfig(ctx, storage, policy)
 		if err != nil {
 			return policyConfig, err
@@ -885,14 +901,17 @@ func (b *backend) getVenafiPolicyConfigForRole(ctx context.Context, storage logi
 		switch function {
 		case venafiRoleFunctionImport:
 			if sliceContains(policyConfig.ImportRoles, roleName) {
+				policyConfig.PolicyName = policy
 				break
 			}
 		case venafiRoleFunctionDefaults:
 			if sliceContains(policyConfig.DefaultsRoles, roleName) {
+				policyConfig.PolicyName = policy
 				break
 			}
 		case venafiRoleFunctionPolicyEnforcement:
 			if sliceContains(policyConfig.PolicyEnforcementRoles, roleName) {
+				policyConfig.PolicyName = policy
 				break
 			}
 		}

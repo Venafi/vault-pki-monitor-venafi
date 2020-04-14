@@ -50,12 +50,18 @@ func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Req
 		}
 
 		//Get Venafi policy in entry format
-		if pkiRoleEntry.VenafiSyncPolicy == "" {
+		policyConfig, err := b.getVenafiPolicyConfigForRole(ctx, req.Storage,roleName, venafiRoleFunctionDefaults)
+		if err != nil {
+			log.Printf("%s", err)
+			continue
+		}
+
+		if !sliceContains(policyConfig.DefaultsRoles, roleName) {
 			continue
 		}
 
 		var entry []string
-		entry = append(entry, fmt.Sprintf("role: %s sync policy: %s", roleName, pkiRoleEntry.VenafiSyncPolicy))
+		entry = append(entry, fmt.Sprintf("role: %s sync policy: %s", roleName, policyConfig.PolicyName))
 		entries = append(entries, entry...)
 
 	}
