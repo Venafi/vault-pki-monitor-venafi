@@ -337,9 +337,6 @@ func (b *backend) syncPKIRoleWithVenafiPolicy(ctx context.Context, storage logic
 	//TODO: we need to sync key settings as well. But before it we need to add key type to zone configuration
 	//in vcert SDK
 
-	//set new last updated
-	pkiRoleEntry.VenafiSyncPolicyLastUpdated = time.Now().Unix()
-
 	// Put new entry
 	jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, pkiRoleEntry)
 	if err != nil {
@@ -387,7 +384,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		},
 		AutoRefreshInterval:    int64(data.Get("auto_refresh_interval").(int)),
 		PolicyEnforcementRoles: data.Get("policy_enforcement_roles").([]string),
-		VenafiDefaultsRoles:    data.Get("venafi_defaults_roles").([]string),
+		DefaultsRoles:          data.Get("venafi_defaults_roles").([]string),
 		ImportRoles:            data.Get("import_roles").([]string),
 		TPPImportTimeout:       data.Get("venafi_import_timeout").(int),
 		TPPImportWorkers:       data.Get("venafi_import_workers").(int),
@@ -548,7 +545,7 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		"cloud_url":                config.CloudURL,
 		"auto_refresh_interval":    config.AutoRefreshInterval,
 		"policy_enforcement_roles": config.PolicyEnforcementRoles,
-		"venafi_defaults_roles":    config.VenafiDefaultsRoles,
+		"venafi_defaults_roles":    config.DefaultsRoles,
 		"import_roles":             config.ImportRoles,
 		"venafi_import_timeout":    config.TPPImportTimeout,
 		"venafi_import_workers":    config.TPPImportWorkers,
@@ -802,7 +799,7 @@ type venafiPolicyConfigEntry struct {
 	AutoRefreshInterval    int64              `json:"auto_refresh_interval"`
 	LastPolicyUpdateTime   int64              `json:"last_policy_update_time"`
 	PolicyEnforcementRoles []string           `json:"policy_enforcement_roles"`
-	VenafiDefaultsRoles    []string           `json:"venafi_defaults_roles"`
+	DefaultsRoles          []string           `json:"venafi_defaults_roles"`
 	ImportRoles            []string           `json:"import_roles"`
 	TPPImportTimeout       int                `json:"venafi_import_timeout"`
 	TPPImportWorkers       int                `json:"venafi_import_workers"`
@@ -863,6 +860,45 @@ func (b *backend) getPKIRoleEntry(ctx context.Context, storage logical.Storage, 
 		return entry, fmt.Errorf("Error getting role %v: %s\n", roleName, err)
 	}
 	return entry, nil
+}
+
+type venafiRoleFunction int
+
+const (
+	venafiRoleFunctionImport venafiRoleFunction = iota
+	venafiRoleFunctionPolicyEnforcement
+	venafiRoleFunctionDefaults
+)
+
+func (b *backend) getVenafiPolicyConfigForRole(ctx context.Context, storage logical.Storage, roleName string, function venafiRoleFunction) (policyConfig *venafiPolicyConfigEntry, err error) {
+
+	//TODO: implement me
+	policies, err := storage.List(ctx, venafiPolicyPath)
+	if err != nil {
+		return policyConfig, err
+	}
+	for _,policy := range policies {
+		policyConfig,err = b.getVenafiPolicyConfig(ctx, storage, policy)
+		if err != nil {
+			return policyConfig, err
+		}
+		switch function {
+		case venafiRoleFunctionImport:
+			if sliceContains(policyConfig.ImportRoles, roleName) {
+				break
+			}
+		case venafiRoleFunctionDefaults:
+			if sliceContains(policyConfig.DefaultsRoles, roleName) {
+				break
+			}
+		case venafiRoleFunctionPolicyEnforcement:
+			if sliceContains(policyConfig.PolicyEnforcementRoles, roleName) {
+				break
+			}
+		}
+
+	}
+	return policyConfig, err
 }
 
 const pathVenafiPolicySyn = `help here`

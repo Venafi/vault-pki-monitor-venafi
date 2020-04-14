@@ -329,12 +329,18 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	if role.TPPImport {
+	roleName := data.Get("role").(string)
+	policyConfig, err := b.getVenafiPolicyConfigForRole(ctx, req.Storage, roleName, venafiRoleFunctionPolicyEnforcement)
+	if err != nil {
+		log.Printf("Unable to get policy config for role: %s", err)
+	}
+
+	if sliceContains(policyConfig.ImportRoles, roleName) {
 		sn := normalizeSerial(cb.SerialNumber)
 		log.Printf("Puting certificate with serial number %s to the Venafi import queue\n", sn)
 
 		err = req.Storage.Put(ctx, &logical.StorageEntry{
-			Key:   "import-queue/" + data.Get("role").(string) + "/" + sn,
+			Key:   "import-queue/" + roleName + "/" + sn,
 			Value: parsedBundle.CertificateBytes,
 		})
 		if err != nil {

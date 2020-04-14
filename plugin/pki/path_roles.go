@@ -420,22 +420,18 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 	return &result, nil
 }
 
-func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
+func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
+	err = req.Storage.Delete(ctx, "role/"+data.Get("name").(string))
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
-	//Cleanup Venafi import if defined
 	roleName := data.Get("name").(string)
-	role, err := b.getRole(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
-	if role.TPPImport {
-		b.cleanupImportToTPP(roleName, ctx, req)
-	}
-	return nil, nil
+	b.cleanupImportToTPP(roleName, ctx, req)
+	return resp, err
 }
 
 func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

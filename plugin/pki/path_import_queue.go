@@ -168,20 +168,16 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 	for i := range roles {
 		roleName := roles[i]
 		//Update role since it's settings may be changed
-		role, err := b.getRole(ctx, storage, roleName)
+		policyConfig, err := b.getVenafiPolicyConfigForRole(ctx, storage, roleName, venafiRoleFunctionImport)
 		if err != nil {
-			log.Printf("Error getting role %v: %s\n Exiting.", role, err)
-			continue
-		}
-		if role == nil {
-			log.Printf("Unknown role %v\n", role)
+			log.Printf("Error getting role %v: %s\n Exiting.", policyConfig, err)
 			continue
 		}
 
 		b.taskStorage.register(fillQueuePrefix+roleName, func() {
 			log.Printf("run queue filler %s", roleName)
-			b.fillImportQueueTask(roleName, role.TPPImportWorkers, storage, conf)
-		}, 1, time.Duration(role.TPPImportTimeout)*time.Second)
+			b.fillImportQueueTask(roleName, policyConfig.TPPImportWorkers, storage, conf)
+		}, 1, time.Duration(policyConfig.TPPImportTimeout)*time.Second)
 
 	}
 	stringInSlice := func(s string, sl []string) bool {
@@ -282,6 +278,7 @@ func (b *backend) deleteCertFromQueue(job Job) {
 
 func (b *backend) cleanupImportToTPP(roleName string, ctx context.Context, req *logical.Request) {
 
+	//TODO: check if role doesn't exists and just do nothing in this case
 	importPath := "import-queue/" + roleName + "/"
 	entries, err := req.Storage.List(ctx, importPath)
 	if err != nil {
