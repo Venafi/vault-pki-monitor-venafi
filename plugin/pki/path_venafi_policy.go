@@ -872,17 +872,22 @@ const (
 	venafiRoleFunctionDefaults
 )
 func (b *backend) getVenafiPolicyForRole(ctx context.Context, storage logical.Storage, roleName string) (policy venafiPolicyEntry, err error) {
-	//policies, err := storage.List(ctx, venafiPolicyPath)
-	//if err != nil {
-	//	return policy, err
-	//}
-	//
-	//policyConfig := b.getVenafiPolicyConfig(ctx, storage, roleName)
-	//for _,policy := range policies {
-	//	if sliceContains(policyConfig.PolicyEnforcementRoles, roleName) {
-	//		break
-	//	}
-	//}
+	policies, err := storage.List(ctx, venafiPolicyPath)
+	if err != nil {
+		return policy, err
+	}
+
+	policyConfig, err := b.getVenafiPolicyConfig(ctx, storage, roleName)
+	if err != nil {
+		return policy, err
+	}
+
+	for _,policy := range policies {
+		if sliceContains(policyConfig.PolicyEnforcementRoles, roleName) {
+			b.getVenafiPolicyParams()
+			break
+		}
+	}
 	return policy, err
 }
 
