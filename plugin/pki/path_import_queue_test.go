@@ -503,3 +503,25 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	}
 
 }
+
+func TestCleanupImportToTPP(t *testing.T) {
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := Backend(config)
+	err := b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	req := &logical.Request{
+		Storage:   b.storage,
+	}
+
+	//cleanup non existant role. no problem should occur
+	b.cleanupImportToTPP("test-role", ctx, req)
+}

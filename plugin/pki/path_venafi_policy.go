@@ -16,8 +16,14 @@ import (
 	"strings"
 )
 
-const venafiPolicyPath = "venafi-policy/"
-const defaultVenafiPolicyName = "default"
+const (
+	venafiPolicyPath            = "venafi-policy/"
+	defaultVenafiPolicyName     = "default"
+    policyFieldEnforcementRoles = "enforcement_roles"
+	policyFieldDefaultsRoles    = "defaults_roles"
+	policyFieldImportRoles      = "import_roles"
+
+)
 
 func pathVenafiPolicy(b *backend) *framework.Path {
 	ret := &framework.Path{
@@ -77,6 +83,36 @@ Example:
 https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 -- simply drop the "ExtKeyUsage" part of the name.
 Also you can use constants from this module (like 1, 5,8) direct or use OIDs (like 1.3.6.1.5.5.7.3.4)`,
+			},
+			"auto_refresh_interval": {
+				Type:        framework.TypeInt,
+				Default:     60,
+				Description: `Interval of policy update from Venafi in seconds. Set it to 0 to disable automatic policy update`,
+			},
+			 policyFieldEnforcementRoles: {
+				Type:        framework.TypeCommaStringSlice,
+				Default:     []string{},
+				Description: "Roles list for policy check",
+			},
+			policyFieldDefaultsRoles: {
+				Type:        framework.TypeCommaStringSlice,
+				Default:     []string{},
+				Description: "Roles list for filing with default values from Venafi",
+			},
+			policyFieldImportRoles: {
+				Type:        framework.TypeCommaStringSlice,
+				Default:     []string{},
+				Description: "Roles list for import to Venafi",
+			},
+			"venafi_import_timeout": {
+				Type:        framework.TypeInt,
+				Default:     15,
+				Description: `Timeout in second to rerun import queue`,
+			},
+			"venafi_import_workers": {
+				Type:        framework.TypeInt,
+				Default:     5,
+				Description: `Max amount of simultaneously working instances of vcert import`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -243,6 +279,37 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
+
+	log.Println("Updating roles policy attributes")
+
+	//TODO: check that role have only only one policy
+	for _,roleType := range []string{policyFieldEnforcementRoles, policyFieldDefaultsRoles, policyFieldImportRoles} {
+		for _, roleName := range data.Get(roleType).([]string) {
+			role, err := b.getRole(ctx, req.Storage, roleName)
+			if err != nil {
+				return nil, err
+			}
+
+			switch roleType {
+			case policyFieldEnforcementRoles:
+				role.VenafiEnforcementPolicy = name
+			case policyFieldDefaultsRoles:
+				role.VenafiDefaultsPolicy = name
+			case policyFieldImportRoles:
+				role.VenafiImportPolicy = name
+			}
+
+			jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, role)
+			if err != nil {
+				return nil, err
+			}
+			if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+
 	log.Printf("Geting policy from zone %s", data.Get("zone").(string))
 	policy, err := b.getPolicyFromVenafi(ctx, req.Storage, name)
 	if err != nil {
@@ -374,6 +441,11 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
+	rolesList, err := b.getRolesListForVenafiPolicy(ctx, req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+
 	//Send config to the user output
 	respData := map[string]interface{}{
 		"tpp_url":           config.TPPURL,
@@ -381,11 +453,45 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		"tpp_user":          config.TPPUser,
 		"trust_bundle_file": config.TrustBundleFile,
 		"cloud_url":         config.CloudURL,
+		policyFieldImportRoles: rolesList.importRoles,
+		policyFieldDefaultsRoles: rolesList.defaultsRoles,
+		policyFieldEnforcementRoles: rolesList.enforceRoles,
 	}
 
 	return &logical.Response{
 		Data: respData,
 	}, nil
+}
+
+type rolesListForVenafiPolicy struct {
+		importRoles []string
+		enforceRoles []string
+		defaultsRoles []string
+}
+
+func (b *backend) getRolesListForVenafiPolicy(ctx context.Context, storage logical.Storage, policyName string, ) (rolesList rolesListForVenafiPolicy, err error) {
+
+	roles, err := storage.List(ctx, "role/")
+	if err != nil {
+		return
+	}
+
+	for _,roleName := range roles {
+		role, err := b.getRole(ctx, storage, roleName)
+		if err != nil {
+			return
+		}
+		if role.VenafiImportPolicy == policyName {
+			rolesList.importRoles = append(rolesList.importRoles, roleName)
+		}
+		if role.VenafiEnforcementPolicy == policyName {
+			rolesList.enforceRoles = append(rolesList.enforceRoles, roleName)
+		}
+		if role.VenafiDefaultsPolicy == policyName {
+			rolesList.defaultsRoles = append(rolesList.defaultsRoles, roleName)
+		}
+	}
+	return rolesList, err
 }
 
 func (b *backend) pathDeleteVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
