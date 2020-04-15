@@ -398,7 +398,7 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 
 func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Storage, policyConfig string) (policy *endpoint.Policy, err error) {
 	log.Printf("Creating Venafi client")
-	cl, err := b.ClientVenafi(ctx, storage, policyConfig, "policy")
+	cl, err := b.ClientVenafi(ctx, storage, policyConfig)
 	if err != nil {
 		return
 	}
@@ -479,7 +479,7 @@ func (b *backend) getRolesListForVenafiPolicy(ctx context.Context, storage logic
 	for _,roleName := range roles {
 		role, err := b.getRole(ctx, storage, roleName)
 		if err != nil {
-			return
+			return rolesList, err
 		}
 		if role.VenafiImportPolicy == policyName {
 			rolesList.importRoles = append(rolesList.importRoles, roleName)
@@ -542,7 +542,7 @@ func checkAgainstVenafiPolicy(
 	cn string,
 	ipAddresses, email, sans []string) error {
 
-	policyConfigPath := role.VenafiCheckPolicy
+	policyConfigPath := role.VenafiEnforcementPolicy
 	ctx := context.Background()
 	if policyConfigPath == "" {
 		policyConfigPath = defaultVenafiPolicyName
@@ -734,6 +734,10 @@ func (b *backend) getVenafiPolicyConfig(ctx context.Context, s logical.Storage, 
 type venafiPolicyConfigEntry struct {
 	venafiConnectionConfig
 	ExtKeyUsage          []x509.ExtKeyUsage `json:"ext_key_usage"`
+	AutoRefreshInterval    int64              `json:"auto_refresh_interval"`
+	LastPolicyUpdateTime   int64              `json:"last_policy_update_time"`
+	VenafiImportTimeout       int                `json:"venafi_import_timeout"`
+	VenafiImportWorkers       int                `json:"venafi_import_workers"`
 }
 
 type venafiPolicyEntry struct {

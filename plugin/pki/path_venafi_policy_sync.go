@@ -52,12 +52,12 @@ func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Req
 		}
 
 		//Get Venafi policy in entry format
-		if pkiRoleEntry.VenafiSyncPolicy == "" {
+		if pkiRoleEntry.VenafiDefaultsPolicy == "" {
 			continue
 		}
 
 		var entry []string
-		entry = append(entry, fmt.Sprintf("role: %s sync policy: %s", roleName, pkiRoleEntry.VenafiSyncPolicy))
+		entry = append(entry, fmt.Sprintf("role: %s sync policy: %s", roleName, pkiRoleEntry.VenafiDefaultsPolicy))
 		entries = append(entries, entry...)
 
 	}
@@ -111,12 +111,12 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 		}
 
 		//Get Venafi policy in entry format
-		if pkiRoleEntry.VenafiSyncPolicy == "" {
+		if pkiRoleEntry.VenafiDefaultsPolicy == "" {
 			continue
 		}
 
 		//Refresh Venafi policy regexes
-		err = b.refreshVenafiPolicyContent(storage, pkiRoleEntry.VenafiSyncPolicy)
+		err = b.refreshVenafiPolicyContent(storage, pkiRoleEntry.VenafiDefaultsPolicy)
 		if err != nil {
 			log.Printf("Errore refreshing venafi policy content: %s", err)
 		}

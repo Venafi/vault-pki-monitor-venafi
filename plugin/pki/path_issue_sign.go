@@ -329,7 +329,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	if role.TPPImport {
+	if role.VenafiImportPolicy != "" {
 		sn := normalizeSerial(cb.SerialNumber)
 		log.Printf("Puting certificate with serial number %s to the Venafi import queue\n", sn)
 

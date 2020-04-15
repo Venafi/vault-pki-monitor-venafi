@@ -15,26 +15,14 @@ import (
 const venafiPolciyCheck = true
 const venafiPolicyDenyAll = true
 
-func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, configName string, configType string) (
+func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, policyName string) (
 	endpoint.Connector, error) {
 
-	if configName == "" {
-		return nil, fmt.Errorf("missing %s name", configType)
+	if policyName == "" {
+		return nil, fmt.Errorf("empty policy name")
 	}
 
-	log.Printf("Using %s: %s", configType, configName)
-	if configType == "role" {
-		role, err := b.getRole(ctx, s, configName)
-		if err != nil {
-			return nil, err
-		}
-		if role == nil {
-			return nil, fmt.Errorf("unknown role %v", role)
-		}
-		return role.venafiConnectionConfig.getConnection()
-
-	} else if configType == "policy" {
-		policy, err := b.getVenafiPolicyConfig(ctx, s, configName)
+		policy, err := b.getVenafiPolicyConfig(ctx, s, policyName)
 		if err != nil {
 			return nil, err
 		}
@@ -43,9 +31,6 @@ func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, configNam
 		}
 
 		return policy.venafiConnectionConfig.getConnection()
-	} else {
-		return nil, fmt.Errorf("couldn't determine config type")
-	}
 }
 
 func pp(a interface{}) string {

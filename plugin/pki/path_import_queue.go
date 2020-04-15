@@ -22,6 +22,7 @@ type Job struct {
 	id         int
 	entry      string
 	roleName   string
+	policyName string
 	importPath string
 	ctx        context.Context
 	//req        *logical.Request
@@ -178,10 +179,15 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 			continue
 		}
 
+		policyConfig, err := b.getVenafiPolicyConfig(ctx, storage, role.VenafiImportPolicy)
+		if err != nil {
+			log.Printf("Error getting policy %v: %s\n Exiting.", role.VenafiImportPolicy, err)
+			continue
+		}
 		b.taskStorage.register(fillQueuePrefix+roleName, func() {
 			log.Printf("run queue filler %s", roleName)
-			b.fillImportQueueTask(roleName, role.TPPImportWorkers, storage, conf)
-		}, 1, time.Duration(role.TPPImportTimeout)*time.Second)
+			b.fillImportQueueTask(roleName, policyConfig.VenafiImportWorkers, storage, conf)
+		}, 1, time.Duration(policyConfig.VenafiImportTimeout)*time.Second)
 
 	}
 	stringInSlice := func(s string, sl []string) bool {
@@ -202,7 +208,6 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 func (b *backend) processImportToTPP(job Job) string {
 	ctx := job.ctx
 	//req := job.req
-	roleName := job.roleName
 	storage := job.storage
 	entry := job.entry
 	id := job.id
@@ -210,7 +215,7 @@ func (b *backend) processImportToTPP(job Job) string {
 	importPath := job.importPath
 	log.Printf("%s Processing entry %s\n", msg, entry)
 	log.Printf("%s Trying to import certificate with SN %s", msg, entry)
-	cl, err := b.ClientVenafi(ctx, storage, roleName, "role")
+	cl, err := b.ClientVenafi(ctx, storage, job.policyName)
 	if err != nil {
 		return fmt.Sprintf("%s Could not create venafi client: %s", msg, err)
 	}
