@@ -8,12 +8,17 @@ import (
 	"time"
 )
 
+var testRoleName = "test-venafi-role"
+
 var policyTPPData = map[string]interface{}{
 	"tpp_url":           os.Getenv("TPP_URL"),
 	"tpp_user":          os.Getenv("TPP_USER"),
 	"tpp_password":      os.Getenv("TPP_PASSWORD"),
 	"zone":              os.Getenv("TPP_ZONE"),
 	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+	policyFieldEnforcementRoles: testRoleName,
+	policyFieldDefaultsRoles: testRoleName,
+	policyFieldImportRoles: testRoleName,
 }
 
 var policyTPPData2 = map[string]interface{}{
@@ -22,12 +27,19 @@ var policyTPPData2 = map[string]interface{}{
 	"tpp_password":      os.Getenv("TPP_PASSWORD"),
 	"zone":              os.Getenv("TPP_ZONE2"),
 	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+	policyFieldEnforcementRoles: testRoleName,
+	policyFieldDefaultsRoles: testRoleName,
+	policyFieldImportRoles: testRoleName,
+
 }
 
 var policyCloudData = map[string]interface{}{
 	"apikey":    os.Getenv("CLOUD_APIKEY"),
 	"cloud_url": os.Getenv("CLOUD_URL"),
 	"zone":      os.Getenv("CLOUD_ZONE_RESTRICTED"),
+	policyFieldEnforcementRoles: testRoleName,
+	policyFieldDefaultsRoles: testRoleName,
+	policyFieldImportRoles: testRoleName,
 }
 
 var wantTPPRoleEntry = roleEntry{
@@ -97,10 +109,6 @@ func TestSyncRoleWithTPPPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//write TPP policy
-	writePolicy(b, storage, policyTPPData2, t, defaultVenafiPolicyName)
-	roleData["venafi_sync_policy"] = defaultVenafiPolicyName
-
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + testRoleName,
@@ -113,6 +121,9 @@ func TestSyncRoleWithTPPPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	//write TPP policy
+	writePolicy(b, storage, policyTPPData2, t, defaultVenafiPolicyName)
 
 	ctx := context.Background()
 	err = b.syncRoleWithVenafiPolicy(storage, config)

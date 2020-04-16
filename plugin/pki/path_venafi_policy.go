@@ -289,6 +289,9 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 			if err != nil {
 				return nil, err
 			}
+			if role == nil {
+				return nil, fmt.Errorf("role %s does not exists. can not add it to the attributes of policy %s", roleName, name)
+			}
 
 			switch roleType {
 			case policyFieldEnforcementRoles:

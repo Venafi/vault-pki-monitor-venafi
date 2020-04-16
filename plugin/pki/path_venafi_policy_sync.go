@@ -7,6 +7,7 @@ import (
 	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -92,14 +93,25 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 	if err != nil {
 		return err
 	}
-	for _, policy := range policies {
+	for _, policyName := range policies {
 
-		policyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policy)
-		if err != nil {
-			log.Printf("Error getting policy config: %s", err)
+		//Removing from policy list repeated policy name with / at the end
+		if strings.Contains(policyName, "/") {
+			continue
 		}
 
-		//check last policy updated
+		policyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policyName)
+		if err != nil {
+			log.Printf("Error getting policy config for policy %s: %s", policyName, err)
+			continue
+		}
+
+		if policyConfig == nil {
+			log.Printf("Policy config for %s is nil. Skipping", policyName)
+			continue
+		}
+
+		log.Println("check last policy updated time")
 		timePassed := time.Now().Unix() - policyConfig.LastPolicyUpdateTime
 
 		//update only if needed
@@ -108,14 +120,14 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 		}
 
 		//Refresh Venafi policy regexes
-		err = b.refreshVenafiPolicyContent(storage, policy)
+		err = b.refreshVenafiPolicyContent(storage, policyName)
 		if err != nil {
 			log.Printf("Error  refreshing venafi policy content: %s", err)
 			continue
 		}
 		//Refresh roles defaults
 		//Get role list with role sync param
-		rolesList, err := b.getRolesListForVenafiPolicy(ctx, storage, policy)
+		rolesList, err := b.getRolesListForVenafiPolicy(ctx, storage, policyName)
 		if err != nil {
 			continue
 		}
@@ -144,7 +156,7 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 			}
 
 
-			entry, err := storage.Get(ctx, venafiPolicyPath+policy)
+			entry, err := storage.Get(ctx, venafiPolicyPath+policyName)
 			if err != nil {
 				log.Println(err)
 				continue
@@ -161,7 +173,7 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 				continue
 			}
 
-			venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, policy,
+			venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, policyName,
 				venafiConfig.Zone)
 			if err != nil {
 				log.Printf("%s", err)
@@ -200,8 +212,16 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 		//set new last updated
 		policyConfig.LastPolicyUpdateTime = time.Now().Unix()
 
-		//put new policy entry
+		//put new policy entry with updated time value
+		jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+policyName, policyConfig)
+		if err != nil {
+			return fmt.Errorf("Error converting policy config into JSON: %s", err)
 
+		}
+		if err := storage.Put(ctx, jsonEntry); err != nil {
+			return fmt.Errorf("Error saving policy last update time: %s", err)
+
+		}
 	}
 
 
