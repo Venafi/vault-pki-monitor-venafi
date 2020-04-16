@@ -89,16 +89,20 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 
 	ctx := context.Background()
 	//Get policy list for enforcement sync
-	policies, err := storage.List(ctx, venafiPolicyPath)
+	policiesRaw, err := storage.List(ctx, venafiPolicyPath)
 	if err != nil {
 		return err
 	}
-	for _, policyName := range policies {
+	var policies []string
 
-		//Removing from policy list repeated policy name with / at the end
-		if strings.Contains(policyName, "/") {
-			continue
+	//Removing from policy list repeated policy name with / at the end
+	for _,p := range policiesRaw {
+		if !strings.Contains(p, "/") {
+			policies = append(policies, p)
 		}
+	}
+
+	for _, policyName := range policies {
 
 		policyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policyName)
 		if err != nil {
@@ -133,7 +137,7 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 		}
 
 		if len(rolesList.defaultsRoles) == 0 {
-			log.Printf("No roles found for refreshing default")
+			log.Printf("No roles found for refreshing defaults in policy %s", policyName)
 			continue
 		}
 

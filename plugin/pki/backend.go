@@ -101,7 +101,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	} else {
 		b.taskStorage.init()
 		b.importToTPP(b.storage, conf)
-		b.syncRoleWithVenafiPolicyRegister(b.storage, conf)
+		//b.syncRoleWithVenafiPolicyRegister(b.storage, conf)
 	}
 
 	return &b
