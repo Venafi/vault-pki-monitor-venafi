@@ -471,6 +471,8 @@ type rolesListForVenafiPolicy struct {
 
 func (b *backend) getRolesListForVenafiPolicy(ctx context.Context, storage logical.Storage, policyName string, ) (rolesList rolesListForVenafiPolicy, err error) {
 
+	//In this function we're getting a role list for Venafi policy.
+	//Each role have three hidden attributes: VenafiImportPolicy,  VenafiEnforcementPolicy and VenafiDefaultsPolicy
 	roles, err := storage.List(ctx, "role/")
 	if err != nil {
 		return
@@ -481,6 +483,7 @@ func (b *backend) getRolesListForVenafiPolicy(ctx context.Context, storage logic
 		if err != nil {
 			return rolesList, err
 		}
+		//If policy name is in one of role policy attributes append it to the roleList structure
 		if role.VenafiImportPolicy == policyName {
 			rolesList.importRoles = append(rolesList.importRoles, roleName)
 		}

@@ -94,18 +94,24 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 	}
 	for _, policy := range policies {
 
+		policyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policy)
+		if err != nil {
+			log.Printf("Error getting policy config: %s", err)
+		}
+
 		//check last policy updated
-		timePassed := time.Now().Unix() - pkiRoleEntry.VenafiSyncPolicyLastUpdated
+		timePassed := time.Now().Unix() - policyConfig.LastPolicyUpdateTime
 
 		//update only if needed
-		if (timePassed) < pkiRoleEntry.VenafiSyncPolicyInterval {
+		if (timePassed) < policyConfig.AutoRefreshInterval {
 			continue
 		}
 
 		//Refresh Venafi policy regexes
 		err = b.refreshVenafiPolicyContent(storage, policy)
 		if err != nil {
-			log.Printf("Errore refreshing venafi policy content: %s", err)
+			log.Printf("Error  refreshing venafi policy content: %s", err)
+			continue
 		}
 		//Refresh roles defaults
 		//Get role list with role sync param
@@ -115,7 +121,8 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 		}
 
 		if len(rolesList.defaultsRoles) == 0 {
-			return
+			log.Printf("No roles found for refreshing default")
+			continue
 		}
 
 		for _, roleName := range rolesList.defaultsRoles {
@@ -191,7 +198,7 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 		}
 
 		//set new last updated
-		pkiRoleEntry.VenafiSyncPolicyLastUpdated = time.Now().Unix()
+		policyConfig.LastPolicyUpdateTime = time.Now().Unix()
 
 		//put new policy entry
 
