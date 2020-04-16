@@ -80,7 +80,7 @@ func (s *taskStorageStruct) loop() {
 				defer func(counter *int64) {
 					r := recover()
 					if r != nil {
-						log.Printf("job failed. recover: %v\n", r)
+						log.Printf("job %s failed. recover: %v\n", currentTask.name, r)
 						//todo: better log
 					}
 					atomic.AddInt64(counter, -1)

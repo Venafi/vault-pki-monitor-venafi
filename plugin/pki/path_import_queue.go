@@ -174,6 +174,11 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 			log.Printf("Error getting role %v: %s\n Exiting.", role, err)
 			continue
 		}
+
+		if role.VenafiImportPolicy == "" {
+			//no import policy defined for role. Skipping
+			continue
+		}
 		if role == nil {
 			log.Printf("Unknown role %v\n", role)
 			continue
