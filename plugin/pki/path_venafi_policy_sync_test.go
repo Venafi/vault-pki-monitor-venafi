@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"fmt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"os"
 	"testing"
@@ -258,10 +259,8 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Log("Setting up first role")
-	writePolicy(b, storage, policyTPPData, t, "tpp-policy")
+	t.Log("Setting up first policy")
 
-	roleData["venafi_sync_policy"] = "tpp-policy"
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -294,7 +293,6 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 	}
 
 	t.Log("Setting up third role without sync")
-	roleData["venafi_sync_policy"] = ""
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + testRoleName + "-third",
@@ -310,7 +308,6 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 
 	t.Log("Setting up fourth role")
 	writePolicy(b, storage, policyTPPData2, t, "tpp2-policy")
-	roleData["venafi_sync_policy"] = "tpp2-policy"
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -324,6 +321,11 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	t.Log("Setting up policy")
+
+	policyCloudData[policyFieldDefaultsRoles] = fmt.Sprintf("%s,%s,%s",testRoleName, testRoleName+ "-second", testRoleName + "-third")
+	writePolicy(b, storage, policyTPPData, t, "tpp-policy")
 
 	ctx := context.Background()
 	err = b.syncRoleWithVenafiPolicy(storage, config)
