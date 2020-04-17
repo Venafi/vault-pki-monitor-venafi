@@ -13,7 +13,7 @@ import (
 const (
 	logPrefixVenafiImport            = "VENAFI_IMPORT: "
 	logPrefixVenafiPolicyEnforcement = "VENAFI_POLICY_ENFORCEMENT: "
-	logPrefixVenafiRoleyDefaults     = "VENAFI_POLICY_DEFAULTS: "
+	logPrefixVenafiRoleyDefaults     = "VENAFI_ROLE_DEFAULTS: "
 	logPrefixVenafiScheduler         = "VENAFI_SCHEDULER: "
 )
 
