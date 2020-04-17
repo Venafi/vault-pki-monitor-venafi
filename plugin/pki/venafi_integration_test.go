@@ -7,7 +7,6 @@ import (
 	"encoding/pem"
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/hashicorp/vault/sdk/logical"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -91,7 +90,7 @@ func TestAllVenafiIntegrations(t *testing.T) {
 	}
 	for _, randRole := range randRoles {
 
-		log.Println("Creating certs for role", randRole)
+		t.Log("Creating certs for role", randRole)
 		// create a role entry
 		roleData := getTPPRoleConfig(domain, 2, 5)
 
@@ -149,17 +148,17 @@ func TestAllVenafiIntegrations(t *testing.T) {
 			t.Fatal(err)
 		}
 		keys := resp.Data["keys"]
-		log.Printf("Import queue list is:\n %v", keys)
+		t.Logf("Import queue list is:\n %v", keys)
 
 	}
 
 	time.Sleep(30 * time.Second)
 	//After creating all certificates we need to check that they exist in TPP
-	log.Println("Trying check all certificates from list", certs_list)
+	t.Log("Trying check all certificates from list", certs_list)
 	for _, singleCN := range certs_list {
 		//retrieve imported certificate
 		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
-		log.Println("Trying to retrieve requested certificate", singleCN)
+		t.Log("Trying to retrieve requested certificate", singleCN)
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 		req := &certificate.Request{}
@@ -172,7 +171,7 @@ func TestAllVenafiIntegrations(t *testing.T) {
 		if err != nil {
 			t.Fatalf("could not retrieve certificate using requestId %s: %s", req.PickupID, err)
 		}
-		//log.Printf("Got certificate\n:%s",pp(pcc.Certificate))
+		//t.Logf("Got certificate\n:%s",pp(pcc.Certificate))
 		block, _ := pem.Decode([]byte(pcc.Certificate))
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
@@ -181,7 +180,7 @@ func TestAllVenafiIntegrations(t *testing.T) {
 		if cert.Subject.CommonName != singleCN {
 			t.Fatalf("Incorrect subject common name: expected %v, got %v", cert.Subject.CommonName, singleCN)
 		} else {
-			log.Printf("Subject common name: expected %v, got %v", cert.Subject.CommonName, singleCN)
+			t.Logf("Subject common name: expected %v, got %v", cert.Subject.CommonName, singleCN)
 		}
 	}
 

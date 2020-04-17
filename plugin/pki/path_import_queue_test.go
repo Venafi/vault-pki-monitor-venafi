@@ -482,7 +482,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 			t.Fatal(err)
 		}
 		keys := resp.Data["keys"]
-		log.Printf("Import queue list is:\n %v", keys)
+		t.Logf("Import queue list is:\n %v", keys)
 
 	}
 
