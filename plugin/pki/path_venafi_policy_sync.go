@@ -96,7 +96,7 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 	var policies []string
 
 	//Removing from policy list repeated policy name with / at the end
-	for _,p := range policiesRaw {
+	for _, p := range policiesRaw {
 		if !strings.Contains(p, "/") {
 			policies = append(policies, p)
 		}
@@ -158,7 +158,6 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 			if pkiRoleEntry.VenafiDefaultsPolicy == "" {
 				continue
 			}
-
 
 			entry, err := storage.Get(ctx, venafiPolicyPath+policyName)
 			if err != nil {
@@ -227,7 +226,6 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 
 		}
 	}
-
 
 	return err
 }

@@ -177,7 +177,7 @@ func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnec
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/"+testRoleName,
+		Path:      "roles/" + testRoleName,
 		Storage:   storage,
 		Data:      roleData,
 	})
@@ -198,7 +198,7 @@ func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnec
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "issue/"+testRoleName,
+		Path:      "issue/" + testRoleName,
 		Storage:   storage,
 		Data:      certData,
 	})
@@ -422,7 +422,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		r := rand + strconv.Itoa(i) + "-role"
 		randRoles = append(randRoles, r)
 	}
-	for _,randRole := range randRoles {
+	for _, randRole := range randRoles {
 
 		log.Println("Creating certs for role", randRole)
 		// create a role entry
@@ -446,7 +446,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	venafiTestTPPConfigAllAllow[policyFieldImportRoles] = strings.Join(randRoles, ",")
 	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, defaultVenafiPolicyName)
 
-	for _,randRole := range randRoles {
+	for _, randRole := range randRoles {
 		//issue some certs
 
 		for j := 1; j < 10; j++ {
@@ -537,7 +537,7 @@ func TestCleanupImportToTPP(t *testing.T) {
 	ctx := context.Background()
 
 	req := &logical.Request{
-		Storage:   b.storage,
+		Storage: b.storage,
 	}
 
 	//cleanup non existant role. no problem should occur
@@ -554,7 +554,6 @@ func Test_fillImportQueueTask(t *testing.T) {
 	rand := randSeq(9)
 	domain := "example.com"
 	testRoleName := "test-import"
-
 
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -617,7 +616,7 @@ func Test_fillImportQueueTask(t *testing.T) {
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/"+testRoleName,
+		Path:      "roles/" + testRoleName,
 		Storage:   storage,
 		Data:      roleData,
 	})
@@ -638,7 +637,7 @@ func Test_fillImportQueueTask(t *testing.T) {
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "issue/"+testRoleName,
+		Path:      "issue/" + testRoleName,
 		Storage:   storage,
 		Data:      certData,
 	})

@@ -695,9 +695,9 @@ type roleEntry struct {
 	NotBeforeDuration             time.Duration `json:"not_before_duration" mapstructure:"not_before_duration"`
 
 	//Hidden role options added for Venafi Platform policies
-	VenafiImportPolicy         string   `json:"venafi_import_policy"`
-	VenafiDefaultsPolicy            string `json:"venafi_defaults_policy"`
-	VenafiEnforcementPolicy    string  `json:"venafi_enforcement_policy"`
+	VenafiImportPolicy      string `json:"venafi_import_policy"`
+	VenafiDefaultsPolicy    string `json:"venafi_defaults_policy"`
+	VenafiEnforcementPolicy string `json:"venafi_enforcement_policy"`
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
@@ -743,8 +743,8 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
 		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
 		//Role options added for Venafi Platform import
-		"venafi_import_policy": r.VenafiImportPolicy,
-		"venafi_defaults_policy": r.VenafiDefaultsPolicy,
+		"venafi_import_policy":      r.VenafiImportPolicy,
+		"venafi_defaults_policy":    r.VenafiDefaultsPolicy,
 		"venafi_enforcement_policy": r.VenafiEnforcementPolicy,
 	}
 	if r.MaxPathLength != nil {

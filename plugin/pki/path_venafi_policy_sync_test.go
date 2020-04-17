@@ -249,7 +249,6 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 
 	t.Log("Setting up first policy")
 
-
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + testRoleName,
@@ -311,7 +310,7 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 
 	t.Log("Setting up policy")
 
-	policyTPPData[policyFieldDefaultsRoles] = fmt.Sprintf("%s,%s",testRoleName, testRoleName+ "-second")
+	policyTPPData[policyFieldDefaultsRoles] = fmt.Sprintf("%s,%s", testRoleName, testRoleName+"-second")
 	writePolicy(b, storage, policyTPPData, t, "tpp-policy")
 
 	policyTPPData2[policyFieldDefaultsRoles] = testRoleName + "-fourth"

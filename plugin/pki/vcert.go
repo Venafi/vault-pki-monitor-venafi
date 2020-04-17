@@ -22,15 +22,15 @@ func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, policyNam
 		return nil, fmt.Errorf("empty policy name")
 	}
 
-		policy, err := b.getVenafiPolicyConfig(ctx, s, policyName)
-		if err != nil {
-			return nil, err
-		}
-		if policy == nil {
-			return nil, fmt.Errorf("expected policy but got nil from Vault storage %v", policy)
-		}
+	policy, err := b.getVenafiPolicyConfig(ctx, s, policyName)
+	if err != nil {
+		return nil, err
+	}
+	if policy == nil {
+		return nil, fmt.Errorf("expected policy but got nil from Vault storage %v", policy)
+	}
 
-		return policy.venafiConnectionConfig.getConnection()
+	return policy.venafiConnectionConfig.getConnection()
 }
 
 func pp(a interface{}) string {
