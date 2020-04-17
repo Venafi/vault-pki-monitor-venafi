@@ -114,6 +114,7 @@ func TestBackend_PathImportToCloud(t *testing.T) {
 func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnection getConnectionFunc, policy map[string]interface{}) {
 	rand := randSeq(9)
 	domain := "example.com"
+	testRoleName := "test-import"
 
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -176,7 +177,7 @@ func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnec
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/test-import",
+		Path:      "roles/"+testRoleName,
 		Storage:   storage,
 		Data:      roleData,
 	})
@@ -187,6 +188,9 @@ func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnec
 		t.Fatal(err)
 	}
 
+	policy[policyFieldImportRoles] = testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+
 	// issue particular cert
 	singleCN := rand + "-import." + domain
 	certData := map[string]interface{}{
@@ -194,7 +198,7 @@ func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnec
 	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "issue/test-import",
+		Path:      "issue/"+testRoleName,
 		Storage:   storage,
 		Data:      certData,
 	})
@@ -412,8 +416,14 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 
 	var certs_list []string
 	//Importing certs in multiple roles
+	var randRoles []string
+
 	for i := 1; i <= 3; i++ {
-		randRole := rand + strconv.Itoa(i) + "-role"
+		r := rand + strconv.Itoa(i) + "-role"
+		randRoles = append(randRoles, r)
+	}
+	for _,randRole := range randRoles {
+
 		log.Println("Creating certs for role", randRole)
 		// create a role entry
 		roleData := getTPPRoleConfig(domain, 2, 5)
@@ -430,7 +440,13 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+	}
 
+	//add created roles to policy
+	venafiTestTPPConfigAllAllow[policyFieldImportRoles] = strings.Join(randRoles, ",")
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, defaultVenafiPolicyName)
+
+	for _,randRole := range randRoles {
 		//issue some certs
 
 		for j := 1; j < 10; j++ {
@@ -505,6 +521,8 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 }
 
 func TestCleanupImportToTPP(t *testing.T) {
+	//This is a test which purpose is to run under debug mode. Usually it should be skipped
+	t.Skip()
 	// create the backend
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
@@ -524,4 +542,139 @@ func TestCleanupImportToTPP(t *testing.T) {
 
 	//cleanup non existant role. no problem should occur
 	b.cleanupImportToTPP("test-role", ctx, req)
+}
+
+func Test_fillImportQueueTask(t *testing.T) {
+	//This is a test which purpose is to run in debug. Usually it should be skipped
+	//t.Skip()
+
+	var getRoleData getRoleDataFunc = getTPPRoleConfig
+	policy := venafiTestTPPConfigAllAllow
+
+	rand := randSeq(9)
+	domain := "example.com"
+	testRoleName := "test-import"
+
+
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := Backend(config)
+	err := b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+
+	// generate root
+	rootData := map[string]interface{}{
+		"common_name":  "ca.some.domain",
+		"organization": "Venafi Inc.",
+		"ou":           "Integration",
+		"locality":     "Salt Lake",
+		"province":     "Utah",
+		"country":      "US",
+		"ttl":          "6h",
+	}
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data:      rootData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// config urls
+	urlsData := map[string]interface{}{
+		"issuing_certificates":    "http://127.0.0.1:8200/v1/pki/ca",
+		"crl_distribution_points": "http://127.0.0.1:8200/v1/pki/crl",
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/urls",
+		Storage:   storage,
+		Data:      urlsData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to config urls, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create a role entry
+	roleData := getRoleData(domain, 2, 2)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/"+testRoleName,
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	policy[policyFieldImportRoles] = testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+
+	// issue particular cert
+	singleCN := rand + "-import." + domain
+	certData := map[string]interface{}{
+		"common_name": singleCN,
+	}
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/"+testRoleName,
+		Storage:   storage,
+		Data:      certData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to issue a cert, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b.fillImportQueueTask(testRoleName, defaultVenafiPolicyName, 5, storage, config)
+
+	//retrieve imported certificate
+	//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
+	log.Println("Trying to retrieve requested certificate", singleCN)
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
+	req := &certificate.Request{}
+	req.PickupID = "\\VED\\Policy\\devops\\vcert\\" + singleCN
+	req.ChainOption = certificate.ChainOptionIgnore
+	//req.Thumbprint = "111111"
+
+	cl := getTPPConnection(t)
+	pcc, err := cl.RetrieveCertificate(req)
+	if err != nil {
+		t.Fatalf("could not retrieve certificate using requestId %s: %s", req.PickupID, err)
+	}
+	//log.Printf("Got certificate\n:%s",pp(pcc.Certificate))
+	block, _ := pem.Decode([]byte(pcc.Certificate))
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatalf("Error parsing cert: %s", err)
+	}
+	if cert.Subject.CommonName != singleCN {
+		t.Fatalf("Incorrect subject common name: expected %v, got %v", cert.Subject.CommonName, singleCN)
+	} else {
+		log.Printf("Subject common name: expected %v, got %v", cert.Subject.CommonName, singleCN)
+	}
 }

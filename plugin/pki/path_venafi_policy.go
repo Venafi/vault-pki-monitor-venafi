@@ -263,6 +263,9 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 			TPPUser:         data.Get("tpp_user").(string),
 			TrustBundleFile: data.Get("trust_bundle_file").(string),
 		},
+		AutoRefreshInterval: int64(data.Get("auto_refresh_interval").(int)),
+		VenafiImportTimeout: data.Get("venafi_import_timeout").(int),
+		VenafiImportWorkers: data.Get("venafi_import_workers").(int),
 	}
 	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
 	venafiPolicyConfig.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)

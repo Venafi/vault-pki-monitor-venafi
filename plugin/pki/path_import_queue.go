@@ -94,7 +94,7 @@ func (b *backend) pathUpdateImportQueue(ctx context.Context, req *logical.Reques
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) fillImportQueueTask(roleName string, noOfWorkers int, storage logical.Storage, conf *logical.BackendConfig) {
+func (b *backend) fillImportQueueTask(roleName string, policyName string, noOfWorkers int, storage logical.Storage, conf *logical.BackendConfig) {
 	ctx := context.Background()
 	jobs := make(chan Job, 100)
 	replicationState := conf.System.ReplicationState()
@@ -141,6 +141,7 @@ func (b *backend) fillImportQueueTask(roleName string, noOfWorkers int, storage 
 			entry:      entry,
 			importPath: importPath,
 			roleName:   roleName,
+			policyName: policyName,
 			storage:    storage,
 			ctx:        ctx,
 		}
@@ -191,7 +192,7 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 		}
 		b.taskStorage.register(fillQueuePrefix+roleName, func() {
 			log.Printf("run queue filler %s", roleName)
-			b.fillImportQueueTask(roleName, policyConfig.VenafiImportWorkers, storage, conf)
+			b.fillImportQueueTask(roleName, role.VenafiImportPolicy, policyConfig.VenafiImportWorkers, storage, conf)
 		}, 1, time.Duration(policyConfig.VenafiImportTimeout)*time.Second)
 
 	}
