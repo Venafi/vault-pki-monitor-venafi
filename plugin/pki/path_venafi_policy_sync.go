@@ -137,14 +137,14 @@ func (b *backend) syncPolicyEnforcementAndRoleDefaults(storage logical.Storage, 
 		}
 
 		if len(rolesList.defaultsRoles) == 0 {
-			log.Printf("%s No roles found for refreshing defaults in policy %s", logPrefixVenafiPolicyDefaults, policyName)
+			log.Printf("%s No roles found for refreshing defaults in policy %s", logPrefixVenafiRoleyDefaults, policyName)
 			continue
 		}
 
 		for _, roleName := range rolesList.defaultsRoles {
 			log.Printf("Synchronizing role %s", roleName)
               msg := b.synchronizeRoleDefaults(ctx, storage, roleName, policyName)
-              	log.Printf("%s %s", logPrefixVenafiPolicyDefaults, msg)
+              	log.Printf("%s %s", logPrefixVenafiRoleyDefaults, msg)
 		}
 
 		//set new last updated

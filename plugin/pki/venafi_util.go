@@ -13,8 +13,8 @@ import (
 const (
 	logPrefixVenafiImport            = "VENAFI_IMPORT: "
 	logPrefixVenafiPolicyEnforcement = "VENAFI_POLICY_ENFORCEMENT: "
-	logPrefixVenafiPolicyDefaults    = "VENAFI_POLICY_DEFAULTS: "
-	logPrefixVenafiScheduler = "VENAFI_SCHEDULER: "
+	logPrefixVenafiRoleyDefaults     = "VENAFI_POLICY_DEFAULTS: "
+	logPrefixVenafiScheduler         = "VENAFI_SCHEDULER: "
 )
 
 const msg_denied_by_policy = "certificate issue should be denied by policy, %#v"
