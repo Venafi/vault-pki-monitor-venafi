@@ -66,26 +66,26 @@ func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Req
 }
 
 func (b *backend) syncRoleWithVenafiPolicyRegister(storage logical.Storage, conf *logical.BackendConfig) {
-	log.Println("registering policy sync controller")
+	log.Printf("%s registering policy sync controller", logPrefixVenafiPolicyEnforcement)
 	b.taskStorage.register("policy-sync-controller", func() {
-		err := b.syncRoleWithVenafiPolicy(storage, conf)
+		err := b.syncPolicyEnforcementAndRoleDefaults(storage, conf)
 		if err != nil {
-			log.Printf("%s", err)
+			log.Printf("%s %s", logPrefixVenafiPolicyEnforcement, err)
 		}
 	}, 1, time.Second*15)
 }
 
-func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logical.BackendConfig) (err error) {
+func (b *backend) syncPolicyEnforcementAndRoleDefaults(storage logical.Storage, conf *logical.BackendConfig) (err error) {
 	replicationState := conf.System.ReplicationState()
 	//Checking if we are on master or on the stanby Vault server
 	isSlave := !(conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) ||
 		replicationState.HasState(hconsts.ReplicationDRSecondary) ||
 		replicationState.HasState(hconsts.ReplicationPerformanceStandby)
 	if isSlave {
-		log.Println("We're on slave. Sleeping")
+		log.Printf("%s We're on slave. Sleeping", logPrefixVenafiPolicyEnforcement)
 		return
 	}
-	log.Println("We're on master. Starting to synchronise policy")
+	log.Printf("%s We're on master. Starting to synchronise policy", logPrefixVenafiPolicyEnforcement)
 
 	ctx := context.Background()
 	//Get policy list for enforcement sync
@@ -106,16 +106,16 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 
 		policyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policyName)
 		if err != nil {
-			log.Printf("Error getting policy config for policy %s: %s", policyName, err)
+			log.Printf("%s Error getting policy config for policy %s: %s", logPrefixVenafiPolicyEnforcement, policyName, err)
 			continue
 		}
 
 		if policyConfig == nil {
-			log.Printf("Policy config for %s is nil. Skipping", policyName)
+			log.Printf("%s Policy config for %s is nil. Skipping", logPrefixVenafiPolicyEnforcement, policyName)
 			continue
 		}
 
-		log.Println("check last policy updated time")
+		log.Printf("%s check last policy updated time", logPrefixVenafiPolicyEnforcement)
 		timePassed := time.Now().Unix() - policyConfig.LastPolicyUpdateTime
 
 		//update only if needed
@@ -126,7 +126,7 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 		//Refresh Venafi policy regexes
 		err = b.refreshVenafiPolicyEnforcementContent(storage, policyName)
 		if err != nil {
-			log.Printf("Error  refreshing venafi policy content: %s", err)
+			log.Printf("%s Error  refreshing venafi policy content: %s", logPrefixVenafiPolicyEnforcement, err)
 			continue
 		}
 		//Refresh roles defaults
@@ -137,7 +137,7 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 		}
 
 		if len(rolesList.defaultsRoles) == 0 {
-			log.Printf("No roles found for refreshing defaults in policy %s", policyName)
+			log.Printf("%s No roles found for refreshing defaults in policy %s", logPrefixVenafiPolicyDefaults, policyName)
 			continue
 		}
 
