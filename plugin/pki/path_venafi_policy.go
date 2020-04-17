@@ -172,23 +172,23 @@ func (b *backend) refreshVenafiPolicyEnforcementContent(storage logical.Storage,
 		return fmt.Errorf("Policy config for %s is empty", policyName)
 	}
 
-	log.Printf("Auto refresh enabled for policy %s. Getting policy from Venafi", policyName)
+	log.Printf("%s Auto refresh enabled for policy %s. Getting policy from Venafi", logPrefixVenafiPolicyEnforcement, policyName)
 	policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
 	if err != nil {
 		return fmt.Errorf("Error getting policy %s from Venafi: %s", policyName, err)
 
 	}
 
-	log.Printf("Saving policy %s", policyName)
+	log.Printf("%s Saving policy %s", logPrefixVenafiPolicyEnforcement, policyName)
 	_, err = savePolicyEntry(policy, policyName, ctx, storage)
 	if err != nil {
-		return fmt.Errorf("Error saving policy: %s", err)
+		return fmt.Errorf("%s Error saving policy: %s", logPrefixVenafiPolicyEnforcement, err)
 
 	}
 
 	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+policyName, venafiPolicyConfig)
 	if err != nil {
-		return fmt.Errorf("Error converting policy config into JSON: %s", err)
+		return fmt.Errorf("%s Error converting policy config into JSON: %s", logPrefixVenafiPolicyEnforcement, err)
 
 	}
 	if err := storage.Put(ctx, jsonEntry); err != nil {
@@ -201,7 +201,7 @@ func (b *backend) refreshVenafiPolicyEnforcementContent(storage logical.Storage,
 
 func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
-	log.Printf("Trying to read policy for config %s", name)
+	log.Printf("%s Trying to read policy for config %s", logPrefixVenafiPolicyEnforcement, name)
 
 	if len(name) == 0 {
 		return logical.ErrorResponse("Non config specified or wrong config path name"), nil
@@ -217,7 +217,7 @@ func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.
 
 	var policy venafiPolicyEntry
 	if err := entry.DecodeJSON(&policy); err != nil {
-		log.Printf("error reading Venafi policy configuration: %s", err)
+		log.Printf("%s error reading Venafi policy configuration: %s", logPrefixVenafiPolicyEnforcement, err)
 		return nil, err
 	}
 
@@ -251,7 +251,7 @@ func (b *backend) pathUpdateVenafiPolicyContent(ctx context.Context, req *logica
 func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, err error) {
 	name := data.Get("name").(string)
 
-	log.Printf("Write policy endpoint configuration into storage")
+	log.Printf("%s Write policy endpoint configuration into storage", logPrefixVenafiPolicyEnforcement)
 	venafiPolicyConfig := &venafiPolicyConfigEntry{
 		venafiConnectionConfig: venafiConnectionConfig{
 			TPPURL:          data.Get("tpp_url").(string),
@@ -282,9 +282,8 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	log.Println("Updating roles policy attributes")
+	log.Printf("%s Updating roles policy attributes", logPrefixVenafiPolicyEnforcement)
 
-	//TODO: check that role have only only one policy
 	for _, roleType := range []string{policyFieldEnforcementRoles, policyFieldDefaultsRoles, policyFieldImportRoles} {
 		for _, roleName := range data.Get(roleType).([]string) {
 			role, err := b.getRole(ctx, req.Storage, roleName)
@@ -314,7 +313,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	log.Printf("Geting policy from zone %s", data.Get("zone").(string))
+	log.Printf("%s Geting policy from zone %s", logPrefixVenafiPolicyEnforcement, data.Get("zone").(string))
 	policy, err := b.getPolicyFromVenafi(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
@@ -352,7 +351,7 @@ func savePolicyEntry(policy *endpoint.Policy, name string, ctx context.Context, 
 		AllowKeyReuse:            policy.AllowKeyReuse,
 	}
 
-	log.Printf("Saving policy into Vault storage")
+	log.Printf("%s Saving policy into Vault storage", logPrefixVenafiPolicyEnforcement)
 	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+name+"/policy", policyEntry)
 	if err != nil {
 		return nil, err
@@ -401,13 +400,13 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 }
 
 func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Storage, policyConfig string) (policy *endpoint.Policy, err error) {
-	log.Printf("Creating Venafi client")
+	log.Printf("%s Creating Venafi client", logPrefixVenafiPolicyEnforcement)
 	cl, err := b.ClientVenafi(ctx, storage, policyConfig)
 	if err != nil {
 		return
 	}
 
-	log.Printf("Getting policy from Venafi endpoint")
+	log.Printf("%s Getting policy from Venafi endpoint", logPrefixVenafiPolicyEnforcement)
 
 	policy, err = cl.ReadPolicyConfiguration()
 	if err != nil {
@@ -423,7 +422,7 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Stora
 
 func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
 	name := data.Get("name").(string)
-	log.Printf("Trying to read policy for config %s", name)
+	log.Printf("%s Trying to read policy for config %s", logPrefixVenafiPolicyEnforcement, name)
 
 	if len(name) == 0 {
 		return logical.ErrorResponse("No config specified or wrong config path name"), nil
@@ -441,7 +440,7 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 	var config venafiPolicyConfigEntry
 
 	if err := entry.DecodeJSON(&config); err != nil {
-		log.Printf("error reading Venafi policy configuration: %s", err)
+		log.Printf("%s error reading Venafi policy configuration: %s", logPrefixVenafiPolicyEnforcement, err)
 		return nil, err
 	}
 
@@ -561,10 +560,10 @@ func checkAgainstVenafiPolicy(
 	}
 	if entry == nil {
 		if venafiPolicyDenyAll {
-			if strings.Contains(req.Path, "root/generate") {
-				//internal certificate won't output error response
-				log.Println("policy data is nil. You need configure Venafi policy to proceed")
-			}
+			//TODO: Can not understand why I added this if here. Probably shiuld be removed
+			//if strings.Contains(req.Path, "root/generate") {
+			//	log.Println("policy data is nil. You need configure Venafi policy to proceed")
+			//}
 			return fmt.Errorf("policy data is nil. You need configure Venafi policy to proceed")
 		} else {
 			return nil
@@ -574,7 +573,7 @@ func checkAgainstVenafiPolicy(
 	var policy venafiPolicyEntry
 
 	if err := entry.DecodeJSON(&policy); err != nil {
-		log.Printf("error reading Venafi policy configuration: %s", err)
+		log.Printf("%s error reading Venafi policy configuration: %s", logPrefixVenafiPolicyEnforcement, err)
 		return err
 	}
 	entry, err = req.Storage.Get(ctx, venafiPolicyPath+policyConfigPath)
@@ -583,12 +582,12 @@ func checkAgainstVenafiPolicy(
 	}
 	var policyConfig venafiPolicyConfigEntry
 	if err := entry.DecodeJSON(&policyConfig); err != nil {
-		log.Printf("error reading Venafi policy configuration: %s", err)
+		log.Printf("%s error reading Venafi policy configuration: %s", logPrefixVenafiPolicyEnforcement, err)
 		return err
 	}
 
 	if csr != nil {
-		log.Printf("Checking CSR against policy %s", policyConfigPath)
+		log.Printf("%s Checking CSR against policy %s", logPrefixVenafiPolicyEnforcement, policyConfigPath)
 		if isCA {
 			if len(csr.EmailAddresses) != 0 || len(csr.DNSNames) != 0 || len(csr.IPAddresses) != 0 || len(csr.URIs) != 0 {
 				//workaround for setting SAN if CA have normal domain in CN
@@ -646,7 +645,7 @@ func checkAgainstVenafiPolicy(
 			if ok {
 				keyValid = checkKey("rsa", pubkey.Size()*8, "", policy.AllowedKeyConfigurations)
 			} else {
-				log.Println("invalid key in csr")
+				log.Printf("%s invalid key in csr", logPrefixVenafiPolicyEnforcement)
 			}
 		} else if csr.PublicKeyAlgorithm == x509.ECDSA {
 			pubkey, ok := csr.PublicKey.(*ecdsa.PublicKey)
@@ -658,7 +657,7 @@ func checkAgainstVenafiPolicy(
 			return fmt.Errorf("key type not compatible vith Venafi policies")
 		}
 	} else {
-		log.Printf("Checking creation bundle against policy %s", policyConfigPath)
+		log.Printf("%s Checking creation bundle against policy %s", logPrefixVenafiPolicyEnforcement, policyConfigPath)
 
 		if isCA {
 			if len(email) != 0 || len(sans) != 0 || len(ipAddresses) != 0 {
