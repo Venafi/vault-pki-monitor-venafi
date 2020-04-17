@@ -209,7 +209,7 @@ func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnec
 		t.Fatal(err)
 	}
 	//Wait until certificate will be imported
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 	certText := resp.Data["certificate"].(string)
 	thumbprint := calcThumbprint(certText)
 	//retrieve imported certificate
