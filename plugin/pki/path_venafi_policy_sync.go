@@ -124,7 +124,7 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 		}
 
 		//Refresh Venafi policy regexes
-		err = b.refreshVenafiPolicyContent(storage, policyName)
+		err = b.refreshVenafiPolicyEnforcementContent(storage, policyName)
 		if err != nil {
 			log.Printf("Error  refreshing venafi policy content: %s", err)
 			continue
@@ -142,74 +142,9 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 		}
 
 		for _, roleName := range rolesList.defaultsRoles {
-			//	Read previous role parameters
-			pkiRoleEntry, err := b.getPKIRoleEntry(ctx, storage, roleName)
-			if err != nil {
-				log.Printf("%s", err)
-				continue
-			}
-
-			if pkiRoleEntry == nil {
-				log.Printf("PKI role %s is empty or does not exist", roleName)
-				continue
-			}
-
-			//Get Venafi policy in entry format
-			if pkiRoleEntry.VenafiDefaultsPolicy == "" {
-				continue
-			}
-
-			entry, err := storage.Get(ctx, venafiPolicyPath+policyName)
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-
-			if entry == nil {
-				log.Println("entry is nil")
-				continue
-			}
-
-			var venafiConfig venafiConnectionConfig
-			if err := entry.DecodeJSON(&venafiConfig); err != nil {
-				log.Printf("error reading Venafi policy configuration: %s", err)
-				continue
-			}
-
-			venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, policyName,
-				venafiConfig.Zone)
-			if err != nil {
-				log.Printf("%s", err)
-				continue
-			}
-
-			//  Replace PKI entry with Venafi policy values
-			replacePKIValue(&pkiRoleEntry.OU, venafiPolicyEntry.OU)
-			replacePKIValue(&pkiRoleEntry.Organization, venafiPolicyEntry.Organization)
-			replacePKIValue(&pkiRoleEntry.Country, venafiPolicyEntry.Country)
-			replacePKIValue(&pkiRoleEntry.Locality, venafiPolicyEntry.Locality)
-			replacePKIValue(&pkiRoleEntry.Province, venafiPolicyEntry.Province)
-			replacePKIValue(&pkiRoleEntry.StreetAddress, venafiPolicyEntry.StreetAddress)
-			replacePKIValue(&pkiRoleEntry.PostalCode, venafiPolicyEntry.PostalCode)
-
-			//does not have to configure the role to limit domains
-			// because the Venafi policy already constrains that area
-			pkiRoleEntry.AllowAnyName = true
-			pkiRoleEntry.AllowedDomains = []string{}
-			pkiRoleEntry.AllowSubdomains = true
-			//TODO: we need to sync key settings as well. But before it we need to add key type to zone configuration
-			//in vcert SDK
-
-			// Put new entry
-			jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, pkiRoleEntry)
-			if err != nil {
-				log.Printf("Error creating json entry for storage: %s", err)
-				continue
-			}
-			if err := storage.Put(ctx, jsonEntry); err != nil {
-				log.Printf("Error putting entry to storage: %s", err)
-				continue
-			}
+			log.Printf("Synchronizing role %s", roleName)
+              msg := b.synchronizeRoleDefaults(ctx, storage, roleName, policyName)
+              	log.Printf("%s %s", logPrefixVenafiPolicyDefaults, msg)
 		}
 
 		//set new last updated
@@ -228,6 +163,71 @@ func (b *backend) syncRoleWithVenafiPolicy(storage logical.Storage, conf *logica
 	}
 
 	return err
+}
+
+func (b *backend) synchronizeRoleDefaults(ctx context.Context, storage logical.Storage, roleName string, policyName string, ) (msg string) {
+	//	Read previous role parameters
+	pkiRoleEntry, err := b.getPKIRoleEntry(ctx, storage, roleName)
+	if err != nil {
+		return fmt.Sprintf("%s", err)
+	}
+
+	if pkiRoleEntry == nil {
+		return fmt.Sprintf("PKI role %s is empty or does not exist", roleName)
+	}
+
+	//Get Venafi policy in entry format
+	if pkiRoleEntry.VenafiDefaultsPolicy == "" {
+		return fmt.Sprintf("role %s do not have venafi_defaults_policy attribute", roleName)
+	}
+
+	entry, err := storage.Get(ctx, venafiPolicyPath+policyName)
+	if err != nil {
+		return fmt.Sprintf(err.Error())
+	}
+
+	if entry == nil {
+		return fmt.Sprintf("entry is nil")
+	}
+
+	var venafiConfig venafiConnectionConfig
+	if err := entry.DecodeJSON(&venafiConfig); err != nil {
+		return fmt.Sprintf("error reading Venafi policy configuration: %s", err)
+	}
+
+	venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, policyName,
+		venafiConfig.Zone)
+	if err != nil {
+		return fmt.Sprintf("%s", err)
+	}
+
+	//  Replace PKI entry with Venafi policy values
+	replacePKIValue(&pkiRoleEntry.OU, venafiPolicyEntry.OU)
+	replacePKIValue(&pkiRoleEntry.Organization, venafiPolicyEntry.Organization)
+	replacePKIValue(&pkiRoleEntry.Country, venafiPolicyEntry.Country)
+	replacePKIValue(&pkiRoleEntry.Locality, venafiPolicyEntry.Locality)
+	replacePKIValue(&pkiRoleEntry.Province, venafiPolicyEntry.Province)
+	replacePKIValue(&pkiRoleEntry.StreetAddress, venafiPolicyEntry.StreetAddress)
+	replacePKIValue(&pkiRoleEntry.PostalCode, venafiPolicyEntry.PostalCode)
+
+	//does not have to configure the role to limit domains
+	// because the Venafi policy already constrains that area
+	pkiRoleEntry.AllowAnyName = true
+	pkiRoleEntry.AllowedDomains = []string{}
+	pkiRoleEntry.AllowSubdomains = true
+	//TODO: we need to sync key settings as well. But before it we need to add key type to zone configuration
+	//in vcert SDK
+
+	// Put new entry
+	jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, pkiRoleEntry)
+	if err != nil {
+		return fmt.Sprintf("Error creating json entry for storage: %s", err)
+	}
+	if err := storage.Put(ctx, jsonEntry); err != nil {
+		return fmt.Sprintf("Error putting entry to storage: %s", err)
+	}
+
+	return fmt.Sprintf("finished synchronizing role %s", roleName)
 }
 
 func replacePKIValue(original *[]string, zone []string) {

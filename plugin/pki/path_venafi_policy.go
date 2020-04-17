@@ -159,7 +159,7 @@ func pathVenafiPolicyList(b *backend) *framework.Path {
 	return ret
 }
 
-func (b *backend) refreshVenafiPolicyContent(storage logical.Storage, policyName string) (err error) {
+func (b *backend) refreshVenafiPolicyEnforcementContent(storage logical.Storage, policyName string) (err error) {
 
 	ctx := context.Background()
 
