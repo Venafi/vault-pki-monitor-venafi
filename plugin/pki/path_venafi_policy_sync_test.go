@@ -91,7 +91,7 @@ func TestSyncRoleWithTPPPolicy(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	testRoleName := "test-venafi-role"
 	config.StorageView = storage
-
+	policy := copyMap(policyTPPData2)
 	b := Backend(config)
 	err := b.Setup(context.Background(), config)
 	if err != nil {
@@ -112,7 +112,8 @@ func TestSyncRoleWithTPPPolicy(t *testing.T) {
 	}
 
 	//write TPP policy
-	writePolicy(b, storage, policyTPPData2, t, defaultVenafiPolicyName)
+	policy[policyFieldDefaultsRoles] = testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
 	ctx := context.Background()
 	err = b.syncPolicyEnforcementAndRoleDefaults(storage, config)
