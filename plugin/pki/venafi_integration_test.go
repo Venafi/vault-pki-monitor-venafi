@@ -28,7 +28,7 @@ func TestAllVenafiIntegrations(t *testing.T) {
 	*/
 	rand := randSeq(5)
 	domain := "example.com"
-	policy := venafiTestTPPConfigAllAllow
+	policy := copyMap(venafiTestTPPConfigAllAllow)
 
 	// create the backend
 	config := logical.TestBackendConfig()

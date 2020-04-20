@@ -106,11 +106,11 @@ func calcThumbprint(cert string) string {
 	return strings.ToUpper(fmt.Sprintf("%x", buf))
 }
 func TestBackend_PathImportToTPP(t *testing.T) {
-	policy := venafiTestTPPConfigAllAllow
+	policy := copyMap(venafiTestTPPConfigAllAllow)
 	testBackend_pathImport(t, getTPPRoleConfig, getTPPConnection, policy)
 }
 func TestBackend_PathImportToCloud(t *testing.T) {
-	policy := venafiTestTPPConfigAllAllow
+	policy := copyMap(venafiTestCloudConfigAllAllow)
 	testBackend_pathImport(t, getCloudRoleConfig, getCloudConnection, policy)
 }
 func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnection getConnectionFunc, policy map[string]interface{}) {
@@ -243,7 +243,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 	rand := randSeq(9)
 	domain := "example.com"
 	testRoleName := "test-import"
-	policy := venafiTestTPPConfigAllAllow
+	policy := copyMap(venafiTestTPPConfigAllAllow)
 
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -372,7 +372,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 	rand := randSeq(5)
 	domain := "example.com"
-	policy := venafiTestTPPConfigAllAllow
+	policy := copyMap(venafiTestTPPConfigAllAllow)
 
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -560,7 +560,7 @@ func Test_fillImportQueueTask(t *testing.T) {
 	//t.Skip()
 
 	var getRoleData getRoleDataFunc = getTPPRoleConfig
-	policy := venafiTestTPPConfigAllAllow
+	policy := copyMap(venafiTestTPPConfigAllAllow)
 
 	rand := randSeq(9)
 	domain := "example.com"
