@@ -240,6 +240,8 @@ func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnec
 func TestBackend_PathImportToTPPTwice(t *testing.T) {
 	rand := randSeq(9)
 	domain := "example.com"
+	testRoleName := "test-import"
+	policy := venafiTestTPPConfigAllAllow
 
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -252,7 +254,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, defaultVenafiPolicyName)
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -297,7 +299,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/test-import",
+		Path:      "roles/" + testRoleName,
 		Storage:   storage,
 		Data:      roleData,
 	})
@@ -308,6 +310,9 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	policy[policyFieldImportRoles] = testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+
 	// issue particular cert
 	singleCN := rand + "twice-import." + domain
 	certData := map[string]interface{}{
@@ -317,7 +322,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 	for i := 1; i <= 3; i++ {
 		resp, err = b.HandleRequest(context.Background(), &logical.Request{
 			Operation: logical.UpdateOperation,
-			Path:      "issue/test-import",
+			Path:      "issue/" + testRoleName,
 			Storage:   storage,
 			Data:      certData,
 		})
@@ -328,7 +333,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 			t.Fatal(err)
 		}
 		//Wait until certificate will be imported
-		time.Sleep(5 * time.Second)
+		time.Sleep(25 * time.Second)
 
 		//retrieve imported certificate
 		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"

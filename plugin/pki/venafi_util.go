@@ -5,7 +5,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/logical"
-	"log"
 	"os"
 	"testing"
 )
@@ -183,7 +182,7 @@ func makeVenafiTPPConfig() (domain string, policyData map[string]interface{}) {
 }
 
 func writePolicy(b *backend, storage logical.Storage, policyData map[string]interface{}, t *testing.T, policyName string) *logical.Response {
-	log.Println("Writing Venafi policy configuration")
+	t.Log("Writing Venafi policy configuration")
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      venafiPolicyPath + policyName,

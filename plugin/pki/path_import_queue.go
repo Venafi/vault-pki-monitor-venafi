@@ -153,12 +153,14 @@ func (b *backend) fillImportQueueTask(roleName string, policyName string, noOfWo
 
 func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConfig) {
 
+	log.Printf("%s starting importcontroler", logPrefixVenafiImport)
 	b.taskStorage.register("importcontroler", func() {
 		b.controlImportQueue(storage, conf)
 	}, 1, time.Second*1)
 }
 
 func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.BackendConfig) {
+	log.Printf("%s running control import queue", logPrefixVenafiImport)
 	ctx := context.Background()
 	const fillQueuePrefix = "fillqueue-"
 	roles, err := storage.List(ctx, "role/")

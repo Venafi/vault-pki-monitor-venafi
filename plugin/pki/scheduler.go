@@ -41,7 +41,7 @@ func (s *taskStorageStruct) register(name string, f func(), count int, interval 
 	task := backgroundTask{name: name, f: f, workers: int64(count), interval: interval}
 	for i := range s.tasks {
 		if s.tasks[i].name == task.name {
-			log.Printf("duplicated task %v", name)
+			log.Printf("%s duplicated task %v", logPrefixVenafiScheduler, name)
 			return
 		}
 	}
@@ -80,7 +80,7 @@ func (s *taskStorageStruct) loop() {
 				defer func(counter *int64) {
 					r := recover()
 					if r != nil {
-						log.Printf("job %s failed. recover: %v\n", currentTask.name, r)
+						log.Printf("%s job %s failed. recover: %v\n", logPrefixVenafiScheduler, currentTask.name, r)
 						//todo: better log
 					}
 					atomic.AddInt64(counter, -1)

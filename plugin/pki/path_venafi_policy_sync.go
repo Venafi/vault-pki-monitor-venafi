@@ -143,8 +143,8 @@ func (b *backend) syncPolicyEnforcementAndRoleDefaults(storage logical.Storage, 
 
 		for _, roleName := range rolesList.defaultsRoles {
 			log.Printf("Synchronizing role %s", roleName)
-              msg := b.synchronizeRoleDefaults(ctx, storage, roleName, policyName)
-              	log.Printf("%s %s", logPrefixVenafiRoleyDefaults, msg)
+			msg := b.synchronizeRoleDefaults(ctx, storage, roleName, policyName)
+			log.Printf("%s %s", logPrefixVenafiRoleyDefaults, msg)
 		}
 
 		//set new last updated
@@ -165,7 +165,7 @@ func (b *backend) syncPolicyEnforcementAndRoleDefaults(storage logical.Storage, 
 	return err
 }
 
-func (b *backend) synchronizeRoleDefaults(ctx context.Context, storage logical.Storage, roleName string, policyName string, ) (msg string) {
+func (b *backend) synchronizeRoleDefaults(ctx context.Context, storage logical.Storage, roleName string, policyName string) (msg string) {
 	//	Read previous role parameters
 	pkiRoleEntry, err := b.getPKIRoleEntry(ctx, storage, roleName)
 	if err != nil {
