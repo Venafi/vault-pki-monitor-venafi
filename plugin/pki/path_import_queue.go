@@ -165,7 +165,7 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 	const fillQueuePrefix = "fillqueue-"
 	roles, err := storage.List(ctx, "role/")
 	if err != nil {
-		log.Printf("%s Couldn't get list of roles %s", logPrefixVenafiImport, roles)
+		log.Printf("%s Couldn't get list of roles %s", logPrefixVenafiImport, err)
 		return
 	}
 
