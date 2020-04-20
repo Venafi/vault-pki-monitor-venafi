@@ -28,6 +28,7 @@ func TestAllVenafiIntegrations(t *testing.T) {
 	*/
 	rand := randSeq(5)
 	domain := "example.com"
+	policy := venafiTestTPPConfigAllAllow
 
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -40,7 +41,7 @@ func TestAllVenafiIntegrations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, defaultVenafiPolicyName)
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -109,8 +110,8 @@ func TestAllVenafiIntegrations(t *testing.T) {
 	}
 
 	//add created roles to policy
-	venafiTestTPPConfigAllAllow[policyFieldImportRoles] = strings.Join(randRoles, ",")
-	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, defaultVenafiPolicyName)
+	policy[policyFieldImportRoles] = strings.Join(randRoles, ",")
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
 	for _, randRole := range randRoles {
 		//issue some certs
