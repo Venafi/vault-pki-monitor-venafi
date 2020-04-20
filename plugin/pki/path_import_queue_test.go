@@ -256,6 +256,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	t.Log("Writing policy configuration before role")
 	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
 	// generate root
@@ -299,6 +300,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 	// create a role entry
 	roleData := getTPPRoleConfig(domain, 1, 2)
 
+	t.Log("creating a role entry")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + testRoleName,
@@ -312,6 +314,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	t.Log("Adding new role to policy configuration")
 	policy[policyFieldImportRoles] = testRoleName
 	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
