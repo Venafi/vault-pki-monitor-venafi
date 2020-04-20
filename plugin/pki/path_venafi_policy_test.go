@@ -475,7 +475,6 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 	//TODO: check that keys is list of [default second]
 
 	log.Println("Creating PKI role for policy second")
-	roleData["venafi_check_policy"] = "second"
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test-venafi-second-policy",

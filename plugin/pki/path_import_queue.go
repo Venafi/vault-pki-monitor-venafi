@@ -160,7 +160,7 @@ func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConf
 }
 
 func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.BackendConfig) {
-	log.Printf("%s running control import queue", logPrefixVenafiImport)
+	//log.Printf("%s running control import queue", logPrefixVenafiImport)
 	ctx := context.Background()
 	const fillQueuePrefix = "fillqueue-"
 	roles, err := storage.List(ctx, "role/")

@@ -141,6 +141,7 @@ func TestIntegrationSyncRoleWithPolicy(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	testRoleName := "test-venafi-role"
 	config.StorageView = storage
+	policy := copyMap(policyTPPData)
 
 	b := Backend(config)
 	err := b.Setup(context.Background(), config)
@@ -149,8 +150,8 @@ func TestIntegrationSyncRoleWithPolicy(t *testing.T) {
 	}
 
 	//write TPP policy
-	writePolicy(b, storage, policyTPPData, t, defaultVenafiPolicyName)
-	roleData["venafi_sync_policy"] = defaultVenafiPolicyName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -164,6 +165,9 @@ func TestIntegrationSyncRoleWithPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	policy[policyFieldDefaultsRoles] = testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
 	ctx := context.Background()
 
@@ -191,6 +195,7 @@ func TestSyncRoleWithCloudPolicy(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	testRoleName := "test-venafi-role"
 	config.StorageView = storage
+	policy := copyMap(policyCloudData)
 
 	b := Backend(config)
 	err := b.Setup(context.Background(), config)
@@ -199,8 +204,7 @@ func TestSyncRoleWithCloudPolicy(t *testing.T) {
 	}
 
 	//write TPP policy
-	writePolicy(b, storage, policyCloudData, t, defaultVenafiPolicyName)
-	roleData["venafi_sync_policy"] = defaultVenafiPolicyName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -214,6 +218,9 @@ func TestSyncRoleWithCloudPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	policy[policyFieldDefaultsRoles] = testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
 	ctx := context.Background()
 	err = b.syncPolicyEnforcementAndRoleDefaults(storage, config)
@@ -265,7 +272,6 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 
 	t.Log("Setting up second role")
 	writePolicy(b, storage, policyCloudData, t, "cloud-policy")
-	roleData["venafi_sync_policy"] = "cloud-policy"
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -311,11 +317,13 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 
 	t.Log("Setting up policy")
 
-	policyTPPData[policyFieldDefaultsRoles] = fmt.Sprintf("%s,%s", testRoleName, testRoleName+"-second")
-	writePolicy(b, storage, policyTPPData, t, "tpp-policy")
+	policy := copyMap(policyTPPData)
+	policy[policyFieldDefaultsRoles] = fmt.Sprintf("%s,%s", testRoleName, testRoleName+"-second")
+	writePolicy(b, storage, policy, t, "tpp-policy")
 
-	policyTPPData2[policyFieldDefaultsRoles] = testRoleName + "-fourth"
-	writePolicy(b, storage, policyTPPData2, t, "tpp2-policy")
+	policy2 := copyMap(policyTPPData2)
+	policy2[policyFieldDefaultsRoles] = testRoleName + "-fourth"
+	writePolicy(b, storage, policy2, t, "tpp2-policy")
 
 	ctx := context.Background()
 	err = b.syncPolicyEnforcementAndRoleDefaults(storage, config)
