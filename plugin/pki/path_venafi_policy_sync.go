@@ -183,11 +183,11 @@ func (b *backend) synchronizeRoleDefaults(ctx context.Context, storage logical.S
 
 	entry, err := storage.Get(ctx, venafiPolicyPath+policyName)
 	if err != nil {
-		return fmt.Sprintf(err.Error())
+		return fmt.Sprintf("%s", err)
 	}
 
 	if entry == nil {
-		return fmt.Sprintf("entry is nil")
+		return "entry is nil"
 	}
 
 	var venafiConfig venafiConnectionConfig
