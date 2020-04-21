@@ -203,7 +203,8 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
         tpp_password="password" \
         zone="DevOps\\Another policy" \
         trust_bundle_file="/opt/venafi/bundle.pem" \
-        roles="venafi-role2"
+        defaults_roles="venafi-role2" \
+        enforcement_roles="venafi-role2"
     ```
 
 1. Venafi policy can be cleared using `delete` operation on the *venafi-policy* path (useful if you want to see the
