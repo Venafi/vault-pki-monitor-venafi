@@ -548,13 +548,12 @@ func checkAgainstVenafiPolicy(
 	cn string,
 	ipAddresses, email, sans []string) error {
 
-	policyConfigPath := role.VenafiEnforcementPolicy
 	ctx := context.Background()
-	if policyConfigPath == "" {
-		policyConfigPath = defaultVenafiPolicyName
+	if role.VenafiEnforcementPolicy == "" {
+		role.VenafiEnforcementPolicy = defaultVenafiPolicyName
 	}
 
-	entry, err := req.Storage.Get(ctx, venafiPolicyPath+policyConfigPath+"/policy")
+	entry, err := req.Storage.Get(ctx, venafiPolicyPath+role.VenafiEnforcementPolicy+"/policy")
 	if err != nil {
 		return err
 	}
@@ -576,7 +575,7 @@ func checkAgainstVenafiPolicy(
 		log.Printf("%s error reading Venafi policy configuration: %s", logPrefixVenafiPolicyEnforcement, err)
 		return err
 	}
-	entry, err = req.Storage.Get(ctx, venafiPolicyPath+policyConfigPath)
+	entry, err = req.Storage.Get(ctx, venafiPolicyPath+role.VenafiEnforcementPolicy)
 	if err != nil {
 		return err
 	}
@@ -587,7 +586,7 @@ func checkAgainstVenafiPolicy(
 	}
 
 	if csr != nil {
-		log.Printf("%s Checking CSR against policy %s", logPrefixVenafiPolicyEnforcement, policyConfigPath)
+		log.Printf("%s Checking CSR against policy %s", logPrefixVenafiPolicyEnforcement, role.VenafiEnforcementPolicy)
 		if isCA {
 			if len(csr.EmailAddresses) != 0 || len(csr.DNSNames) != 0 || len(csr.IPAddresses) != 0 || len(csr.URIs) != 0 {
 				//workaround for setting SAN if CA have normal domain in CN
@@ -657,7 +656,7 @@ func checkAgainstVenafiPolicy(
 			return fmt.Errorf("key type not compatible vith Venafi policies")
 		}
 	} else {
-		log.Printf("%s Checking creation bundle against policy %s", logPrefixVenafiPolicyEnforcement, policyConfigPath)
+		log.Printf("%s Checking creation bundle against policy %s", logPrefixVenafiPolicyEnforcement, role.VenafiEnforcementPolicy)
 
 		if isCA {
 			if len(email) != 0 || len(sans) != 0 || len(ipAddresses) != 0 {
