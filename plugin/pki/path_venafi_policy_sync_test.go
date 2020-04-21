@@ -152,7 +152,6 @@ func TestIntegrationSyncRoleWithPolicy(t *testing.T) {
 	//write TPP policy
 	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
-
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + testRoleName,

@@ -284,33 +284,9 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 
 	log.Printf("%s Updating roles policy attributes", logPrefixVenafiPolicyEnforcement)
 
-	for _, roleType := range []string{policyFieldEnforcementRoles, policyFieldDefaultsRoles, policyFieldImportRoles} {
-		for _, roleName := range data.Get(roleType).([]string) {
-			role, err := b.getRole(ctx, req.Storage, roleName)
-			if err != nil {
-				return nil, err
-			}
-			if role == nil {
-				return nil, fmt.Errorf("role %s does not exists. can not add it to the attributes of policy %s", roleName, name)
-			}
-
-			switch roleType {
-			case policyFieldEnforcementRoles:
-				role.VenafiEnforcementPolicy = name
-			case policyFieldDefaultsRoles:
-				role.VenafiDefaultsPolicy = name
-			case policyFieldImportRoles:
-				role.VenafiImportPolicy = name
-			}
-
-			jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, role)
-			if err != nil {
-				return nil, err
-			}
-			if err := req.Storage.Put(ctx, jsonEntry); err != nil {
-				return nil, err
-			}
-		}
+	err = b.updateRolesPolicyAttributes(ctx, req, data, name)
+	if err != nil {
+		return nil, err
 	}
 
 	log.Printf("%s Geting policy from zone %s", logPrefixVenafiPolicyEnforcement, data.Get("zone").(string))
@@ -329,6 +305,40 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		Data: respData,
 	}, nil
 
+}
+
+func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.Request, data *framework.FieldData, name string) error {
+	//TODO: write test for it
+	//TODO: if role will be updated manually policy fields will become empty. Call this function from role update (need to replace field data)
+	for _, roleType := range []string{policyFieldEnforcementRoles, policyFieldDefaultsRoles, policyFieldImportRoles} {
+		for _, roleName := range data.Get(roleType).([]string) {
+			role, err := b.getRole(ctx, req.Storage, roleName)
+			if err != nil {
+				return err
+			}
+			if role == nil {
+				return fmt.Errorf("role %s does not exists. can not add it to the attributes of policy %s", roleName, name)
+			}
+
+			switch roleType {
+			case policyFieldEnforcementRoles:
+				role.VenafiEnforcementPolicy = name
+			case policyFieldDefaultsRoles:
+				role.VenafiDefaultsPolicy = name
+			case policyFieldImportRoles:
+				role.VenafiImportPolicy = name
+			}
+
+			jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, role)
+			if err != nil {
+				return err
+			}
+			if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func savePolicyEntry(policy *endpoint.Policy, name string, ctx context.Context, storage logical.Storage) (policyEntry *venafiPolicyEntry, err error) {

@@ -69,7 +69,7 @@ unset:
 #Developement server tasks
 dev_server: unset
 	pkill vault || echo "Vault server is not running"
-	vault server -log-level=debug -dev -config=vault-config.hcl
+	vault server -log-level=debug -dev -config=vault-config.hcl 
 
 dev: dev_build mount_dev
 
