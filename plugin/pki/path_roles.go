@@ -502,6 +502,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		PolicyIdentifiers:             data.Get("policy_identifiers").([]string),
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
 		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
+		Name:                          name,
 	}
 
 	otherSANs := data.Get("allowed_other_sans").([]string)
@@ -696,6 +697,8 @@ type roleEntry struct {
 
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
+
+	Name string `json:"name"`
 }
 
 func (r *roleEntry) ToResponseData() map[string]interface{} {
@@ -737,10 +740,6 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
 		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
-		//Role options added for Venafi Platform import
-		"venafi_import_policy":      r.VenafiImportPolicy,
-		"venafi_defaults_policy":    r.VenafiDefaultsPolicy,
-		"venafi_enforcement_policy": r.VenafiEnforcementPolicy,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength

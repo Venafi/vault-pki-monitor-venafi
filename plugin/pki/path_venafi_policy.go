@@ -340,7 +340,7 @@ type policyRoleMap struct {
 	Roles map[string]policyTypes `json:"roles"`
 }
 
-func getPolicyRoleMap(ctx context.Context, storage logical.Storage) (policyMap policyRoleMap,err error){
+func getPolicyRoleMap(ctx context.Context, storage logical.Storage) (policyMap policyRoleMap, err error) {
 	//TODO: write test for it
 	policyMap.Roles = make(map[string]policyTypes)
 
@@ -377,7 +377,7 @@ func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.
 				if data.Get(policyFieldCreateRole).(bool) {
 					return fmt.Errorf("role %s does not exists. can not add it to the attributes of policy %s", roleName, name)
 				} else {
-                   //TODO: create role here
+					//TODO: create role here
 					log.Println("Creating role", roleName)
 				}
 			}
@@ -565,19 +565,20 @@ func (b *backend) getRolesListForVenafiPolicy(ctx context.Context, storage logic
 		return
 	}
 
+	policyMap, err := getPolicyRoleMap(ctx, storage)
+	if err != nil {
+		return
+	}
 	for _, roleName := range roles {
-		role, err := b.getRole(ctx, storage, roleName)
-		if err != nil {
-			return rolesList, err
-		}
+
 		//If policy name is in one of role policy attributes append it to the roleList structure
-		if role.VenafiImportPolicy == policyName {
+		if policyMap.Roles[roleName].ImportPolicy == policyName {
 			rolesList.importRoles = append(rolesList.importRoles, roleName)
 		}
-		if role.VenafiEnforcementPolicy == policyName {
+		if policyMap.Roles[roleName].EnforcementPolicy == policyName {
 			rolesList.enforceRoles = append(rolesList.enforceRoles, roleName)
 		}
-		if role.VenafiDefaultsPolicy == policyName {
+		if policyMap.Roles[roleName].DefaultsPolicy == policyName {
 			rolesList.defaultsRoles = append(rolesList.defaultsRoles, roleName)
 		}
 	}
@@ -649,17 +650,28 @@ func checkAgainstVenafiPolicy(
 	ipAddresses, email, sans []string) error {
 
 	ctx := context.Background()
-	if role.VenafiEnforcementPolicy == "" {
-		role.VenafiEnforcementPolicy = defaultVenafiPolicyName
+
+	policyMap, err := getPolicyRoleMap(ctx, req.Storage)
+	if err != nil {
+		return err
 	}
 
-	entry, err := req.Storage.Get(ctx, venafiPolicyPath+role.VenafiEnforcementPolicy+"/policy")
+	if policyMap.Roles[role.Name].EnforcementPolicy == "" {
+
+	}
+
+	venafiEnforcementPolicy := policyMap.Roles[role.Name].EnforcementPolicy
+	if venafiEnforcementPolicy == "" {
+		venafiEnforcementPolicy = defaultVenafiPolicyName
+	}
+
+	entry, err := req.Storage.Get(ctx, venafiPolicyPath+venafiEnforcementPolicy+"/policy")
 	if err != nil {
 		return err
 	}
 	if entry == nil {
 		if venafiPolicyDenyAll {
-			//TODO: Can not understand why I added this if here. Probably shiuld be removed
+			//TODO: Can not understand why I added this if here. Probably should be removed
 			//if strings.Contains(req.Path, "root/generate") {
 			//	log.Println("policy data is nil. You need configure Venafi policy to proceed")
 			//}
@@ -675,7 +687,7 @@ func checkAgainstVenafiPolicy(
 		log.Printf("%s error reading Venafi policy configuration: %s", logPrefixVenafiPolicyEnforcement, err)
 		return err
 	}
-	entry, err = req.Storage.Get(ctx, venafiPolicyPath+role.VenafiEnforcementPolicy)
+	entry, err = req.Storage.Get(ctx, venafiPolicyPath+venafiEnforcementPolicy)
 	if err != nil {
 		return err
 	}
@@ -686,7 +698,7 @@ func checkAgainstVenafiPolicy(
 	}
 
 	if csr != nil {
-		log.Printf("%s Checking CSR against policy %s", logPrefixVenafiPolicyEnforcement, role.VenafiEnforcementPolicy)
+		log.Printf("%s Checking CSR against policy %s", logPrefixVenafiPolicyEnforcement, venafiEnforcementPolicy)
 		if isCA {
 			if len(csr.EmailAddresses) != 0 || len(csr.DNSNames) != 0 || len(csr.IPAddresses) != 0 || len(csr.URIs) != 0 {
 				//workaround for setting SAN if CA have normal domain in CN
@@ -756,7 +768,7 @@ func checkAgainstVenafiPolicy(
 			return fmt.Errorf("key type not compatible vith Venafi policies")
 		}
 	} else {
-		log.Printf("%s Checking creation bundle against policy %s", logPrefixVenafiPolicyEnforcement, role.VenafiEnforcementPolicy)
+		log.Printf("%s Checking creation bundle against policy %s", logPrefixVenafiPolicyEnforcement, venafiEnforcementPolicy)
 
 		if isCA {
 			if len(email) != 0 || len(sans) != 0 || len(ipAddresses) != 0 {

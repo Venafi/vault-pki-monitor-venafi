@@ -52,13 +52,18 @@ func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Req
 			continue
 		}
 
+		policyMap, err := getPolicyRoleMap(ctx, req.Storage)
+		if err != nil {
+			return
+		}
+
 		//Get Venafi policy in entry format
-		if pkiRoleEntry.VenafiDefaultsPolicy == "" {
+		if policyMap.Roles[roleName].DefaultsPolicy == "" {
 			continue
 		}
 
 		var entry []string
-		entry = append(entry, fmt.Sprintf("role: %s sync policy: %s", roleName, pkiRoleEntry.VenafiDefaultsPolicy))
+		entry = append(entry, fmt.Sprintf("role: %s sync policy: %s", roleName, policyMap.Roles[roleName].DefaultsPolicy))
 		entries = append(entries, entry...)
 
 	}
@@ -177,7 +182,11 @@ func (b *backend) synchronizeRoleDefaults(ctx context.Context, storage logical.S
 	}
 
 	//Get Venafi policy in entry format
-	if pkiRoleEntry.VenafiDefaultsPolicy == "" {
+	policyMap, err := getPolicyRoleMap(ctx, storage)
+	if err != nil {
+		return
+	}
+	if policyMap.Roles[roleName].DefaultsPolicy == "" {
 		return fmt.Sprintf("role %s do not have venafi_defaults_policy attribute", roleName)
 	}
 

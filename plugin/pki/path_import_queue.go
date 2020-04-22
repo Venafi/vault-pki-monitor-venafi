@@ -169,6 +169,12 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 		return
 	}
 
+	policyMap, err := getPolicyRoleMap(ctx, storage)
+	if err != nil {
+		log.Printf("Can get policy map: %s", err)
+		return
+	}
+
 	for i := range roles {
 		roleName := roles[i]
 		//Update role since it's settings may be changed
@@ -178,7 +184,7 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 			continue
 		}
 
-		if role.VenafiImportPolicy == "" {
+		if policyMap.Roles[roleName].ImportPolicy == "" {
 			//no import policy defined for role. Skipping
 			continue
 		}
@@ -187,14 +193,14 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 			continue
 		}
 
-		policyConfig, err := b.getVenafiPolicyConfig(ctx, storage, role.VenafiImportPolicy)
+		policyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policyMap.Roles[roleName].ImportPolicy)
 		if err != nil {
-			log.Printf("%s Error getting policy %v: %s\n Exiting.", logPrefixVenafiImport, role.VenafiImportPolicy, err)
+			log.Printf("%s Error getting policy %v: %s\n Exiting.", logPrefixVenafiImport, policyMap.Roles[roleName].ImportPolicy, err)
 			continue
 		}
 		b.taskStorage.register(fillQueuePrefix+roleName, func() {
 			log.Printf("%s run queue filler %s", logPrefixVenafiImport, roleName)
-			b.fillImportQueueTask(roleName, role.VenafiImportPolicy, policyConfig.VenafiImportWorkers, storage, conf)
+			b.fillImportQueueTask(roleName, policyMap.Roles[roleName].ImportPolicy, policyConfig.VenafiImportWorkers, storage, conf)
 		}, 1, time.Duration(policyConfig.VenafiImportTimeout)*time.Second)
 
 	}
