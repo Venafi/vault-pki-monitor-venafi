@@ -340,22 +340,31 @@ type policyRoleMap struct {
 	Roles map[string]policyTypes `json:"roles"`
 }
 
-func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.Request, data *framework.FieldData, name string) error {
+func getPolicyRoleMap(ctx context.Context, storage logical.Storage) (policyMap policyRoleMap,err error){
 	//TODO: write test for it
-
-	var policyMap policyRoleMap
 	policyMap.Roles = make(map[string]policyTypes)
 
-	entry, err := req.Storage.Get(ctx, venafiRolePolicyMapStorage)
+	entry, err := storage.Get(ctx, venafiRolePolicyMapStorage)
 	if err != nil {
-		return err
+		return policyMap, err
 	}
 
 	if entry != nil {
 		err = json.Unmarshal(entry.Value, &policyMap)
 		if err != nil {
-			return err
+			return policyMap, err
 		}
+	}
+
+	return policyMap, err
+}
+
+func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.Request, data *framework.FieldData, name string) error {
+	//TODO: write test for it
+
+	policyMap, err := getPolicyRoleMap(ctx, req.Storage)
+	if err != nil {
+		return err
 	}
 
 	for _, roleType := range []string{policyFieldEnforcementRoles, policyFieldDefaultsRoles, policyFieldImportRoles} {
@@ -377,13 +386,10 @@ func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.
 			switch roleType {
 			case policyFieldEnforcementRoles:
 				r.EnforcementPolicy = name
-				role.VenafiEnforcementPolicy = name
 			case policyFieldDefaultsRoles:
 				r.DefaultsPolicy = name
-				role.VenafiDefaultsPolicy = name
 			case policyFieldImportRoles:
 				r.ImportPolicy = name
-				role.VenafiImportPolicy = name
 			}
 
 			policyMap.Roles[roleName] = r

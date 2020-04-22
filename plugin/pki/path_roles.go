@@ -694,11 +694,6 @@ type roleEntry struct {
 	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
 	NotBeforeDuration             time.Duration `json:"not_before_duration" mapstructure:"not_before_duration"`
 
-	//Hidden role options added for Venafi Platform policies
-	VenafiImportPolicy      string `json:"venafi_import_policy"`
-	VenafiDefaultsPolicy    string `json:"venafi_defaults_policy"`
-	VenafiEnforcementPolicy string `json:"venafi_enforcement_policy"`
-
 	// Used internally for signing intermediates
 	AllowExpirationPastCA bool
 }
