@@ -383,6 +383,12 @@ func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.
 			}
 
 			r := policyTypes{}
+
+			//copy policy values before setting new value
+			r.EnforcementPolicy = policyMap.Roles[roleName].EnforcementPolicy
+			r.DefaultsPolicy = policyMap.Roles[roleName].DefaultsPolicy
+			r.ImportPolicy = policyMap.Roles[roleName].ImportPolicy
+
 			switch roleType {
 			case policyFieldEnforcementRoles:
 				r.EnforcementPolicy = name

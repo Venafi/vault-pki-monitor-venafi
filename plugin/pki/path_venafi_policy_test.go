@@ -203,6 +203,7 @@ func Test_pathShowVenafiPolicyMap(t *testing.T) {
 
 	policy[policyFieldDefaultsRoles] = ""
 	policy[policyFieldEnforcementRoles] = testRoleName + "-2"
+	policy[policyFieldImportRoles] = testRoleName
 	writePolicy(b, storage, policy, t, defaultVenafiPolicyName+"-2")
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -248,6 +249,11 @@ func Test_pathShowVenafiPolicyMap(t *testing.T) {
 		t.Fatalf("Policy should be %s but we have %s", want, have)
 	}
 
+	want = defaultVenafiPolicyName + "-2"
+	have = policyMap.Roles[testRoleName].ImportPolicy
+	if want != have {
+		t.Fatalf("Policy should be %s but we have %s", want, have)
+	}
 }
 
 //TODO: add test with empty organization
