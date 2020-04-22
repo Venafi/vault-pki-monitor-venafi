@@ -17,11 +17,13 @@ import (
 )
 
 const (
-	venafiPolicyPath            = "venafi-policy/"
+    venafiRolePolicyMapStorage = "venafi-role-policy-map"
+	venafiPolicyPath           = "venafi-policy/"
 	defaultVenafiPolicyName     = "default"
 	policyFieldEnforcementRoles = "enforcement_roles"
 	policyFieldDefaultsRoles    = "defaults_roles"
 	policyFieldImportRoles      = "import_roles"
+	venafiRolePolicyMapPath = "show-venafi-role-policy-map"
 )
 
 func pathVenafiPolicy(b *backend) *framework.Path {
@@ -161,7 +163,7 @@ func pathVenafiPolicyList(b *backend) *framework.Path {
 
 func pathVenafiPolicyMap(b *backend) *framework.Path {
 	ret := &framework.Path{
-		Pattern: "show-venafi-role-policy-map",
+		Pattern: venafiRolePolicyMapPath,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.pathShowVenafiPolicyMap,
 		},
@@ -334,8 +336,23 @@ type policyRoleMap struct {
 func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.Request, data *framework.FieldData, name string) error {
 	//TODO: write test for it
 	//TODO: if role will be updated manually policy fields will become empty. Call this function from role update (need to replace field data)
+
 	var policyMap policyRoleMap
 	policyMap.Roles = make(map[string]policyTypes)
+
+	entry, err := req.Storage.Get(ctx, venafiRolePolicyMapStorage)
+	if err != nil {
+		return err
+	}
+
+	if entry != nil {
+		err = json.Unmarshal(entry.Value, &policyMap)
+		if err != nil {
+			return err
+		}
+	}
+
+
 
 	for _, roleType := range []string{policyFieldEnforcementRoles, policyFieldDefaultsRoles, policyFieldImportRoles} {
 		for _, roleName := range data.Get(roleType).([]string) {
@@ -370,7 +387,7 @@ func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.
 				return err
 			}
 
-			jsonEntry, err = logical.StorageEntryJSON("venafi-role-policy-map", policyMap)
+			jsonEntry, err = logical.StorageEntryJSON(venafiRolePolicyMapStorage, policyMap)
 
 			if err != nil {
 				return err
@@ -593,22 +610,17 @@ func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) pathShowVenafiPolicyMap(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response,err error) {
-	entry, err := req.Storage.Get(ctx, "venafi-role-policy-map")
-	if err != nil {
-		return nil, err
-	}
-	policyMap := policyRoleMap{}
-	err = json.Unmarshal(entry.Value, &policyMap)
+	//TODO: test it!
+	entry, err := req.Storage.Get(ctx, venafiRolePolicyMapStorage)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("ENtry is %s", entry.Value)
 	response = &logical.Response{
 		Data: map[string]interface{}{},
 	}
 
-	//decodedEntry,_ := base64.StdEncoding.DecodeString(string(entry.Value))
+
 	response.Data["policy_map_json"] = entry.Value
 
 	return response, nil

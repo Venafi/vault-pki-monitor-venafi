@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
 	"strings"
@@ -131,6 +132,123 @@ func venafiPolicyWriteAndReadTest(t *testing.T, policyData map[string]interface{
 
 }
 
+func Test_pathShowVenafiPolicyMap(t *testing.T) {
+
+	policy := copyMap(policyCloudData)
+	testRoleName := "test-import"
+
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := Backend(config)
+	err := b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+
+	// create a role entry
+	roleData := map[string]interface{}{
+		"allowed_domains":  "test.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "4h",
+	}
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + testRoleName,
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//create second role
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + testRoleName + "-1",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	policy[policyFieldDefaultsRoles] = testRoleName + "-1," + testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+
+	//create third role and write policy
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + testRoleName + "-2",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	policy[policyFieldEnforcementRoles] = testRoleName + "-2"
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName+"-2")
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      venafiRolePolicyMapPath,
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to read policy map, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Data["policy_map_json"] == "" {
+		t.Fatalf("There should be data in resp: %s", resp.Data["policy_map_json"])
+	}
+
+	var policyMap policyRoleMap
+	policyMap.Roles = make(map[string]policyTypes)
+
+	err = json.Unmarshal(resp.Data["policy_map_json"].([]byte), &policyMap)
+	if err != nil {
+		t.Fatalf("Can not parse policy json data: %s", err)
+	}
+
+	var want, have string
+
+    want = defaultVenafiPolicyName
+    have = policyMap.Roles[testRoleName].DefaultsPolicy
+	if want != have {
+		t.Fatalf("Policy should be %s but we have %s", want, have)
+	}
+    want = defaultVenafiPolicyName
+    have = policyMap.Roles[testRoleName + "-1"].DefaultsPolicy
+	if want != have {
+		t.Fatalf("Policy should be %s but we have %s", want, have)
+	}
+    want = defaultVenafiPolicyName+"-2"
+    have = policyMap.Roles[testRoleName + "-2"].EnforcementPolicy
+	if want != have {
+		t.Fatalf("Policy should be %s but we have %s", want, have)
+	}
+
+}
+
 //TODO: add test with empty organization
 //TODO: add test for CA with emoty organization
 //TODO: add test for CA with SANs
@@ -140,7 +258,7 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 	b, storage := createBackendWithStorage(t)
 	writePolicy(b, storage, policyData, t, defaultVenafiPolicyName)
 
-	log.Println("Setting up role")
+	t.Log("Setting up role")
 	roleData := map[string]interface{}{
 		"organization":       "Venafi Inc.",
 		"ou":                 "Integration",
