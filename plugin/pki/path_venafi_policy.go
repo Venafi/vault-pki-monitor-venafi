@@ -159,6 +159,20 @@ func pathVenafiPolicyList(b *backend) *framework.Path {
 	return ret
 }
 
+func pathVenafiPolicyMap(b *backend) *framework.Path {
+	ret := &framework.Path{
+		Pattern: "show-venafi-role-policy-map",
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.pathShowVenafiPolicyMap,
+		},
+
+		HelpSynopsis:    pathImportQueueSyn,
+		HelpDescription: pathImportQueueDesc,
+	}
+	return ret
+}
+
+
 func (b *backend) refreshVenafiPolicyEnforcementContent(storage logical.Storage, policyName string) (err error) {
 
 	ctx := context.Background()
@@ -307,9 +321,22 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 
 }
 
+type policyTypes struct {
+	ImportPolicy  string `json:"import_policy"`
+	DefaultsPolicy string `json:"defaults_policy"`
+	EnforcementPolicy string `json:"enforcement_policy"`
+}
+
+type policyRoleMap struct {
+	Roles map[string]policyTypes `json:"roles"`
+}
+
 func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.Request, data *framework.FieldData, name string) error {
 	//TODO: write test for it
 	//TODO: if role will be updated manually policy fields will become empty. Call this function from role update (need to replace field data)
+	var policyMap policyRoleMap
+	policyMap.Roles = make(map[string]policyTypes)
+
 	for _, roleType := range []string{policyFieldEnforcementRoles, policyFieldDefaultsRoles, policyFieldImportRoles} {
 		for _, roleName := range data.Get(roleType).([]string) {
 			role, err := b.getRole(ctx, req.Storage, roleName)
@@ -320,16 +347,31 @@ func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.
 				return fmt.Errorf("role %s does not exists. can not add it to the attributes of policy %s", roleName, name)
 			}
 
+			r := policyTypes{}
 			switch roleType {
 			case policyFieldEnforcementRoles:
+				r.EnforcementPolicy = name
 				role.VenafiEnforcementPolicy = name
 			case policyFieldDefaultsRoles:
+				r.DefaultsPolicy = name
 				role.VenafiDefaultsPolicy = name
 			case policyFieldImportRoles:
+				r.ImportPolicy = name
 				role.VenafiImportPolicy = name
 			}
 
+			policyMap.Roles[roleName] = r
+
 			jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, role)
+			if err != nil {
+				return err
+			}
+			if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+				return err
+			}
+
+			jsonEntry, err = logical.StorageEntryJSON("venafi-role-policy-map", policyMap)
+
 			if err != nil {
 				return err
 			}
@@ -548,6 +590,28 @@ func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request
 
 	}
 	return logical.ListResponse(entries), nil
+}
+
+func (b *backend) pathShowVenafiPolicyMap(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response,err error) {
+	entry, err := req.Storage.Get(ctx, "venafi-role-policy-map")
+	if err != nil {
+		return nil, err
+	}
+	policyMap := policyRoleMap{}
+	err = json.Unmarshal(entry.Value, &policyMap)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("ENtry is %s", entry.Value)
+	response = &logical.Response{
+		Data: map[string]interface{}{},
+	}
+
+	//decodedEntry,_ := base64.StdEncoding.DecodeString(string(entry.Value))
+	response.Data["policy_map_json"] = entry.Value
+
+	return response, nil
 }
 
 func checkAgainstVenafiPolicy(
