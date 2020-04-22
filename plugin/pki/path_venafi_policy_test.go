@@ -185,7 +185,7 @@ func Test_pathShowVenafiPolicyMap(t *testing.T) {
 	}
 
 	policy[policyFieldDefaultsRoles] = testRoleName + "-1," + testRoleName
-	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName + "-1")
 
 	//create third role and write policy
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -201,6 +201,7 @@ func Test_pathShowVenafiPolicyMap(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	policy[policyFieldDefaultsRoles] = ""
 	policy[policyFieldEnforcementRoles] = testRoleName + "-2"
 	writePolicy(b, storage, policy, t, defaultVenafiPolicyName+"-2")
 
@@ -231,18 +232,18 @@ func Test_pathShowVenafiPolicyMap(t *testing.T) {
 
 	var want, have string
 
-    want = defaultVenafiPolicyName
-    have = policyMap.Roles[testRoleName].DefaultsPolicy
+	want = defaultVenafiPolicyName+ "-1"
+	have = policyMap.Roles[testRoleName].DefaultsPolicy
 	if want != have {
 		t.Fatalf("Policy should be %s but we have %s", want, have)
 	}
-    want = defaultVenafiPolicyName
-    have = policyMap.Roles[testRoleName + "-1"].DefaultsPolicy
+	want = defaultVenafiPolicyName+ "-1"
+	have = policyMap.Roles[testRoleName+"-1"].DefaultsPolicy
 	if want != have {
 		t.Fatalf("Policy should be %s but we have %s", want, have)
 	}
-    want = defaultVenafiPolicyName+"-2"
-    have = policyMap.Roles[testRoleName + "-2"].EnforcementPolicy
+	want = defaultVenafiPolicyName + "-2"
+	have = policyMap.Roles[testRoleName+"-2"].EnforcementPolicy
 	if want != have {
 		t.Fatalf("Policy should be %s but we have %s", want, have)
 	}

@@ -17,13 +17,14 @@ import (
 )
 
 const (
-    venafiRolePolicyMapStorage = "venafi-role-policy-map"
-	venafiPolicyPath           = "venafi-policy/"
+	venafiRolePolicyMapStorage  = "venafi-role-policy-map"
+	venafiPolicyPath            = "venafi-policy/"
 	defaultVenafiPolicyName     = "default"
 	policyFieldEnforcementRoles = "enforcement_roles"
 	policyFieldDefaultsRoles    = "defaults_roles"
 	policyFieldImportRoles      = "import_roles"
-	venafiRolePolicyMapPath = "show-venafi-role-policy-map"
+	policyFieldCreateRole       = "create_role"
+	venafiRolePolicyMapPath     = "show-venafi-role-policy-map"
 )
 
 func pathVenafiPolicy(b *backend) *framework.Path {
@@ -115,6 +116,11 @@ Also you can use constants from this module (like 1, 5,8) direct or use OIDs (li
 				Default:     5,
 				Description: `Max amount of simultaneously working instances of vcert import`,
 			},
+			policyFieldCreateRole: {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: `Automatically create empty role for polic if it does not exists`,
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathUpdateVenafiPolicy,
@@ -173,7 +179,6 @@ func pathVenafiPolicyMap(b *backend) *framework.Path {
 	}
 	return ret
 }
-
 
 func (b *backend) refreshVenafiPolicyEnforcementContent(storage logical.Storage, policyName string) (err error) {
 
@@ -281,6 +286,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		AutoRefreshInterval: int64(data.Get("auto_refresh_interval").(int)),
 		VenafiImportTimeout: data.Get("venafi_import_timeout").(int),
 		VenafiImportWorkers: data.Get("venafi_import_workers").(int),
+		CreateRole:          data.Get(policyFieldCreateRole).(bool),
 	}
 	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
 	venafiPolicyConfig.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
@@ -298,13 +304,6 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	log.Printf("%s Updating roles policy attributes", logPrefixVenafiPolicyEnforcement)
-
-	err = b.updateRolesPolicyAttributes(ctx, req, data, name)
-	if err != nil {
-		return nil, err
-	}
-
 	log.Printf("%s Geting policy from zone %s", logPrefixVenafiPolicyEnforcement, data.Get("zone").(string))
 	policy, err := b.getPolicyFromVenafi(ctx, req.Storage, name)
 	if err != nil {
@@ -314,6 +313,14 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return nil, err
 	}
+
+	log.Printf("%s Updating roles policy attributes", logPrefixVenafiPolicyEnforcement)
+
+	err = b.updateRolesPolicyAttributes(ctx, req, data, name)
+	if err != nil {
+		return nil, err
+	}
+
 	//Send policy to the user output
 	respData := formPolicyRespData(*policyEntry)
 
@@ -324,8 +331,8 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 }
 
 type policyTypes struct {
-	ImportPolicy  string `json:"import_policy"`
-	DefaultsPolicy string `json:"defaults_policy"`
+	ImportPolicy      string `json:"import_policy"`
+	DefaultsPolicy    string `json:"defaults_policy"`
 	EnforcementPolicy string `json:"enforcement_policy"`
 }
 
@@ -335,7 +342,6 @@ type policyRoleMap struct {
 
 func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.Request, data *framework.FieldData, name string) error {
 	//TODO: write test for it
-	//TODO: if role will be updated manually policy fields will become empty. Call this function from role update (need to replace field data)
 
 	var policyMap policyRoleMap
 	policyMap.Roles = make(map[string]policyTypes)
@@ -352,8 +358,6 @@ func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.
 		}
 	}
 
-
-
 	for _, roleType := range []string{policyFieldEnforcementRoles, policyFieldDefaultsRoles, policyFieldImportRoles} {
 		for _, roleName := range data.Get(roleType).([]string) {
 			role, err := b.getRole(ctx, req.Storage, roleName)
@@ -361,7 +365,12 @@ func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.
 				return err
 			}
 			if role == nil {
-				return fmt.Errorf("role %s does not exists. can not add it to the attributes of policy %s", roleName, name)
+				if data.Get(policyFieldCreateRole).(bool) {
+					return fmt.Errorf("role %s does not exists. can not add it to the attributes of policy %s", roleName, name)
+				} else {
+                   //TODO: create role here
+					log.Println("Creating role", roleName)
+				}
 			}
 
 			r := policyTypes{}
@@ -386,16 +395,16 @@ func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.
 			if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 				return err
 			}
-
-			jsonEntry, err = logical.StorageEntryJSON(venafiRolePolicyMapStorage, policyMap)
-
-			if err != nil {
-				return err
-			}
-			if err := req.Storage.Put(ctx, jsonEntry); err != nil {
-				return err
-			}
 		}
+	}
+
+	jsonEntry, err := logical.StorageEntryJSON(venafiRolePolicyMapStorage, policyMap)
+
+	if err != nil {
+		return err
+	}
+	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+		return err
 	}
 	return nil
 }
@@ -609,7 +618,7 @@ func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathShowVenafiPolicyMap(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response,err error) {
+func (b *backend) pathShowVenafiPolicyMap(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, err error) {
 	//TODO: test it!
 	entry, err := req.Storage.Get(ctx, venafiRolePolicyMapStorage)
 	if err != nil {
@@ -619,7 +628,6 @@ func (b *backend) pathShowVenafiPolicyMap(ctx context.Context, req *logical.Requ
 	response = &logical.Response{
 		Data: map[string]interface{}{},
 	}
-
 
 	response.Data["policy_map_json"] = entry.Value
 
@@ -829,6 +837,7 @@ type venafiPolicyConfigEntry struct {
 	LastPolicyUpdateTime int64              `json:"last_policy_update_time"`
 	VenafiImportTimeout  int                `json:"venafi_import_timeout"`
 	VenafiImportWorkers  int                `json:"venafi_import_workers"`
+	CreateRole           bool               `json:"create_role"`
 }
 
 type venafiPolicyEntry struct {
