@@ -124,6 +124,7 @@ func (b *backend) syncPolicyEnforcementAndRoleDefaults(conf *logical.BackendConf
 		timePassed := time.Now().Unix() - policyConfig.LastPolicyUpdateTime
 
 		//update only if needed
+		//TODO: Make test to check this refresh
 		if (timePassed) < policyConfig.AutoRefreshInterval {
 			continue
 		}
