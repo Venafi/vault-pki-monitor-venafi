@@ -17,7 +17,8 @@ type backgroundTask struct {
 }
 
 type taskStorageStruct struct {
-	tasks []backgroundTask
+	inited bool
+	tasks  []backgroundTask
 	sync.RWMutex
 }
 
@@ -61,6 +62,10 @@ func (s *taskStorageStruct) del(taskName string) {
 }
 
 func (s *taskStorageStruct) init() {
+	if s.inited {
+		panic(logPrefixVenafiScheduler + " twice inited loop")
+	}
+	s.inited = true
 	go s.loop()
 }
 
