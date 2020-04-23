@@ -81,6 +81,11 @@ func getTPPConnection(t *testing.T) endpoint.Connector {
 	return cl
 }
 
+var _ = func() error {
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	return nil
+}()
+
 func getCloudConnection(t *testing.T) endpoint.Connector {
 	var cloudConfig = &vcert.Config{
 		ConnectorType: endpoint.ConnectorTypeCloud,
@@ -342,7 +347,6 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		//retrieve imported certificate
 		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
 		log.Println("Trying to retrieve requested certificate", singleCN)
-		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 		req := &certificate.Request{}
 		req.PickupID = "\\VED\\Policy\\devops\\vcert\\" + singleCN
@@ -503,7 +507,6 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		//retrieve imported certificate
 		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
 		log.Println("Trying to retrieve requested certificate", singleCN)
-		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 		req := &certificate.Request{}
 		req.PickupID = "\\VED\\Policy\\devops\\vcert\\" + singleCN
@@ -663,7 +666,6 @@ func Test_fillImportQueueTask(t *testing.T) {
 	//retrieve imported certificate
 	//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
 	log.Println("Trying to retrieve requested certificate", singleCN)
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	req := &certificate.Request{}
 	req.PickupID = "\\VED\\Policy\\devops\\vcert\\" + singleCN
