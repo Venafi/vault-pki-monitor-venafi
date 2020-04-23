@@ -17,19 +17,13 @@ type backgroundTask struct {
 }
 
 type taskStorageStruct struct {
-	inited         bool
-	stopOnNextTurn bool
-	tasks          []backgroundTask
+	inited bool
+	tasks  []backgroundTask
 	sync.RWMutex
 }
 
 func (task *backgroundTask) cancel() {
 
-}
-func (s *taskStorageStruct) stop() {
-	s.Lock()
-	s.stopOnNextTurn = true
-	s.Unlock()
 }
 
 func (s *taskStorageStruct) getTasksNames() []string {
@@ -78,10 +72,6 @@ func (s *taskStorageStruct) init() {
 func (s *taskStorageStruct) loop() {
 	for {
 		s.RLock()
-		if s.stopOnNextTurn {
-			s.RUnlock()
-			return
-		}
 		for i := range s.tasks {
 			if s.tasks[i].currentWorkers >= s.tasks[i].workers {
 				continue
