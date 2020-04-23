@@ -233,10 +233,10 @@ func TestAllVenafiIntegrations(t *testing.T) {
 	}
 
 	//add created roles to policy
-	policy[policyFieldImportRoles] = strings.Join(randRoles, ",")
-	policy[policyFieldEnforcementRoles] = strings.Join(randRoles, ",")
-	policy[policyFieldDefaultsRoles] = strings.Join(randRoles, ",")
-	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+	policy2[policyFieldImportRoles] = strings.Join(randRoles, ",")
+	policy2[policyFieldEnforcementRoles] = strings.Join(randRoles, ",")
+	policy2[policyFieldDefaultsRoles] = strings.Join(randRoles, ",")
+	writePolicy(b, storage, policy2, t, defaultVenafiPolicyName)
 
 	log.Println("waiting for roles synchronization")
 	time.Sleep(30 * time.Second)
@@ -282,7 +282,7 @@ func TestAllVenafiIntegrations(t *testing.T) {
 	}
 
 	log.Println("Waiting for certs to import")
-	time.Sleep(30 * time.Second)
+	time.Sleep(45 * time.Second)
 	//After creating all certificates we need to check that they exist in TPP
 	log.Println("Trying check all certificates from list", certs_list)
 	for _, singleCN := range certs_list {

@@ -160,7 +160,7 @@ func (b *backend) importToTPP(conf *logical.BackendConfig) {
 }
 
 func (b *backend) controlImportQueue(conf *logical.BackendConfig) {
-	//log.Printf("%s running control import queue", logPrefixVenafiImport)
+	log.Printf("%s running control import queue", logPrefixVenafiImport)
 	ctx := context.Background()
 	const fillQueuePrefix = "fillqueue-"
 	roles, err := b.storage.List(ctx, "role/")
@@ -217,6 +217,7 @@ func (b *backend) controlImportQueue(conf *logical.BackendConfig) {
 			b.taskStorage.del(taskName)
 		}
 	}
+	log.Printf("%s finished running control import queue", logPrefixVenafiImport)
 }
 
 func (b *backend) processImportToTPP(job Job) string {
