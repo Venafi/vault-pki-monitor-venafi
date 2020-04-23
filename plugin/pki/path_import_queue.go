@@ -276,18 +276,18 @@ func (b *backend) processImportToTPP(job Job) string {
 }
 
 func (b *backend) deleteCertFromQueue(job Job) {
-	ctx := job.ctx
-	s := job.storage
-	entry := job.entry
+	//ctx := job.ctx
+	//s := job.storage
+	//entry := job.entry
 	msg := fmt.Sprintf("Job id: %v ###", job.id)
 	importPath := job.importPath
-	log.Printf("%s %s Removing certificate from import path %s", logPrefixVenafiImport, msg, importPath+entry)
-	err := s.Delete(ctx, importPath+entry)
+	log.Printf("%s %s Removing certificate from import path %s", logPrefixVenafiImport, msg, importPath+job.entry)
+	err := job.storage.Delete(job.ctx, importPath+job.entry)
 	if err != nil {
-		log.Printf("%s %s Could not delete %s from queue: %s", logPrefixVenafiImport, msg, importPath+entry, err)
+		log.Printf("%s %s Could not delete %s from queue: %s", logPrefixVenafiImport, msg, importPath+job.entry, err)
 	} else {
-		log.Printf("%s %s Certificate with SN %s removed from queue", logPrefixVenafiImport, msg, entry)
-		_, err := s.List(ctx, importPath)
+		log.Printf("%s %s Certificate with SN %s removed from queue", logPrefixVenafiImport, msg, job.entry)
+		_, err := job.storage.List(job.ctx, importPath)
 		if err != nil {
 			log.Printf("%s %s Could not get queue list: %s", logPrefixVenafiImport, msg, err)
 		}
