@@ -220,25 +220,21 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 }
 
 func (b *backend) processImportToTPP(job Job) string {
-	ctx := job.ctx
-	//req := job.req
-	storage := job.storage
-	entry := job.entry
-	id := job.id
-	msg := fmt.Sprintf("Job id: %v ###", id)
+
+	msg := fmt.Sprintf("Job id: %v ###", job.id)
 	importPath := job.importPath
-	log.Printf("%s %s Trying to import certificate with SN %s", logPrefixVenafiImport, msg, entry)
-	cl, err := b.ClientVenafi(ctx, storage, job.policyName)
+	log.Printf("%s %s Trying to import certificate with SN %s", logPrefixVenafiImport, msg, job.entry)
+	cl, err := b.ClientVenafi(job.ctx, job.storage, job.policyName)
 	if err != nil {
 		return fmt.Sprintf("%s Could not create venafi client: %s", msg, err)
 	}
 
-	certEntry, err := storage.Get(ctx, importPath+entry)
+	certEntry, err := job.storage.Get(job.ctx, importPath+job.entry)
 	if err != nil {
-		return fmt.Sprintf("%s Could not get certificate from %s: %s", msg, importPath+entry, err)
+		return fmt.Sprintf("%s Could not get certificate from %s: %s", msg, importPath + job.entry, err)
 	}
 	if certEntry == nil {
-		return fmt.Sprintf("%s Could not get certificate from %s: cert entry not found", msg, importPath+entry)
+		return fmt.Sprintf("%s Could not get certificate from %s: cert entry not found", msg, importPath + job.entry)
 	}
 	block := pem.Block{
 		Type:  "CERTIFICATE",
@@ -247,7 +243,7 @@ func (b *backend) processImportToTPP(job Job) string {
 
 	Certificate, err := x509.ParseCertificate(certEntry.Value)
 	if err != nil {
-		return fmt.Sprintf("%s Could not get certificate from entry %s: %s", msg, importPath+entry, err)
+		return fmt.Sprintf("%s Could not get certificate from entry %s: %s", msg, importPath + job.entry, err)
 	}
 	//TODO: here we should check for existing CN and set it to DNS or throw error
 	cn := Certificate.Subject.CommonName
