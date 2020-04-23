@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/hashicorp/vault/sdk/logical"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -28,10 +29,16 @@ func TestAllVenafiIntegrations(t *testing.T) {
 		Stress test
 	*/
 	rand := randSeq(5)
-	domain := "example.com"
+	domain := "vfidev.com"
+	testRoleName := "test-import"
 
 	policy := copyMap(policyCloudData)
-	testRoleName := "test-import"
+	policy2 := copyMap(policyTPPData)
+
+	policy2[policyFieldDefaultsRoles] = ""
+	policy2[policyFieldEnforcementRoles] = testRoleName + "-2"
+	policy2[policyFieldImportRoles] = testRoleName+ "-1," +testRoleName
+
 
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -44,15 +51,17 @@ func TestAllVenafiIntegrations(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	log.Println("create first policy")
 	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
-	// create a role entry
+	log.Println("create default role entry")
 	roleData := map[string]interface{}{
 		"allowed_domains":  "test.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "4h",
 	}
 
+	log.Println("create first role")
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + testRoleName,
@@ -66,7 +75,7 @@ func TestAllVenafiIntegrations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//create second role
+	log.Println("create second role")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + testRoleName + "-1",
@@ -80,10 +89,12 @@ func TestAllVenafiIntegrations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	policy[policyFieldDefaultsRoles] = testRoleName + "-1," + testRoleName
-	writePolicy(b, storage, policy, t, defaultVenafiPolicyName+"-1")
+	log.Println("update first policy")
 
-	//create third role and write policy
+	policy[policyFieldDefaultsRoles] = testRoleName + "-1," + testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+
+	log.Println("create third role")
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + testRoleName + "-2",
@@ -97,10 +108,9 @@ func TestAllVenafiIntegrations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	policy[policyFieldDefaultsRoles] = ""
-	policy[policyFieldEnforcementRoles] = testRoleName + "-2"
-	policy[policyFieldImportRoles] = testRoleName
-	writePolicy(b, storage, policy, t, defaultVenafiPolicyName+"-2")
+	log.Println("write second policy")
+
+	writePolicy(b, storage, policy2, t, defaultVenafiPolicyName+"-1")
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -129,31 +139,37 @@ func TestAllVenafiIntegrations(t *testing.T) {
 
 	var want, have string
 
-	want = defaultVenafiPolicyName + "-1"
+	want = defaultVenafiPolicyName
 	have = policyMap.Roles[testRoleName].DefaultsPolicy
 	if want != have {
 		t.Fatalf("Policy should be %s but we have %s", want, have)
 	}
-	want = defaultVenafiPolicyName + "-1"
-	have = policyMap.Roles[testRoleName+"-1"].DefaultsPolicy
+	want = ""
+	have = policyMap.Roles[testRoleName+"-2"].DefaultsPolicy
 	if want != have {
 		t.Fatalf("Policy should be %s but we have %s", want, have)
 	}
-	want = defaultVenafiPolicyName + "-2"
+	want = defaultVenafiPolicyName + "-1"
 	have = policyMap.Roles[testRoleName+"-2"].EnforcementPolicy
 	if want != have {
 		t.Fatalf("Policy should be %s but we have %s", want, have)
 	}
 
-	want = defaultVenafiPolicyName + "-2"
+	want = defaultVenafiPolicyName + "-1"
 	have = policyMap.Roles[testRoleName].ImportPolicy
 	if want != have {
 		t.Fatalf("Policy should be %s but we have %s", want, have)
 	}
+
 	// generate root
 	rootData := map[string]interface{}{
-		"common_name": domain,
-		"ttl":         "6h",
+		"common_name":  "ca.some.domain",
+		"organization": "Venafi Inc.",
+		"ou":           "Integration",
+		"locality":     "Salt Lake",
+		"province":     "Utah",
+		"country":      "US",
+		"ttl":          "6h",
 	}
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
@@ -198,7 +214,7 @@ func TestAllVenafiIntegrations(t *testing.T) {
 	}
 	for _, randRole := range randRoles {
 
-		t.Log("Creating certs for role", randRole)
+		log.Println("Creating certs for role", randRole)
 		// create a role entry
 		roleData := getTPPRoleConfig(domain, 2, 5)
 
@@ -218,7 +234,12 @@ func TestAllVenafiIntegrations(t *testing.T) {
 
 	//add created roles to policy
 	policy[policyFieldImportRoles] = strings.Join(randRoles, ",")
+	policy[policyFieldEnforcementRoles] = strings.Join(randRoles, ",")
+	policy[policyFieldDefaultsRoles] = strings.Join(randRoles, ",")
 	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+
+	log.Println("waiting for roles synchronization")
+	time.Sleep(30 * time.Second)
 
 	for _, randRole := range randRoles {
 		//issue some certs
@@ -260,13 +281,14 @@ func TestAllVenafiIntegrations(t *testing.T) {
 
 	}
 
+	log.Println("Waiting for certs to import")
 	time.Sleep(30 * time.Second)
 	//After creating all certificates we need to check that they exist in TPP
-	t.Log("Trying check all certificates from list", certs_list)
+	log.Println("Trying check all certificates from list", certs_list)
 	for _, singleCN := range certs_list {
 		//retrieve imported certificate
 		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
-		t.Log("Trying to retrieve requested certificate", singleCN)
+		log.Println("Trying to retrieve requested certificate", singleCN)
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 		req := &certificate.Request{}
