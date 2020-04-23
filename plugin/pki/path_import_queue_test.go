@@ -216,7 +216,6 @@ func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnec
 	thumbprint := calcThumbprint(certText)
 	//retrieve imported certificate
 	log.Println("Trying to retrieve requested certificate", singleCN)
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	req := &certificate.Request{}
 	req.Thumbprint = thumbprint

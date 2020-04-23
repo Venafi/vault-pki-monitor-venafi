@@ -70,17 +70,17 @@ func (b *backend) pathReadVenafiPolicySync(ctx context.Context, req *logical.Req
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) syncRoleWithVenafiPolicyRegister(storage logical.Storage, conf *logical.BackendConfig) {
+func (b *backend) syncRoleWithVenafiPolicyRegister(conf *logical.BackendConfig) {
 	log.Printf("%s registering policy sync controller", logPrefixVenafiPolicyEnforcement)
 	b.taskStorage.register("policy-sync-controller", func() {
-		err := b.syncPolicyEnforcementAndRoleDefaults(storage, conf)
+		err := b.syncPolicyEnforcementAndRoleDefaults(conf)
 		if err != nil {
 			log.Printf("%s %s", logPrefixVenafiPolicyEnforcement, err)
 		}
 	}, 1, time.Second*15)
 }
 
-func (b *backend) syncPolicyEnforcementAndRoleDefaults(storage logical.Storage, conf *logical.BackendConfig) (err error) {
+func (b *backend) syncPolicyEnforcementAndRoleDefaults(conf *logical.BackendConfig) (err error) {
 	replicationState := conf.System.ReplicationState()
 	//Checking if we are on master or on the stanby Vault server
 	isSlave := !(conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) ||
@@ -94,7 +94,7 @@ func (b *backend) syncPolicyEnforcementAndRoleDefaults(storage logical.Storage, 
 
 	ctx := context.Background()
 	//Get policy list for enforcement sync
-	policiesRaw, err := storage.List(ctx, venafiPolicyPath)
+	policiesRaw, err := b.storage.List(ctx, venafiPolicyPath)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (b *backend) syncPolicyEnforcementAndRoleDefaults(storage logical.Storage, 
 
 	for _, policyName := range policies {
 
-		policyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policyName)
+		policyConfig, err := b.getVenafiPolicyConfig(ctx, b.storage, policyName)
 		if err != nil {
 			log.Printf("%s Error getting policy config for policy %s: %s", logPrefixVenafiPolicyEnforcement, policyName, err)
 			continue
@@ -129,14 +129,14 @@ func (b *backend) syncPolicyEnforcementAndRoleDefaults(storage logical.Storage, 
 		}
 
 		//Refresh Venafi policy regexes
-		err = b.refreshVenafiPolicyEnforcementContent(storage, policyName)
+		err = b.refreshVenafiPolicyEnforcementContent(b.storage, policyName)
 		if err != nil {
 			log.Printf("%s Error  refreshing venafi policy content: %s", logPrefixVenafiPolicyEnforcement, err)
 			continue
 		}
 		//Refresh roles defaults
 		//Get role list with role sync param
-		rolesList, err := b.getRolesListForVenafiPolicy(ctx, storage, policyName)
+		rolesList, err := b.getRolesListForVenafiPolicy(ctx, b.storage, policyName)
 		if err != nil {
 			continue
 		}
@@ -148,7 +148,7 @@ func (b *backend) syncPolicyEnforcementAndRoleDefaults(storage logical.Storage, 
 
 		for _, roleName := range rolesList.defaultsRoles {
 			log.Printf("Synchronizing role %s", roleName)
-			msg := b.synchronizeRoleDefaults(ctx, storage, roleName, policyName)
+			msg := b.synchronizeRoleDefaults(ctx, b.storage, roleName, policyName)
 			log.Printf("%s %s", logPrefixVenafiRoleyDefaults, msg)
 		}
 
@@ -161,7 +161,7 @@ func (b *backend) syncPolicyEnforcementAndRoleDefaults(storage logical.Storage, 
 			return fmt.Errorf("Error converting policy config into JSON: %s", err)
 
 		}
-		if err := storage.Put(ctx, jsonEntry); err != nil {
+		if err := b.storage.Put(ctx, jsonEntry); err != nil {
 			return fmt.Errorf("Error saving policy last update time: %s", err)
 
 		}
