@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"log"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
+	runtime.SetFinalizer(b, func(b *backend) { b.taskStorage.stop() })
 	return b, nil
 }
 
@@ -100,6 +102,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	if b.storage == nil {
 		log.Println("Can't start queue when storage is nil")
 	} else {
+		b.taskStorage = &taskStorageStruct{}
 		b.taskStorage.init()
 		b.importToTPP(conf)
 		b.syncRoleWithVenafiPolicyRegister(conf)
@@ -115,7 +118,7 @@ type backend struct {
 	crlLifetime       time.Duration
 	revokeStorageLock sync.RWMutex
 	tidyCASGuard      *uint32
-	taskStorage       taskStorageStruct
+	taskStorage       *taskStorageStruct
 }
 
 const backendHelp = `
