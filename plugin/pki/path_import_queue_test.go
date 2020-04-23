@@ -82,7 +82,7 @@ func getTPPConnection(t *testing.T) endpoint.Connector {
 }
 
 func getCloudConnection(t *testing.T) endpoint.Connector {
-	var tppConfig = &vcert.Config{
+	var cloudConfig = &vcert.Config{
 		ConnectorType: endpoint.ConnectorTypeCloud,
 		BaseUrl:       os.Getenv("CLOUD_URL"),
 		Credentials: &endpoint.Authentication{
@@ -91,7 +91,7 @@ func getCloudConnection(t *testing.T) endpoint.Connector {
 		Zone:       os.Getenv("CLOUD_ZONE"),
 		LogVerbose: true,
 	}
-	cl, err := vcert.NewClient(tppConfig)
+	cl, err := vcert.NewClient(cloudConfig)
 	if err != nil {
 		t.Fatalf("could not connect to endpoint: %s", err)
 	}
