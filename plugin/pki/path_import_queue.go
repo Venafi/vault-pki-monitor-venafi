@@ -151,25 +151,25 @@ func (b *backend) fillImportQueueTask(roleName string, policyName string, noOfWo
 	wg.Wait()
 }
 
-func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConfig) {
+func (b *backend) importToTPP(conf *logical.BackendConfig) {
 
 	log.Printf("%s starting importcontroler", logPrefixVenafiImport)
 	b.taskStorage.register("importcontroler", func() {
-		b.controlImportQueue(storage, conf)
+		b.controlImportQueue(conf)
 	}, 1, time.Second*1)
 }
 
-func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.BackendConfig) {
+func (b *backend) controlImportQueue(conf *logical.BackendConfig) {
 	//log.Printf("%s running control import queue", logPrefixVenafiImport)
 	ctx := context.Background()
 	const fillQueuePrefix = "fillqueue-"
-	roles, err := storage.List(ctx, "role/")
+	roles, err := b.storage.List(ctx, "role/")
 	if err != nil {
 		log.Printf("%s Couldn't get list of roles %s", logPrefixVenafiImport, err)
 		return
 	}
 
-	policyMap, err := getPolicyRoleMap(ctx, storage)
+	policyMap, err := getPolicyRoleMap(ctx, b.storage)
 	if err != nil {
 		log.Printf("Can get policy map: %s", err)
 		return
@@ -178,7 +178,7 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 	for i := range roles {
 		roleName := roles[i]
 		//Update role since it's settings may be changed
-		role, err := b.getRole(ctx, storage, roleName)
+		role, err := b.getRole(ctx, b.storage, roleName)
 		if err != nil {
 			log.Printf("%s Error getting role %v: %s\n Exiting.", logPrefixVenafiImport, role, err)
 			continue
@@ -193,14 +193,14 @@ func (b *backend) controlImportQueue(storage logical.Storage, conf *logical.Back
 			continue
 		}
 
-		policyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policyMap.Roles[roleName].ImportPolicy)
+		policyConfig, err := b.getVenafiPolicyConfig(ctx, b.storage, policyMap.Roles[roleName].ImportPolicy)
 		if err != nil {
 			log.Printf("%s Error getting policy %v: %s\n Exiting.", logPrefixVenafiImport, policyMap.Roles[roleName].ImportPolicy, err)
 			continue
 		}
 		b.taskStorage.register(fillQueuePrefix+roleName, func() {
 			log.Printf("%s run queue filler %s", logPrefixVenafiImport, roleName)
-			b.fillImportQueueTask(roleName, policyMap.Roles[roleName].ImportPolicy, policyConfig.VenafiImportWorkers, storage, conf)
+			b.fillImportQueueTask(roleName, policyMap.Roles[roleName].ImportPolicy, policyConfig.VenafiImportWorkers, b.storage, conf)
 		}, 1, time.Duration(policyConfig.VenafiImportTimeout)*time.Second)
 
 	}
@@ -231,10 +231,10 @@ func (b *backend) processImportToTPP(job Job) string {
 
 	certEntry, err := job.storage.Get(job.ctx, importPath+job.entry)
 	if err != nil {
-		return fmt.Sprintf("%s Could not get certificate from %s: %s", msg, importPath + job.entry, err)
+		return fmt.Sprintf("%s Could not get certificate from %s: %s", msg, importPath+job.entry, err)
 	}
 	if certEntry == nil {
-		return fmt.Sprintf("%s Could not get certificate from %s: cert entry not found", msg, importPath + job.entry)
+		return fmt.Sprintf("%s Could not get certificate from %s: cert entry not found", msg, importPath+job.entry)
 	}
 	block := pem.Block{
 		Type:  "CERTIFICATE",
@@ -243,7 +243,7 @@ func (b *backend) processImportToTPP(job Job) string {
 
 	Certificate, err := x509.ParseCertificate(certEntry.Value)
 	if err != nil {
-		return fmt.Sprintf("%s Could not get certificate from entry %s: %s", msg, importPath + job.entry, err)
+		return fmt.Sprintf("%s Could not get certificate from entry %s: %s", msg, importPath+job.entry, err)
 	}
 	//TODO: here we should check for existing CN and set it to DNS or throw error
 	cn := Certificate.Subject.CommonName
