@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -28,7 +29,9 @@ func TestAllVenafiIntegrations(t *testing.T) {
 	*/
 	rand := randSeq(5)
 	domain := "example.com"
-	policy := copyMap(venafiTestTPPConfigAllAllow)
+
+	policy := copyMap(policyCloudData)
+	testRoleName := "test-import"
 
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -43,13 +46,117 @@ func TestAllVenafiIntegrations(t *testing.T) {
 
 	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
+	// create a role entry
+	roleData := map[string]interface{}{
+		"allowed_domains":  "test.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "4h",
+	}
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + testRoleName,
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//create second role
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + testRoleName + "-1",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	policy[policyFieldDefaultsRoles] = testRoleName + "-1," + testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName+"-1")
+
+	//create third role and write policy
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + testRoleName + "-2",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	policy[policyFieldDefaultsRoles] = ""
+	policy[policyFieldEnforcementRoles] = testRoleName + "-2"
+	policy[policyFieldImportRoles] = testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName+"-2")
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      venafiRolePolicyMapPath,
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to read policy map, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Data["policy_map_json"] == "" {
+		t.Fatalf("There should be data in resp: %s", resp.Data["policy_map_json"])
+	}
+
+	var policyMap policyRoleMap
+	policyMap.Roles = make(map[string]policyTypes)
+
+	err = json.Unmarshal(resp.Data["policy_map_json"].([]byte), &policyMap)
+	if err != nil {
+		t.Fatalf("Can not parse policy json data: %s", err)
+	}
+
+	var want, have string
+
+	want = defaultVenafiPolicyName + "-1"
+	have = policyMap.Roles[testRoleName].DefaultsPolicy
+	if want != have {
+		t.Fatalf("Policy should be %s but we have %s", want, have)
+	}
+	want = defaultVenafiPolicyName + "-1"
+	have = policyMap.Roles[testRoleName+"-1"].DefaultsPolicy
+	if want != have {
+		t.Fatalf("Policy should be %s but we have %s", want, have)
+	}
+	want = defaultVenafiPolicyName + "-2"
+	have = policyMap.Roles[testRoleName+"-2"].EnforcementPolicy
+	if want != have {
+		t.Fatalf("Policy should be %s but we have %s", want, have)
+	}
+
+	want = defaultVenafiPolicyName + "-2"
+	have = policyMap.Roles[testRoleName].ImportPolicy
+	if want != have {
+		t.Fatalf("Policy should be %s but we have %s", want, have)
+	}
 	// generate root
 	rootData := map[string]interface{}{
 		"common_name": domain,
 		"ttl":         "6h",
 	}
 
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/generate/internal",
 		Storage:   storage,

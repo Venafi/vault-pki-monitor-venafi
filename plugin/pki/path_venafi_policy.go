@@ -25,6 +25,7 @@ const (
 	policyFieldImportRoles      = "import_roles"
 	policyFieldCreateRole       = "create_role"
 	venafiRolePolicyMapPath     = "show-venafi-role-policy-map"
+	errPolicyMapDoesNotExists   = "policy map does not exists"
 )
 
 func pathVenafiPolicy(b *backend) *framework.Path {
@@ -349,11 +350,13 @@ func getPolicyRoleMap(ctx context.Context, storage logical.Storage) (policyMap p
 		return policyMap, err
 	}
 
-	if entry != nil {
-		err = json.Unmarshal(entry.Value, &policyMap)
-		if err != nil {
-			return policyMap, err
-		}
+	if entry == nil {
+		return policyMap, fmt.Errorf(errPolicyMapDoesNotExists)
+	}
+
+	err = json.Unmarshal(entry.Value, &policyMap)
+	if err != nil {
+		return policyMap, err
 	}
 
 	return policyMap, err
@@ -364,7 +367,12 @@ func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.
 
 	policyMap, err := getPolicyRoleMap(ctx, req.Storage)
 	if err != nil {
-		return err
+		if err.Error() == errPolicyMapDoesNotExists {
+			log.Println(errPolicyMapDoesNotExists + " will create new")
+		} else {
+			return err
+		}
+
 	}
 
 	for _, roleType := range []string{policyFieldEnforcementRoles, policyFieldDefaultsRoles, policyFieldImportRoles} {
@@ -660,10 +668,6 @@ func checkAgainstVenafiPolicy(
 	policyMap, err := getPolicyRoleMap(ctx, req.Storage)
 	if err != nil {
 		return err
-	}
-
-	if policyMap.Roles[role.Name].EnforcementPolicy == "" {
-
 	}
 
 	venafiEnforcementPolicy := policyMap.Roles[role.Name].EnforcementPolicy
