@@ -217,6 +217,7 @@ func (b *backend) controlImportQueue(conf *logical.BackendConfig) {
 			b.taskStorage.del(taskName)
 		}
 	}
+
 }
 
 func (b *backend) processImportToTPP(job Job) string {
