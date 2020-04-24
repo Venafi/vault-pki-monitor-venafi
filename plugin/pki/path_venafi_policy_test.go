@@ -613,6 +613,27 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 		t.Fatal(err)
 	}
 
+	//TODO: this action should be removed after implementing that writing policy will also update the role
+	log.Println("Updating second Venafi policy configuration to match role second")
+	policyData[policyFieldDefaultsRoles] = ""
+	policyData[policyFieldEnforcementRoles] = "test-venafi-second-policy"
+	policyData[policyFieldImportRoles] = "test-venafi-second-policy"
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      venafiPolicyPath + "second",
+		Storage:   storage,
+		Data:      policyData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to configure venafi policy, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatalf("after write policy should be on output, but response is nil: %#v", resp)
+	}
+
 	log.Println("Issuing certificate for policy second")
 	singleCN = rand + "-import-second-policy." + domain
 	certData = map[string]interface{}{

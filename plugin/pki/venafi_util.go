@@ -171,13 +171,13 @@ var venafiCloudCreateSimplePolicyStep = logicaltest.TestStep{
 
 func makeVenafiCloudConfig() (domain string, policyData map[string]interface{}) {
 	domain = "vfidev.com"
-	policyData = venafiTestCloudConfigRestricted
+	policyData = copyMap(venafiTestCloudConfigRestricted)
 	return
 }
 
 func makeVenafiTPPConfig() (domain string, policyData map[string]interface{}) {
 	domain = "vfidev.com"
-	policyData = venafiTestTPPConfigRestricted
+	policyData = copyMap(venafiTestTPPConfigRestricted)
 	return
 }
 
