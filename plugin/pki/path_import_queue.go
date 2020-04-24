@@ -177,6 +177,11 @@ func (b *backend) controlImportQueue(conf *logical.BackendConfig) {
 
 	for i := range roles {
 		roleName := roles[i]
+		if policyMap.Roles[roleName].ImportPolicy == "" {
+			//no import policy defined for role. Skipping
+			continue
+		}
+
 		//Update role since it's settings may be changed
 		role, err := b.getRole(ctx, b.storage, roleName)
 		if err != nil {
@@ -184,10 +189,6 @@ func (b *backend) controlImportQueue(conf *logical.BackendConfig) {
 			continue
 		}
 
-		if policyMap.Roles[roleName].ImportPolicy == "" {
-			//no import policy defined for role. Skipping
-			continue
-		}
 		if role == nil {
 			log.Printf("%s Unknown role %v\n", logPrefixVenafiImport, role)
 			continue
