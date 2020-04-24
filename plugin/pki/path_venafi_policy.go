@@ -194,7 +194,12 @@ func (b *backend) refreshVenafiPolicyEnforcementContent(storage logical.Storage,
 		return fmt.Errorf("Policy config for %s is empty", policyName)
 	}
 
-	log.Printf("%s Auto refresh enabled for policy %s. Getting policy from Venafi", logPrefixVenafiPolicyEnforcement, policyName)
+	if venafiPolicyConfig.AutoRefreshInterval > 0 {
+		log.Printf("%s Auto refresh enabled for policy %s. Getting policy from Venafi", logPrefixVenafiPolicyEnforcement, policyName)
+	} else {
+		return nil
+	}
+
 	policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
 	if err != nil {
 		return fmt.Errorf("Error getting policy %s from Venafi: %s", policyName, err)
@@ -557,6 +562,11 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		policyFieldImportRoles:      rolesList.importRoles,
 		policyFieldDefaultsRoles:    rolesList.defaultsRoles,
 		policyFieldEnforcementRoles: rolesList.enforceRoles,
+		"auto_refresh_interval":     config.AutoRefreshInterval,
+		"last_policy_update_time":   config.LastPolicyUpdateTime,
+		"venafi_import_timeout":     config.VenafiImportTimeout,
+		"venafi_import_workers":     config.VenafiImportWorkers,
+		"create_role":               config.CreateRole,
 	}
 
 	return &logical.Response{

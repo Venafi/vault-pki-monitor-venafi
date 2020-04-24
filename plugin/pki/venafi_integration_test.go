@@ -37,8 +37,7 @@ func TestAllVenafiIntegrations(t *testing.T) {
 
 	policy2[policyFieldDefaultsRoles] = ""
 	policy2[policyFieldEnforcementRoles] = testRoleName + "-2"
-	policy2[policyFieldImportRoles] = testRoleName+ "-1," +testRoleName
-
+	policy2[policyFieldImportRoles] = testRoleName + "-1," + testRoleName
 
 	// create the backend
 	config := logical.TestBackendConfig()
