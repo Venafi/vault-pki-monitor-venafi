@@ -89,7 +89,7 @@ Also you can use constants from this module (like 1, 5,8) direct or use OIDs (li
 			},
 			"auto_refresh_interval": {
 				Type:        framework.TypeInt,
-				Default:     60,
+				Default:     0,
 				Description: `Interval of policy update from Venafi in seconds. Set it to 0 to disable automatic policy update`,
 			},
 			policyFieldEnforcementRoles: {
