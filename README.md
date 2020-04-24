@@ -156,9 +156,12 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     |`tpp_user`             |string   | Web API user for Venafi Platform                                            |`admin`|
     |`trust_bundle_file`    |string   | Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server.|`"/full/path/to/chain.pem"`|
     |`zone`                 |string   | Name of Venafi Platform policy or Venafi Cloud Zone ID.                     |`testpolicy\\vault`|
+    |`auto_refresh_interval`| int | Interval of policy update from Venafi in seconds. Set it to 0 to disable automatic policy| 0|    
+    | `venafi_import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
+    | `venafi_import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 12        |
     |`enforcement_roles`   |string   | List of roles where policy enfrcement is enabled                            |`tpp`|
     |`defaults_roles`      |string   | List of roles where default values from Venafi will be set                            |`tpp`|
-    |`import_roles`               |string   | List of roles from where certificates will be imported to Venafi                          |`tpp`|    
+    |`import_roles`               |string   | List of roles from where certificates will be imported to Venafi                          |`tpp`|        
     |
 
     Policy will be downloaded from Venafi, parsed, saved under the specified path, and displayed to the user. After policy
@@ -242,6 +245,7 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     
 ## Quickstart: Enabling Venafi Visibility
 
+# !! Need to rewrite this section. Visibility is on on the policy level now
 1. Visibiliy is enabled at the [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) by enabling the `venafi_import` option:
     1. For the Venafi Platform:
     ```
@@ -269,18 +273,8 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
 
 The following options are supported (note: this list can also be viewed from the command line using `vault path-help pki/roles/<ROLE_NAME>`):
 
-| Parameter               | Type    | Description                                                                   | Default   |
-| ----------------------- | ------- | ------------------------------------------------------------------------------| --------- |
-| `venafi_import`         | bool    | Controls whether certificates are forwarded to the Venafi Platform or Venafi Cloud            | `true`    |
-| `zone`                  | string  | Venafi Platform policy folder where certificates will be imported; for Venafi Cloud this is the endpoint that the certificates will be sent to.             | |
-| `tpp_url`               | string  | Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk")                     |           |
-| `tpp_username`          | string  | Venafi Platform WebSDK account username                                       |           |
-| `tpp_password`          | string  | Venafi Platform WebSDK account password                                       |           |
-| `trust_bundle_file`     | string  | PEM trust bundle for Venafi Platform server certificate                       |           |
-| `venafi_import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
-| `venafi_import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 12        |
-| `venafi_check_policy`   | string  | Which Venafi policy check to use                                              |  |
-| `venafi_sync_policy`    | string  | Policy where to get Venafi connection details for policy synchronization      |  |
+
+
 
 ### Import Queue
 After a certificate has been signed by the Vault CA it is added to the import queue. Processing of certificates in the queue
