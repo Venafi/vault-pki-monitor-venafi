@@ -35,8 +35,8 @@ func getTPPRoleConfig(domain string, timeout, workers int) map[string]interface{
 		"tpp_password":          os.Getenv("TPP_PASSWORD"),
 		"zone":                  os.Getenv("TPP_ZONE"),
 		"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
-		"venafi_import_timeout": timeout,
-		"venafi_import_workers": workers,
+		"import_timeout": timeout,
+		"import_workers": workers,
 	}
 }
 
@@ -52,8 +52,8 @@ func getCloudRoleConfig(domain string, timeout, workers int) map[string]interfac
 		"cloud_url":             os.Getenv("CLOUD_URL"),
 		"zone":                  os.Getenv("CLOUD_ZONE"),
 		"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
-		"venafi_import_timeout": timeout,
-		"venafi_import_workers": workers,
+		"import_timeout": timeout,
+		"import_workers": workers,
 		"organization":          "Venafi Inc.",
 		"ou":                    "Integration",
 		"locality":              "Salt Lake",

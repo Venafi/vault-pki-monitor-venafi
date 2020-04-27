@@ -107,12 +107,12 @@ Also you can use constants from this module (like 1, 5,8) direct or use OIDs (li
 				Default:     []string{},
 				Description: "Roles list for import to Venafi",
 			},
-			"venafi_import_timeout": {
+			"import_timeout": {
 				Type:        framework.TypeInt,
 				Default:     15,
 				Description: `Timeout in second to rerun import queue`,
 			},
-			"venafi_import_workers": {
+			"import_workers": {
 				Type:        framework.TypeInt,
 				Default:     5,
 				Description: `Max amount of simultaneously working instances of vcert import`,
@@ -290,8 +290,8 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 			TrustBundleFile: data.Get("trust_bundle_file").(string),
 		},
 		AutoRefreshInterval: int64(data.Get("auto_refresh_interval").(int)),
-		VenafiImportTimeout: data.Get("venafi_import_timeout").(int),
-		VenafiImportWorkers: data.Get("venafi_import_workers").(int),
+		VenafiImportTimeout: data.Get("import_timeout").(int),
+		VenafiImportWorkers: data.Get("import_workers").(int),
 		CreateRole:          data.Get(policyFieldCreateRole).(bool),
 	}
 	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
@@ -564,8 +564,8 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		policyFieldEnforcementRoles: rolesList.enforceRoles,
 		"auto_refresh_interval":     config.AutoRefreshInterval,
 		"last_policy_update_time":   config.LastPolicyUpdateTime,
-		"venafi_import_timeout":     config.VenafiImportTimeout,
-		"venafi_import_workers":     config.VenafiImportWorkers,
+		"import_timeout":     config.VenafiImportTimeout,
+		"import_workers":     config.VenafiImportWorkers,
 		"create_role":               config.CreateRole,
 	}
 
@@ -873,8 +873,8 @@ type venafiPolicyConfigEntry struct {
 	ExtKeyUsage          []x509.ExtKeyUsage `json:"ext_key_usage"`
 	AutoRefreshInterval  int64              `json:"auto_refresh_interval"`
 	LastPolicyUpdateTime int64              `json:"last_policy_update_time"`
-	VenafiImportTimeout  int                `json:"venafi_import_timeout"`
-	VenafiImportWorkers  int                `json:"venafi_import_workers"`
+	VenafiImportTimeout  int                `json:"import_timeout"`
+	VenafiImportWorkers  int                `json:"import_workers"`
 	CreateRole           bool               `json:"create_role"`
 }
 

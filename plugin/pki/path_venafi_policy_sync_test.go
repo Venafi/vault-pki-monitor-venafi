@@ -496,3 +496,7 @@ func Test_backend_getVenafiPolicyParams(t *testing.T) {
 		t.Fatalf("%s doesn't match %s", have, want)
 	}
 }
+
+func TestAutoRefresh(t *testing.T) {
+
+}

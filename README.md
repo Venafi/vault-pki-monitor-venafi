@@ -157,8 +157,8 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     |`trust_bundle_file`    |string   | Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server.|`"/full/path/to/chain.pem"`|
     |`zone`                 |string   | Name of Venafi Platform policy or Venafi Cloud Zone ID.                     |`testpolicy\\vault`|
     |`auto_refresh_interval`| int | Interval of policy update from Venafi in seconds. Set it to 0 to disable automatic policy| 0|    
-    | `venafi_import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
-    | `venafi_import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 12        |
+    | `import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
+    | `import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 12        |
     |`enforcement_roles`   |string   | List of roles where policy enfrcement is enabled                            |`tpp`|
     |`defaults_roles`      |string   | List of roles where default values from Venafi will be set                            |`tpp`|
     |`import_roles`               |string   | List of roles from where certificates will be imported to Venafi                          |`tpp`|        
