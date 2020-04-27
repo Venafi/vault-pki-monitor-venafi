@@ -72,7 +72,6 @@ func Test_scheduler_del(t *testing.T) {
 }
 
 func Test_scheduler_concurency(t *testing.T) {
-	t.Skip("Skip until fixing issue https://github.com/Venafi/vault-pki-monitor-venafi/issues/48")
 	s := taskStorageStruct{}
 	const threads = 100
 	const iterations = 1000
@@ -102,7 +101,6 @@ func Test_scheduler_concurency(t *testing.T) {
 }
 
 func Test_scheduler_running(t *testing.T) {
-	t.Skip("Skip until fixing issue https://github.com/Venafi/vault-pki-monitor-venafi/issues/48")
 	s := taskStorageStruct{}
 	const iterations = 1000
 	var globalCounter int64
