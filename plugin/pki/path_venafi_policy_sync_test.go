@@ -498,5 +498,5 @@ func Test_backend_getVenafiPolicyParams(t *testing.T) {
 }
 
 func TestAutoRefresh(t *testing.T) {
-
+//TODO: make it
 }
