@@ -196,7 +196,7 @@ func (b *backend) controlImportQueue(conf *logical.BackendConfig) {
 
 		policyConfig, err := b.getVenafiPolicyConfig(ctx, b.storage, policyMap.Roles[roleName].ImportPolicy)
 		if err != nil || policyConfig == nil {
-			log.Printf("%s Error getting policy %v: %s\n Exiting.", logPrefixVenafiImport, policyMap.Roles[roleName].ImportPolicy, err)
+			log.Printf("%s Error getting policy %v: %v\n Exiting.", logPrefixVenafiImport, policyMap.Roles[roleName].ImportPolicy, err)
 			continue
 		}
 		b.taskStorage.register(fillQueuePrefix+roleName, func() {
