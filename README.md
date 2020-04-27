@@ -115,12 +115,6 @@ directory of your choosing):
 
 [![asciicast](https://asciinema.org/a/vmo1iE4fj3bDQFOByCSVH5h4D.svg)](https://asciinema.org/a/vmo1iE4fj3bDQFOByCSVH5h4D)
 
-### Running under Windows
- If you want to run plugin on Windows the following environment variables must specified to restrict the port that will be assigned to be from within a specific range. If not values are provided plugin will exit with error. For more information please see https://github.com/hashicorp/go-plugin/pull/111
-
-  * `PLUGIN_MIN_PORT`: Specifies the minimum port value that will be assigned to the listener.
-  * `PLUGIN_MAX_PORT`: Specifies the maximum port value that will be assigned to the listener.
- 
 ## Quickstart: Enabling Venafi Policy Enforcement
 
 Venafi Policy limits the PKI role based on Venafi Platform policies or Venafi Cloud zones.  Policy enforcement is
