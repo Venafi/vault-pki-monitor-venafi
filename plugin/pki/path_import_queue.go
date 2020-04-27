@@ -278,9 +278,7 @@ func (b *backend) processImportToTPP(job Job) string {
 }
 
 func (b *backend) deleteCertFromQueue(job Job) {
-	//ctx := job.ctx
-	//s := job.storage
-	//entry := job.entry
+
 	msg := fmt.Sprintf("Job id: %v ###", job.id)
 	importPath := job.importPath
 	log.Printf("%s %s Removing certificate from import path %s", logPrefixVenafiImport, msg, importPath+job.entry)
