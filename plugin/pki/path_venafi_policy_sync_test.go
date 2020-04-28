@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"fmt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"os"
 	"testing"
@@ -90,16 +91,12 @@ func TestSyncRoleWithTPPPolicy(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	testRoleName := "test-venafi-role"
 	config.StorageView = storage
-
+	policy := copyMap(policyTPPData2)
 	b := Backend(config)
 	err := b.Setup(context.Background(), config)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	//write TPP policy
-	writePolicy(b, storage, policyTPPData2, t, defaultVenafiPolicyName)
-	roleData["venafi_sync_policy"] = defaultVenafiPolicyName
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -114,8 +111,12 @@ func TestSyncRoleWithTPPPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	//write TPP policy
+	policy[policyFieldDefaultsRoles] = testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+
 	ctx := context.Background()
-	err = b.syncWithVenafiPolicy(storage, config)
+	err = b.syncPolicyEnforcementAndRoleDefaults(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,6 +141,7 @@ func TestIntegrationSyncRoleWithPolicy(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	testRoleName := "test-venafi-role"
 	config.StorageView = storage
+	policy := copyMap(policyTPPData)
 
 	b := Backend(config)
 	err := b.Setup(context.Background(), config)
@@ -148,8 +150,7 @@ func TestIntegrationSyncRoleWithPolicy(t *testing.T) {
 	}
 
 	//write TPP policy
-	writePolicy(b, storage, policyTPPData, t, defaultVenafiPolicyName)
-	roleData["venafi_sync_policy"] = defaultVenafiPolicyName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -163,6 +164,9 @@ func TestIntegrationSyncRoleWithPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	policy[policyFieldDefaultsRoles] = testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
 	ctx := context.Background()
 
@@ -190,6 +194,7 @@ func TestSyncRoleWithCloudPolicy(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	testRoleName := "test-venafi-role"
 	config.StorageView = storage
+	policy := copyMap(policyCloudData)
 
 	b := Backend(config)
 	err := b.Setup(context.Background(), config)
@@ -198,8 +203,7 @@ func TestSyncRoleWithCloudPolicy(t *testing.T) {
 	}
 
 	//write TPP policy
-	writePolicy(b, storage, policyCloudData, t, defaultVenafiPolicyName)
-	roleData["venafi_sync_policy"] = defaultVenafiPolicyName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -214,8 +218,11 @@ func TestSyncRoleWithCloudPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	policy[policyFieldDefaultsRoles] = testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+
 	ctx := context.Background()
-	err = b.syncWithVenafiPolicy(storage, config)
+	err = b.syncPolicyEnforcementAndRoleDefaults(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,10 +254,7 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Log("Setting up first role")
-	writePolicy(b, storage, policyTPPData, t, "tpp-policy")
-
-	roleData["venafi_sync_policy"] = "tpp-policy"
+	t.Log("Setting up first policy")
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -267,7 +271,6 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 
 	t.Log("Setting up second role")
 	writePolicy(b, storage, policyCloudData, t, "cloud-policy")
-	roleData["venafi_sync_policy"] = "cloud-policy"
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -283,7 +286,6 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 	}
 
 	t.Log("Setting up third role without sync")
-	roleData["venafi_sync_policy"] = ""
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/" + testRoleName + "-third",
@@ -298,8 +300,6 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 	}
 
 	t.Log("Setting up fourth role")
-	writePolicy(b, storage, policyTPPData2, t, "tpp2-policy")
-	roleData["venafi_sync_policy"] = "tpp2-policy"
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -314,8 +314,18 @@ func TestSyncMultipleRolesWithTPPPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	t.Log("Setting up policy")
+
+	policy := copyMap(policyTPPData)
+	policy[policyFieldDefaultsRoles] = fmt.Sprintf("%s,%s", testRoleName, testRoleName+"-second")
+	writePolicy(b, storage, policy, t, "tpp-policy")
+
+	policy2 := copyMap(policyTPPData2)
+	policy2[policyFieldDefaultsRoles] = testRoleName + "-fourth"
+	writePolicy(b, storage, policy2, t, "tpp2-policy")
+
 	ctx := context.Background()
-	err = b.syncWithVenafiPolicy(storage, config)
+	err = b.syncPolicyEnforcementAndRoleDefaults(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -485,4 +495,8 @@ func Test_backend_getVenafiPolicyParams(t *testing.T) {
 	if have != want {
 		t.Fatalf("%s doesn't match %s", have, want)
 	}
+}
+
+func TestAutoRefresh(t *testing.T) {
+//TODO: make it
 }

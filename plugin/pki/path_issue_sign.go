@@ -329,9 +329,13 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	if role.TPPImport {
+	policyMap, err := getPolicyRoleMap(ctx, req.Storage)
+	if err != nil {
+		return nil, errwrap.Wrapf("unable to get policy map: {{err}}", err)
+	}
+	if policyMap.Roles[data.Get("role").(string)].ImportPolicy != "" {
 		sn := normalizeSerial(cb.SerialNumber)
-		log.Printf("Puting certificate with serial number %s to the Venafi import queue\n", sn)
+		log.Printf("%s Puting certificate with serial number %s to the Venafi import queue\n", logPrefixVenafiImport, sn)
 
 		err = req.Storage.Put(ctx, &logical.StorageEntry{
 			Key:   "import-queue/" + data.Get("role").(string) + "/" + sn,

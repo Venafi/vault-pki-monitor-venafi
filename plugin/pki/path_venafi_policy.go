@@ -10,13 +10,23 @@ import (
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/hashicorp/vault/sdk/framework"
+
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
 	"strings"
 )
 
-const venafiPolicyPath = "venafi-policy/"
-const defaultVenafiPolicyName = "default"
+const (
+	venafiRolePolicyMapStorage  = "venafi-role-policy-map"
+	venafiPolicyPath            = "venafi-policy/"
+	defaultVenafiPolicyName     = "default"
+	policyFieldEnforcementRoles = "enforcement_roles"
+	policyFieldDefaultsRoles    = "defaults_roles"
+	policyFieldImportRoles      = "import_roles"
+	policyFieldCreateRole       = "create_role"
+	venafiRolePolicyMapPath     = "show-venafi-role-policy-map"
+	errPolicyMapDoesNotExists   = "policy map does not exists"
+)
 
 func pathVenafiPolicy(b *backend) *framework.Path {
 	ret := &framework.Path{
@@ -77,6 +87,41 @@ https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 -- simply drop the "ExtKeyUsage" part of the name.
 Also you can use constants from this module (like 1, 5,8) direct or use OIDs (like 1.3.6.1.5.5.7.3.4)`,
 			},
+			"auto_refresh_interval": {
+				Type:        framework.TypeInt,
+				Default:     0,
+				Description: `Interval of policy update from Venafi in seconds. Set it to 0 to disable automatic policy update`,
+			},
+			policyFieldEnforcementRoles: {
+				Type:        framework.TypeCommaStringSlice,
+				Default:     []string{},
+				Description: "Roles list for policy check",
+			},
+			policyFieldDefaultsRoles: {
+				Type:        framework.TypeCommaStringSlice,
+				Default:     []string{},
+				Description: "Roles list for filing with default values from Venafi",
+			},
+			policyFieldImportRoles: {
+				Type:        framework.TypeCommaStringSlice,
+				Default:     []string{},
+				Description: "Roles list for import to Venafi",
+			},
+			"import_timeout": {
+				Type:        framework.TypeInt,
+				Default:     15,
+				Description: `Timeout in second to rerun import queue`,
+			},
+			"import_workers": {
+				Type:        framework.TypeInt,
+				Default:     5,
+				Description: `Max amount of simultaneously working instances of vcert import`,
+			},
+			policyFieldCreateRole: {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: `Automatically create empty role for polic if it does not exists`,
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathUpdateVenafiPolicy,
@@ -123,9 +168,67 @@ func pathVenafiPolicyList(b *backend) *framework.Path {
 	return ret
 }
 
+func pathVenafiPolicyMap(b *backend) *framework.Path {
+	ret := &framework.Path{
+		Pattern: venafiRolePolicyMapPath,
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.pathShowVenafiPolicyMap,
+		},
+
+		HelpSynopsis:    pathImportQueueSyn,
+		HelpDescription: pathImportQueueDesc,
+	}
+	return ret
+}
+
+func (b *backend) refreshVenafiPolicyEnforcementContent(storage logical.Storage, policyName string) (err error) {
+
+	ctx := context.Background()
+
+	venafiPolicyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policyName)
+	if err != nil {
+		return fmt.Errorf("Error getting policy config %s: %s", policyName, err)
+
+	}
+	if venafiPolicyConfig == nil {
+		return fmt.Errorf("Policy config for %s is empty", policyName)
+	}
+
+	if venafiPolicyConfig.AutoRefreshInterval > 0 {
+		log.Printf("%s Auto refresh enabled for policy %s. Getting policy from Venafi", logPrefixVenafiPolicyEnforcement, policyName)
+	} else {
+		return nil
+	}
+
+	policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
+	if err != nil {
+		return fmt.Errorf("Error getting policy %s from Venafi: %s", policyName, err)
+
+	}
+
+	log.Printf("%s Saving policy %s", logPrefixVenafiPolicyEnforcement, policyName)
+	_, err = savePolicyEntry(policy, policyName, ctx, storage)
+	if err != nil {
+		return fmt.Errorf("%s Error saving policy: %s", logPrefixVenafiPolicyEnforcement, err)
+
+	}
+
+	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+policyName, venafiPolicyConfig)
+	if err != nil {
+		return fmt.Errorf("%s Error converting policy config into JSON: %s", logPrefixVenafiPolicyEnforcement, err)
+
+	}
+	if err := storage.Put(ctx, jsonEntry); err != nil {
+		return fmt.Errorf("Error saving policy last update time: %s", err)
+
+	}
+
+	return nil
+}
+
 func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
-	log.Printf("Trying to read policy for config %s", name)
+	log.Printf("%s Trying to read policy for config %s", logPrefixVenafiPolicyEnforcement, name)
 
 	if len(name) == 0 {
 		return logical.ErrorResponse("Non config specified or wrong config path name"), nil
@@ -141,7 +244,7 @@ func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.
 
 	var policy venafiPolicyEntry
 	if err := entry.DecodeJSON(&policy); err != nil {
-		log.Printf("error reading Venafi policy configuration: %s", err)
+		log.Printf("%s error reading Venafi policy configuration: %s", logPrefixVenafiPolicyEnforcement, err)
 		return nil, err
 	}
 
@@ -156,12 +259,12 @@ func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.
 func (b *backend) pathUpdateVenafiPolicyContent(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	policy, err := b.getPolicyFromVenafi(ctx, req, name)
+	policy, err := b.getPolicyFromVenafi(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
 
-	policyEntry, err := savePolicyEntry(policy, name, ctx, req)
+	policyEntry, err := savePolicyEntry(policy, name, ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -175,8 +278,8 @@ func (b *backend) pathUpdateVenafiPolicyContent(ctx context.Context, req *logica
 func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, err error) {
 	name := data.Get("name").(string)
 
-	log.Printf("Write policy endpoint configuration into storage")
-	configEntry := &venafiPolicyConfigEntry{
+	log.Printf("%s Write policy endpoint configuration into storage", logPrefixVenafiPolicyEnforcement)
+	venafiPolicyConfig := &venafiPolicyConfigEntry{
 		venafiConnectionConfig: venafiConnectionConfig{
 			TPPURL:          data.Get("tpp_url").(string),
 			CloudURL:        data.Get("cloud_url").(string),
@@ -186,40 +289,152 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 			TPPUser:         data.Get("tpp_user").(string),
 			TrustBundleFile: data.Get("trust_bundle_file").(string),
 		},
+		AutoRefreshInterval: int64(data.Get("auto_refresh_interval").(int)),
+		VenafiImportTimeout: data.Get("import_timeout").(int),
+		VenafiImportWorkers: data.Get("import_workers").(int),
+		CreateRole:          data.Get(policyFieldCreateRole).(bool),
 	}
 	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
-	configEntry.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
+	venafiPolicyConfig.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
 	if err != nil {
 		return
 	}
-	if configEntry.Apikey == "" && (configEntry.TPPURL == "" || configEntry.TPPUser == "" || configEntry.TPPPassword == "") {
+	if venafiPolicyConfig.Apikey == "" && (venafiPolicyConfig.TPPURL == "" || venafiPolicyConfig.TPPUser == "" || venafiPolicyConfig.TPPPassword == "") {
 		return logical.ErrorResponse("Invalid mode. apikey or tpp credentials required"), nil
 	}
-	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+name, configEntry)
+	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+name, venafiPolicyConfig)
 	if err != nil {
 		return nil, err
 	}
 	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
-	log.Printf("Geting policy from zone %s", data.Get("zone").(string))
-	policy, err := b.getPolicyFromVenafi(ctx, req, name)
+
+	log.Printf("%s Geting policy from zone %s", logPrefixVenafiPolicyEnforcement, data.Get("zone").(string))
+	policy, err := b.getPolicyFromVenafi(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
-	policyEntry, err := savePolicyEntry(policy, name, ctx, req)
+	policyEntry, err := savePolicyEntry(policy, name, ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
+
+	log.Printf("%s Updating roles policy attributes", logPrefixVenafiPolicyEnforcement)
+
+	err = b.updateRolesPolicyAttributes(ctx, req, data, name)
+	if err != nil {
+		return nil, err
+	}
+
 	//Send policy to the user output
 	respData := formPolicyRespData(*policyEntry)
 
 	return &logical.Response{
 		Data: respData,
 	}, nil
+
 }
 
-func savePolicyEntry(policy *endpoint.Policy, name string, ctx context.Context, req *logical.Request) (policyEntry *venafiPolicyEntry, err error) {
+type policyTypes struct {
+	ImportPolicy      string `json:"import_policy"`
+	DefaultsPolicy    string `json:"defaults_policy"`
+	EnforcementPolicy string `json:"enforcement_policy"`
+}
+
+type policyRoleMap struct {
+	Roles map[string]policyTypes `json:"roles"`
+}
+
+func getPolicyRoleMap(ctx context.Context, storage logical.Storage) (policyMap policyRoleMap, err error) {
+	//TODO: write test for it
+	policyMap.Roles = make(map[string]policyTypes)
+
+	entry, err := storage.Get(ctx, venafiRolePolicyMapStorage)
+	if err != nil {
+		return policyMap, err
+	}
+
+	if entry == nil {
+		return policyMap, fmt.Errorf(errPolicyMapDoesNotExists)
+	}
+
+	err = json.Unmarshal(entry.Value, &policyMap)
+	if err != nil {
+		return policyMap, err
+	}
+
+	return policyMap, err
+}
+
+func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.Request, data *framework.FieldData, name string) error {
+	//TODO: write test for it
+
+	policyMap, err := getPolicyRoleMap(ctx, req.Storage)
+	if err != nil {
+		if err.Error() == errPolicyMapDoesNotExists {
+			log.Println(errPolicyMapDoesNotExists + " will create new")
+		} else {
+			return err
+		}
+
+	}
+
+	for _, roleType := range []string{policyFieldEnforcementRoles, policyFieldDefaultsRoles, policyFieldImportRoles} {
+		for _, roleName := range data.Get(roleType).([]string) {
+			role, err := b.getRole(ctx, req.Storage, roleName)
+			if err != nil {
+				return err
+			}
+			if role == nil {
+				if data.Get(policyFieldCreateRole).(bool) {
+					return fmt.Errorf("role %s does not exists. can not add it to the attributes of policy %s", roleName, name)
+				} else {
+					//TODO: create role here
+					log.Println("Creating role", roleName)
+				}
+			}
+
+			r := policyTypes{}
+
+			//copy policy values before setting new value
+			r.EnforcementPolicy = policyMap.Roles[roleName].EnforcementPolicy
+			r.DefaultsPolicy = policyMap.Roles[roleName].DefaultsPolicy
+			r.ImportPolicy = policyMap.Roles[roleName].ImportPolicy
+
+			switch roleType {
+			case policyFieldEnforcementRoles:
+				r.EnforcementPolicy = name
+			case policyFieldDefaultsRoles:
+				r.DefaultsPolicy = name
+			case policyFieldImportRoles:
+				r.ImportPolicy = name
+			}
+
+			policyMap.Roles[roleName] = r
+
+			jsonEntry, err := logical.StorageEntryJSON("role/"+roleName, role)
+			if err != nil {
+				return err
+			}
+			if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+				return err
+			}
+		}
+	}
+
+	jsonEntry, err := logical.StorageEntryJSON(venafiRolePolicyMapStorage, policyMap)
+
+	if err != nil {
+		return err
+	}
+	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+		return err
+	}
+	return nil
+}
+
+func savePolicyEntry(policy *endpoint.Policy, name string, ctx context.Context, storage logical.Storage) (policyEntry *venafiPolicyEntry, err error) {
 
 	//Form policy entry for storage
 	policyEntry = &venafiPolicyEntry{
@@ -239,12 +454,12 @@ func savePolicyEntry(policy *endpoint.Policy, name string, ctx context.Context, 
 		AllowKeyReuse:            policy.AllowKeyReuse,
 	}
 
-	log.Printf("Saving policy into Vault storage")
+	log.Printf("%s Saving policy into Vault storage", logPrefixVenafiPolicyEnforcement)
 	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+name+"/policy", policyEntry)
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(ctx, jsonEntry); err != nil {
+	if err := storage.Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
 
@@ -271,7 +486,7 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 	}
 	return map[string]interface{}{
 		"subject_cn_regexes":         policy.SubjectCNRegexes,
-		"subject_or_regexes":         policy.SubjectORegexes,
+		"subject_o_regexes":          policy.SubjectORegexes,
 		"subject_ou_regexes":         policy.SubjectOURegexes,
 		"subject_st_regexes":         policy.SubjectSTRegexes,
 		"subject_l_regexes":          policy.SubjectLRegexes,
@@ -287,14 +502,14 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 	}
 }
 
-func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request, policyConfig string) (policy *endpoint.Policy, err error) {
-	log.Printf("Creating Venafi client")
-	cl, err := b.ClientVenafi(ctx, req.Storage, policyConfig, "policy")
+func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Storage, policyConfig string) (policy *endpoint.Policy, err error) {
+	log.Printf("%s Creating Venafi client", logPrefixVenafiPolicyEnforcement)
+	cl, err := b.ClientVenafi(ctx, storage, policyConfig)
 	if err != nil {
 		return
 	}
 
-	log.Printf("Getting policy from Venafi endpoint")
+	log.Printf("%s Getting policy from Venafi endpoint", logPrefixVenafiPolicyEnforcement)
 
 	policy, err = cl.ReadPolicyConfiguration()
 	if err != nil {
@@ -310,10 +525,10 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, req *logical.Request,
 
 func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
 	name := data.Get("name").(string)
-	log.Printf("Trying to read policy for config %s", name)
+	log.Printf("%s Trying to read policy for config %s", logPrefixVenafiPolicyEnforcement, name)
 
 	if len(name) == 0 {
-		return logical.ErrorResponse("Non config specified or wrong config path name"), nil
+		return logical.ErrorResponse("No config specified or wrong config path name"), nil
 	}
 
 	entry, err := req.Storage.Get(ctx, venafiPolicyPath+name)
@@ -328,24 +543,70 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 	var config venafiPolicyConfigEntry
 
 	if err := entry.DecodeJSON(&config); err != nil {
-		log.Printf("error reading Venafi policy configuration: %s", err)
+		log.Printf("%s error reading Venafi policy configuration: %s", logPrefixVenafiPolicyEnforcement, err)
+		return nil, err
+	}
+
+	rolesList, err := b.getRolesListForVenafiPolicy(ctx, req.Storage, name)
+	if err != nil {
 		return nil, err
 	}
 
 	//Send config to the user output
 	respData := map[string]interface{}{
-		"tpp_url":           config.TPPURL,
-		"zone":              config.Zone,
-		"tpp_password":      config.TPPPassword,
-		"tpp_user":          config.TPPUser,
-		"trust_bundle_file": config.TrustBundleFile,
-		"apikey":            config.Apikey,
-		"cloud_url":         config.CloudURL,
+		"tpp_url":                   config.TPPURL,
+		"zone":                      config.Zone,
+		"tpp_user":                  config.TPPUser,
+		"trust_bundle_file":         config.TrustBundleFile,
+		"cloud_url":                 config.CloudURL,
+		policyFieldImportRoles:      rolesList.importRoles,
+		policyFieldDefaultsRoles:    rolesList.defaultsRoles,
+		policyFieldEnforcementRoles: rolesList.enforceRoles,
+		"auto_refresh_interval":     config.AutoRefreshInterval,
+		"last_policy_update_time":   config.LastPolicyUpdateTime,
+		"import_timeout":     config.VenafiImportTimeout,
+		"import_workers":     config.VenafiImportWorkers,
+		"create_role":               config.CreateRole,
 	}
 
 	return &logical.Response{
 		Data: respData,
 	}, nil
+}
+
+type rolesListForVenafiPolicy struct {
+	importRoles   []string
+	enforceRoles  []string
+	defaultsRoles []string
+}
+
+func (b *backend) getRolesListForVenafiPolicy(ctx context.Context, storage logical.Storage, policyName string) (rolesList rolesListForVenafiPolicy, err error) {
+
+	//In this function we're getting a role list for Venafi policy.
+	//Each role have three hidden attributes: VenafiImportPolicy,  VenafiEnforcementPolicy and VenafiDefaultsPolicy
+	roles, err := storage.List(ctx, "role/")
+	if err != nil {
+		return
+	}
+
+	policyMap, err := getPolicyRoleMap(ctx, storage)
+	if err != nil {
+		return
+	}
+	for _, roleName := range roles {
+
+		//If policy name is in one of role policy attributes append it to the roleList structure
+		if policyMap.Roles[roleName].ImportPolicy == policyName {
+			rolesList.importRoles = append(rolesList.importRoles, roleName)
+		}
+		if policyMap.Roles[roleName].EnforcementPolicy == policyName {
+			rolesList.enforceRoles = append(rolesList.enforceRoles, roleName)
+		}
+		if policyMap.Roles[roleName].DefaultsPolicy == policyName {
+			rolesList.defaultsRoles = append(rolesList.defaultsRoles, roleName)
+		}
+	}
+	return rolesList, err
 }
 
 func (b *backend) pathDeleteVenafiPolicy(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -388,6 +649,22 @@ func (b *backend) pathListVenafiPolicy(ctx context.Context, req *logical.Request
 	return logical.ListResponse(entries), nil
 }
 
+func (b *backend) pathShowVenafiPolicyMap(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, err error) {
+	//TODO: test it!
+	entry, err := req.Storage.Get(ctx, venafiRolePolicyMapStorage)
+	if err != nil {
+		return nil, err
+	}
+
+	response = &logical.Response{
+		Data: map[string]interface{}{},
+	}
+
+	response.Data["policy_map_json"] = entry.Value
+
+	return response, nil
+}
+
 func checkAgainstVenafiPolicy(
 	req *logical.Request,
 	role *roleEntry,
@@ -396,22 +673,28 @@ func checkAgainstVenafiPolicy(
 	cn string,
 	ipAddresses, email, sans []string) error {
 
-	policyConfigPath := role.VenafiCheckPolicy
 	ctx := context.Background()
-	if policyConfigPath == "" {
-		policyConfigPath = defaultVenafiPolicyName
+
+	policyMap, err := getPolicyRoleMap(ctx, req.Storage)
+	if err != nil {
+		return err
 	}
 
-	entry, err := req.Storage.Get(ctx, venafiPolicyPath+policyConfigPath+"/policy")
+	venafiEnforcementPolicy := policyMap.Roles[role.Name].EnforcementPolicy
+	if venafiEnforcementPolicy == "" {
+		venafiEnforcementPolicy = defaultVenafiPolicyName
+	}
+
+	entry, err := req.Storage.Get(ctx, venafiPolicyPath+venafiEnforcementPolicy+"/policy")
 	if err != nil {
 		return err
 	}
 	if entry == nil {
 		if venafiPolicyDenyAll {
-			if strings.Contains(req.Path, "root/generate") {
-				//internal certificate won't output error response
-				log.Println("policy data is nil. You need configure Venafi policy to proceed")
-			}
+			//TODO: Can not understand why I added this if here. Probably should be removed
+			//if strings.Contains(req.Path, "root/generate") {
+			//	log.Println("policy data is nil. You need configure Venafi policy to proceed")
+			//}
 			return fmt.Errorf("policy data is nil. You need configure Venafi policy to proceed")
 		} else {
 			return nil
@@ -421,21 +704,21 @@ func checkAgainstVenafiPolicy(
 	var policy venafiPolicyEntry
 
 	if err := entry.DecodeJSON(&policy); err != nil {
-		log.Printf("error reading Venafi policy configuration: %s", err)
+		log.Printf("%s error reading Venafi policy configuration: %s", logPrefixVenafiPolicyEnforcement, err)
 		return err
 	}
-	entry, err = req.Storage.Get(ctx, venafiPolicyPath+policyConfigPath)
+	entry, err = req.Storage.Get(ctx, venafiPolicyPath+venafiEnforcementPolicy)
 	if err != nil {
 		return err
 	}
 	var policyConfig venafiPolicyConfigEntry
 	if err := entry.DecodeJSON(&policyConfig); err != nil {
-		log.Printf("error reading Venafi policy configuration: %s", err)
+		log.Printf("%s error reading Venafi policy configuration: %s", logPrefixVenafiPolicyEnforcement, err)
 		return err
 	}
 
 	if csr != nil {
-		log.Printf("Checking CSR against policy %s", policyConfigPath)
+		log.Printf("%s Checking CSR against policy %s", logPrefixVenafiPolicyEnforcement, venafiEnforcementPolicy)
 		if isCA {
 			if len(csr.EmailAddresses) != 0 || len(csr.DNSNames) != 0 || len(csr.IPAddresses) != 0 || len(csr.URIs) != 0 {
 				//workaround for setting SAN if CA have normal domain in CN
@@ -493,7 +776,7 @@ func checkAgainstVenafiPolicy(
 			if ok {
 				keyValid = checkKey("rsa", pubkey.Size()*8, "", policy.AllowedKeyConfigurations)
 			} else {
-				log.Println("invalid key in csr")
+				log.Printf("%s invalid key in csr", logPrefixVenafiPolicyEnforcement)
 			}
 		} else if csr.PublicKeyAlgorithm == x509.ECDSA {
 			pubkey, ok := csr.PublicKey.(*ecdsa.PublicKey)
@@ -505,7 +788,7 @@ func checkAgainstVenafiPolicy(
 			return fmt.Errorf("key type not compatible vith Venafi policies")
 		}
 	} else {
-		log.Printf("Checking creation bundle against policy %s", policyConfigPath)
+		log.Printf("%s Checking creation bundle against policy %s", logPrefixVenafiPolicyEnforcement, venafiEnforcementPolicy)
 
 		if isCA {
 			if len(email) != 0 || len(sans) != 0 || len(ipAddresses) != 0 {
@@ -569,7 +852,7 @@ func checkAgainstVenafiPolicy(
 	return nil
 }
 
-func (b *backend) getPolicyConfig(ctx context.Context, s logical.Storage, n string) (*venafiPolicyConfigEntry, error) {
+func (b *backend) getVenafiPolicyConfig(ctx context.Context, s logical.Storage, n string) (*venafiPolicyConfigEntry, error) {
 	entry, err := s.Get(ctx, venafiPolicyPath+n)
 	if err != nil {
 		return nil, err
@@ -587,12 +870,17 @@ func (b *backend) getPolicyConfig(ctx context.Context, s logical.Storage, n stri
 
 type venafiPolicyConfigEntry struct {
 	venafiConnectionConfig
-	ExtKeyUsage []x509.ExtKeyUsage `json:"ext_key_usage"`
+	ExtKeyUsage          []x509.ExtKeyUsage `json:"ext_key_usage"`
+	AutoRefreshInterval  int64              `json:"auto_refresh_interval"`
+	LastPolicyUpdateTime int64              `json:"last_policy_update_time"`
+	VenafiImportTimeout  int                `json:"import_timeout"`
+	VenafiImportWorkers  int                `json:"import_workers"`
+	CreateRole           bool               `json:"create_role"`
 }
 
 type venafiPolicyEntry struct {
 	SubjectCNRegexes         []string                           `json:"subject_cn_regexes"`
-	SubjectORegexes          []string                           `json:"subject_or_regexes"`
+	SubjectORegexes          []string                           `json:"subject_o_regexes"`
 	SubjectOURegexes         []string                           `json:"subject_ou_regexes"`
 	SubjectSTRegexes         []string                           `json:"subject_st_regexes"`
 	SubjectLRegexes          []string                           `json:"subject_l_regexes"`

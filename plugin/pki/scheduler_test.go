@@ -90,7 +90,7 @@ func Test_scheduler_concurency(t *testing.T) {
 
 		}(i)
 	}
-	time.Sleep(time.Minute)
+	time.Sleep(time.Minute * 2)
 	tasksCount := threads*iterations*9/10 + threads
 	if len(s.tasks) != tasksCount {
 		t.Fatalf("tasks count should be %v but it is %v", tasksCount, len(s.tasks))
@@ -110,7 +110,7 @@ func Test_scheduler_running(t *testing.T) {
 			atomic.AddInt64(&globalCounter, 1)
 		}, 1, time.Second*10)
 	}
-	time.Sleep(time.Second * 25)
+	time.Sleep(time.Second * 28)
 	if globalCounter != iterations*3 {
 		t.Fatalf("global counter should be %v but it is %v", iterations*3, globalCounter)
 	}

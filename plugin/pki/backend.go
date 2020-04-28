@@ -80,6 +80,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathVenafiPolicy(&b),
 			pathVenafiPolicyContent(&b),
 			pathVenafiPolicyList(&b),
+			pathVenafiPolicyMap(&b),
 			pathVenafiPolicySync(&b),
 			pathRevoke(&b),
 			pathTidy(&b),
@@ -100,8 +101,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 		log.Println("Can't start queue when storage is nil")
 	} else {
 		b.taskStorage.init()
-		b.importToTPP(b.storage, conf)
-		b.syncWithVenafiPolicyRegister(b.storage, conf)
+		b.importToTPP(conf)
+		b.syncRoleWithVenafiPolicyRegister(conf)
 	}
 
 	return &b

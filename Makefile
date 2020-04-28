@@ -5,7 +5,7 @@ CURRENT_DIR := $(patsubst %/,%,$(dir $(realpath $(MKFILE_PATH))))
 
 # List of tests to run
 TEST ?= $$(go list ./... | grep -v /vendor/ | grep -v /e2e)
-TEST_TIMEOUT?=6m
+TEST_TIMEOUT?=20m
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 
 #Plugin information
@@ -52,7 +52,7 @@ VAULT_CLIENT_TIMEOUT = 180s
 test: linter
 	VAULT_ACC=1 \
 	go get gotest.tools/gotestsum
-	gotestsum --junitfile  junit.xml
+	gotestsum --junitfile  junit.xml  -- -timeout $(TEST_TIMEOUT) ./...
 
 policy_test:
 	go test github.com/Venafi/vault-pki-monitor-venafi/plugin/pki -run ^TestBackend_VenafiPolicy*$
@@ -70,7 +70,7 @@ unset:
 #Developement server tasks
 dev_server: unset
 	pkill vault || echo "Vault server is not running"
-	vault server -log-level=debug -dev -config=vault-config.hcl
+	vault server -log-level=debug -dev -config=vault-config.hcl 
 
 dev: dev_build mount_dev
 
@@ -117,8 +117,8 @@ import_config_write:
 		allowed_domains=$(IMPORT_DOMAIN) \
 		allow_subdomains=true \
 		trust_bundle_file=$(TRUST_BUNDLE) \
-		venafi_import_timeout=15 \
-		venafi_import_workers=5
+		import_timeout=15 \
+		import_workers=5
 
 import_config_read:
 	vault read $(MOUNT)/roles/$(IMPORT_ROLE)

@@ -5,9 +5,15 @@ import (
 	"github.com/hashicorp/vault/api"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/logical"
-	"log"
 	"os"
 	"testing"
+)
+
+const (
+	logPrefixVenafiImport            = "VENAFI_IMPORT: "
+	logPrefixVenafiPolicyEnforcement = "VENAFI_POLICY_ENFORCEMENT: "
+	logPrefixVenafiRoleyDefaults     = "VENAFI_ROLE_DEFAULTS: "
+	logPrefixVenafiScheduler         = "VENAFI_SCHEDULER: "
 )
 
 const msg_denied_by_policy = "certificate issue should be denied by policy, %#v"
@@ -107,30 +113,49 @@ bOcvXbCN3l5HIY76e+6FbLGGCvNKcgNpSAAPYJg=
 `
 
 var venafiTestTPPConfigAllAllow = map[string]interface{}{
-	"tpp_url":           os.Getenv("TPP_URL"),
-	"tpp_user":          os.Getenv("TPP_USER"),
-	"tpp_password":      os.Getenv("TPP_PASSWORD"),
-	"zone":              os.Getenv("TPP_ZONE"),
-	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+	"tpp_url":               os.Getenv("TPP_URL"),
+	"tpp_user":              os.Getenv("TPP_USER"),
+	"tpp_password":          os.Getenv("TPP_PASSWORD"),
+	"zone":                  os.Getenv("TPP_ZONE"),
+	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
+	"auto_refresh_interval": 1,
 }
 
-var venafiTestTPPConfigRestricted = map[string]interface{}{
-	"tpp_url":           os.Getenv("TPP_URL"),
-	"tpp_user":          os.Getenv("TPP_USER"),
-	"tpp_password":      os.Getenv("TPP_PASSWORD"),
-	"zone":              os.Getenv("TPP_ZONE_RESTRICTED"),
-	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+var venafiTestTPPConfigNoRefresh = map[string]interface{}{
+	"tpp_url":               os.Getenv("TPP_URL"),
+	"tpp_user":              os.Getenv("TPP_USER"),
+	"tpp_password":          os.Getenv("TPP_PASSWORD"),
+	"zone":                  os.Getenv("TPP_ZONE"),
+	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
+	"auto_refresh_interval": 0,
 }
 
-var venafiTestCloudConfigRestricted = map[string]interface{}{
+var venafiTestConfigBadData = map[string]interface{}{
 	"cloud_url": os.Getenv("CLOUD_URL"),
 	"apikey":    os.Getenv("CLOUD_APIKEY"),
 	"zone":      os.Getenv("CLOUD_ZONE_RESTRICTED"),
 }
+
+var venafiTestTPPConfigRestricted = map[string]interface{}{
+	"tpp_url":               os.Getenv("TPP_URL"),
+	"tpp_user":              os.Getenv("TPP_USER"),
+	"tpp_password":          os.Getenv("TPP_PASSWORD"),
+	"zone":                  os.Getenv("TPP_ZONE_RESTRICTED"),
+	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
+	"auto_refresh_interval": 1,
+}
+
+var venafiTestCloudConfigRestricted = map[string]interface{}{
+	"cloud_url":             os.Getenv("CLOUD_URL"),
+	"apikey":                os.Getenv("CLOUD_APIKEY"),
+	"zone":                  os.Getenv("CLOUD_ZONE_RESTRICTED"),
+	"auto_refresh_interval": 1,
+}
 var venafiTestCloudConfigAllAllow = map[string]interface{}{
-	"cloud_url": os.Getenv("CLOUD_URL"),
-	"apikey":    os.Getenv("CLOUD_APIKEY"),
-	"zone":      os.Getenv("CLOUD_ZONE"),
+	"cloud_url":             os.Getenv("CLOUD_URL"),
+	"apikey":                os.Getenv("CLOUD_APIKEY"),
+	"zone":                  os.Getenv("CLOUD_ZONE"),
+	"auto_refresh_interval": 1,
 }
 
 var venafiTPPCreateSimplePolicyStep = logicaltest.TestStep{
@@ -146,18 +171,18 @@ var venafiCloudCreateSimplePolicyStep = logicaltest.TestStep{
 
 func makeVenafiCloudConfig() (domain string, policyData map[string]interface{}) {
 	domain = "vfidev.com"
-	policyData = venafiTestCloudConfigRestricted
+	policyData = copyMap(venafiTestCloudConfigRestricted)
 	return
 }
 
 func makeVenafiTPPConfig() (domain string, policyData map[string]interface{}) {
 	domain = "vfidev.com"
-	policyData = venafiTestTPPConfigRestricted
+	policyData = copyMap(venafiTestTPPConfigRestricted)
 	return
 }
 
 func writePolicy(b *backend, storage logical.Storage, policyData map[string]interface{}, t *testing.T, policyName string) *logical.Response {
-	log.Println("Writing Venafi policy configuration")
+	t.Log("Writing Venafi policy configuration")
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      venafiPolicyPath + policyName,
@@ -246,4 +271,28 @@ func testEqStrginSlice(a, b []string) bool {
 	}
 
 	return true
+}
+
+func sliceContains(slice []string, item string) bool {
+	set := make(map[string]struct{}, len(slice))
+	for _, s := range slice {
+		set[s] = struct{}{}
+	}
+
+	_, ok := set[item]
+	return ok
+}
+
+func copyMap(m map[string]interface{}) map[string]interface{} {
+	cp := make(map[string]interface{})
+	for k, v := range m {
+		vm, ok := v.(map[string]interface{})
+		if ok {
+			cp[k] = copyMap(vm)
+		} else {
+			cp[k] = v
+		}
+	}
+
+	return cp
 }

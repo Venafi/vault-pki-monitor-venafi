@@ -17,7 +17,8 @@ type backgroundTask struct {
 }
 
 type taskStorageStruct struct {
-	tasks []backgroundTask
+	inited bool
+	tasks  []*backgroundTask
 	sync.RWMutex
 }
 
@@ -41,11 +42,11 @@ func (s *taskStorageStruct) register(name string, f func(), count int, interval 
 	task := backgroundTask{name: name, f: f, workers: int64(count), interval: interval}
 	for i := range s.tasks {
 		if s.tasks[i].name == task.name {
-			log.Printf("duplicated task %v", name)
+			log.Printf("%s duplicated task %v", logPrefixVenafiScheduler, name)
 			return
 		}
 	}
-	s.tasks = append(s.tasks, task)
+	s.tasks = append(s.tasks, &task)
 }
 
 func (s *taskStorageStruct) del(taskName string) {
@@ -61,6 +62,10 @@ func (s *taskStorageStruct) del(taskName string) {
 }
 
 func (s *taskStorageStruct) init() {
+	if s.inited {
+		panic(logPrefixVenafiScheduler + " twice inited loop")
+	}
+	s.inited = true
 	go s.loop()
 }
 
@@ -68,19 +73,19 @@ func (s *taskStorageStruct) loop() {
 	for {
 		s.RLock()
 		for i := range s.tasks {
-			if s.tasks[i].currentWorkers >= s.tasks[i].workers {
+			currentTask := s.tasks[i]
+			if currentTask.currentWorkers >= currentTask.workers {
 				continue
 			}
-			if time.Since(s.tasks[i].lastRun) < s.tasks[i].interval {
+			if time.Since(currentTask.lastRun) < currentTask.interval {
 				continue
 			}
-			currentTask := &s.tasks[i]
 			atomic.AddInt64(&currentTask.currentWorkers, 1)
 			go func(counter *int64) {
 				defer func(counter *int64) {
 					r := recover()
 					if r != nil {
-						log.Printf("job failed. recover: %v\n", r)
+						log.Printf("%s job %s failed. recover: %v\n", logPrefixVenafiScheduler, currentTask.name, r)
 						//todo: better log
 					}
 					atomic.AddInt64(counter, -1)
