@@ -5,7 +5,7 @@ CURRENT_DIR := $(patsubst %/,%,$(dir $(realpath $(MKFILE_PATH))))
 
 # List of tests to run
 TEST ?= $$(go list ./... | grep -v /vendor/ | grep -v /e2e)
-TEST_TIMEOUT?=6m
+TEST_TIMEOUT?=20m
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 
 #Plugin information
@@ -17,6 +17,15 @@ ifdef BUILD_NUMBER
 VERSION=`git describe --abbrev=0 --tags`+$(BUILD_NUMBER)
 else
 VERSION=`git describe --abbrev=0 --tags`
+endif
+
+#define version if release is set
+ifdef RELEASE_VERSION
+ifdef BUILD_NUMBER
+VERSION=$(RELEASE_VERSION)+$(BUILD_NUMBER)
+else
+VERSION=$(RELEASE_VERSION)
+endif
 endif
 
 #test demo vars
@@ -40,9 +49,10 @@ VAULT_ADDR = http://127.0.0.1:8200
 #Must be set,otherwise cloud certificates will timeout
 VAULT_CLIENT_TIMEOUT = 180s
 
-test:
+test: linter
 	VAULT_ACC=1 \
-	go test $(TEST) $(TESTARGS) -v -timeout=$(TEST_TIMEOUT) -parallel=20
+	go get gotest.tools/gotestsum
+	gotestsum --junitfile  junit.xml  -- -timeout $(TEST_TIMEOUT) ./...
 
 policy_test:
 	go test github.com/Venafi/vault-pki-monitor-venafi/plugin/pki -run ^TestBackend_VenafiPolicy*$
@@ -60,7 +70,7 @@ unset:
 #Developement server tasks
 dev_server: unset
 	pkill vault || echo "Vault server is not running"
-	vault server -log-level=debug -dev -config=vault-config.hcl
+	vault server -log-level=debug -dev -config=vault-config.hcl 
 
 dev: dev_build mount_dev
 
@@ -98,17 +108,17 @@ mount_dev: unset
 
 import_config_write:
 	vault write $(MOUNT)/roles/$(IMPORT_ROLE) \
-		tpp_import="true"  \
-		tpp_url=$(TPPURL) \
-		tpp_user=$(TPPUSER) \
-		tpp_password=$(TPPPASSWORD) \
-		zone="$(TPPZONE)" \
+		venafi_import="true"  \
+		tpp_url=$(TPP_URL) \
+		tpp_user=$(TPP_USER) \
+		tpp_password=$(TPP_PASSWORD) \
+		zone="$(TPP_ZONE)" \
 		$(ROLE_OPTIONS) \
 		allowed_domains=$(IMPORT_DOMAIN) \
 		allow_subdomains=true \
 		trust_bundle_file=$(TRUST_BUNDLE) \
-		tpp_import_timeout=15 \
-		tpp_import_workers=5
+		import_timeout=15 \
+		import_workers=5
 
 import_config_read:
 	vault read $(MOUNT)/roles/$(IMPORT_ROLE)
@@ -123,8 +133,13 @@ collect_artifacts:
 	rm -rf artifcats
 	mkdir -p artifcats
 	cp -rv $(DIST_DIR)/*.zip artifcats
-	cp -rv $(DIST_DIR)/*.SHA256SUM artifcats
-	cd artifcats; sha256sum * > hashsums.SHA256SUM
+	cd artifcats; echo '```' > ../release.txt
+	cd artifcats; sha256sum * >> ../release.txt
+	cd artifcats; echo '```' >> ../release.txt
+
+release:
+	go get -u github.com/tcnksm/ghr
+	ghr -prerelease -n $$RELEASE_VERSION -body="$$(cat ./release.txt)" $$RELEASE_VERSION artifcats/
 
 #Docker server with consul
 docker_server_prepare:

@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Factory creates a new backend implementing the logical.Backend interface
@@ -80,6 +80,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathVenafiPolicy(&b),
 			pathVenafiPolicyContent(&b),
 			pathVenafiPolicyList(&b),
+			pathVenafiPolicyMap(&b),
+			pathVenafiPolicySync(&b),
 			pathRevoke(&b),
 			pathTidy(&b),
 		},
@@ -98,7 +100,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 	if b.storage == nil {
 		log.Println("Can't start queue when storage is nil")
 	} else {
-		go b.importToTPP(b.storage, conf)
+		b.taskStorage.init()
+		b.importToTPP(conf)
+		b.syncRoleWithVenafiPolicyRegister(conf)
 	}
 
 	return &b
@@ -111,9 +115,7 @@ type backend struct {
 	crlLifetime       time.Duration
 	revokeStorageLock sync.RWMutex
 	tidyCASGuard      *uint32
-
-	//Mutex for import queue
-	importQueue sync.Mutex
+	taskStorage       taskStorageStruct
 }
 
 const backendHelp = `

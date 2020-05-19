@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathIssue(b *backend) *framework.Path {
@@ -329,9 +329,13 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	if role.TPPImport {
+	policyMap, err := getPolicyRoleMap(ctx, req.Storage)
+	if err != nil {
+		return nil, errwrap.Wrapf("unable to get policy map: {{err}}", err)
+	}
+	if policyMap.Roles[data.Get("role").(string)].ImportPolicy != "" {
 		sn := normalizeSerial(cb.SerialNumber)
-		log.Printf("Puting certificate with serial number %s to the Venafi import queue\n", sn)
+		log.Printf("%s Puting certificate with serial number %s to the Venafi import queue\n", logPrefixVenafiImport, sn)
 
 		err = req.Storage.Put(ctx, &logical.StorageEntry{
 			Key:   "import-queue/" + data.Get("role").(string) + "/" + sn,

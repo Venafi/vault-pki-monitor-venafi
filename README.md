@@ -1,6 +1,13 @@
-# Venafi PKI Monitoring Secrets Engine for HashiCorp Vault
+![Venafi](Venafi_logo.png)
+[![MPL 2.0 License](https://img.shields.io/badge/License-MPL%202.0-blue.svg)](https://opensource.org/licenses/MPL-2.0)
+![Community Supported](https://img.shields.io/badge/Support%20Level-Community-brightgreen)
+![Compatible with TPP 18.2+ & Cloud](https://img.shields.io/badge/Compatibility-TPP%2018.2+%20%26%20Cloud-f9a90c)  
+_This open source project is community-supported. To report a problem or share an idea, use the
+**[Issues](../../issues)** tab; and if you have a suggestion for fixing the issue, please include those details, too.
+In addition, use the **[Pull requests](../../pulls)** tab to contribute actual bug fixes or proposed enhancements.
+We welcome and appreciate all contributions._
 
-<img src="https://www.venafi.com/sites/default/files/content/body/Light_background_logo.png" width="330px" height="69px"/>  
+# Venafi PKI Monitoring Secrets Engine for HashiCorp Vault
 
 This solution allows [HashiCorp Vault](https://www.vaultproject.io/) users to provide their
 Information Security organization visibility into certificate issuance.
@@ -19,137 +26,160 @@ original HashiCorp Vault PKI secrets engine.
 1. For policy enforcement, the Venafi WebSDK user that Vault will be using needs to have been granted view and read
    permissions to the policy folder from which Venafi policy will be obtained.
 1. For issuance visibility, the Venafi WebSDK user that Vault will be using needs to have been granted write and create
-   permission to the policy folder where Vault issued certificates will be imported.
+   permission to the policy folder where Vault issued certificates will be imported, and the 
+   _Allow Users to Import Duplicate Certificates and Reuse Private Keys_ policy of that folder needs to be set to 'Yes'
+   to ensure that all certificates issued by the Vault can be imported.
 
 ### Establishing Trust between Vault and Trust Protection Platform
 
-It is not common for the Venafi Platform's REST API (WebSDK) to be secured using a certificate issued by a publicly trusted CA,
-therefore establishing trust for that server certificate is a critical part of your configuration.
-Ideally this is done by obtaining the root CA certificate in the issuing chain in PEM format and copying that file to
-your Vault server (e.g. /opt/venafi/bundle.pem).  You then reference that file using the 'trust_bundle_file' parameter whenever you create
-a new PKI role in your Vault.
+It is not common for the Venafi Platform's REST API (WebSDK) to be secured using a certificate
+issued by a publicly trusted CA, therefore establishing trust for that server certificate is a
+critical part of your configuration. Ideally this is done by obtaining the root CA certificate in
+the issuing chain in PEM format and copying that file to your Vault server
+(e.g. /opt/venafi/bundle.pem).  You then reference that file using the 'trust_bundle_file'
+parameter whenever you create a new PKI role in your Vault.
 
 ## Quickstart: Enabling the Plug-in
 
-This is a [Vault plugin](https://www.vaultproject.io/docs/internals/plugins.html)
-and is meant to work with Vault. This guide assumes you have already installed Vault
-and have a basic understanding of how Vault works.
+This solution is a [plugin](https://www.vaultproject.io/docs/internals/plugins.html)
+for HashiCorp Vault. This guide assumes you have already installed Vault and have a basic
+understanding of how it works. If that's not the case, please read the
+[getting started](https://www.vaultproject.io/intro/getting-started/install.html) guide
+for Vault.
 
-Otherwise, first read this guide on how to [get started with Vault](https://www.vaultproject.io/intro/getting-started/install.html).
+This plugin was originally sourced from the
+[built-in Vault PKI secrets engine](https://www.vaultproject.io/docs/secrets/pki/index.html)
+and enhanced with features for integrating with Venafi Platform and Cloud.
 
-To learn specifically about how plugins work, see documentation on [Vault plugins](https://www.vaultproject.io/docs/internals/plugins.html).
+1. Review the notes for [latest release](https://github.com/Venafi/vault-pki-monitor-venafi/releases/latest)
+and identify the `vault-pki-monitor-venafi` zip package that applies to your operating system and
+use case. There are two versions, optional and strict. The "optional" version allows certificates
+to be issued by the Vault CA when there is no Venafi policy applied whereas the "strict" version
+will return the following error when there is no Venafi policy applied: *policy data is nil. You
+need to configure Venafi policy to proceed*
+   
+1. Download the `vault-pki-monitor-venafi` zip package, then calculate the SHA256 hashsum and
+compare the value to the one listed in the release notes to ensure they match.  File names change
+with each release so the following commands may not represent the latest version.
+   ```
+   $ wget -q https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/v0.6.0/vault-pki-monitor-venafi_v0.6.0+496_linux_st
+   rict.zip
+   $ sha256sum vault-pki-monitor-venafi_v0.6.0+496_linux_strict.zip
+   48f9d916698fada0370be65b193dece5f6a395ef17be5be189dc047b4a54c612  vault-pki-monitor-venafi_v0.6.0+496_linux_strict.zip
+   ```
 
-This plugin is a copy of [original Vault PKI plugin](https://www.vaultproject.io/docs/secrets/pki/index.html) with additional features
-for integrating it with Venafi Platform and Cloud.
-
-1. Download the current `vault-pki-monitor-venafi` release zip package for your operating system and checksum for the binary.
-   There are two versions of binaries, optional and strict. The "optional" allows certificates to be issued by the Vault CA
-   when there is no Venafi policy applied whereas the "strict" will return the following error when there is no Venafi policy
-   applied: *policy data is nil. You need configure Venafi policy to proceed*
-    ```
-    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.4.0%2B181/vault-pki-monitor-venafi_0.4.0+181_linux_strict.zip
-    curl -fOSL https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/0.4.0%2B181/vault-pki-monitor-venafi_0.4.0+181_linux_strict.SHA256SUM
-    ```
-
-1. Unzip the plugin binary and check it with sha256 
-    ```
-    unzip vault-pki-monitor-venafi_0.4.0+181_linux_strict.zip
-    sha256sum -c vault-pki-monitor-venafi_0.4.0+181_linux_strict.SHA256SUM
-    ```
-1. Move it to the `/etc/vault/vault_plugins` directory (or a custom directory of your choosing):
-    ```
-    mv vault-pki-monitor-venafi_strict /etc/vault/vault_plugins
-    ```
+1. Unzip the plugin binary and move it to the `/etc/vault/vault_plugins` directory (or a custom
+directory of your choosing):
+   ```
+   $ unzip vault-pki-monitor-venafi_v0.6.0+496_linux_strict.zip
+   Archive:  vault-pki-monitor-venafi_v0.6.0+496_linux_strict.zip
+     inflating: vault-pki-monitor-venafi_strict
+   $ mv vault-pki-monitor-venafi_strict /etc/vault/vault_plugins
+   ```
     
-1. Configure the plugin directory for your Vault by specifying it in the startup configuration file:
-    ```
-    echo 'plugin_directory = "/etc/vault/vault_plugins"' > vault-config.hcl
-    ```
+1. Configure the plugin directory for your Vault by specifying it in the server configuration file:
+   ```
+   $ echo 'plugin_directory = "/etc/vault/vault_plugins"' > vault-config.hcl
+   ```
 
-    **NOTE**: If you are running through these instructions on a Macbook, you need to make sure the directory you set for your plugins are NOT symlinked. The directory /etc is default symlinked to /private/etc so if you wish to use that folder set the directory value to `/private/etc/vault/vault_plugins` instead. Make sure that any changes made involving this are reflected in the rest of your actions in the instructions.
+1. Start your Vault server (note: if you don't have working configuration you can start it in dev mode.):  
+   **Dev mode is only for educational or development purposes. Don't use it in production!**
+   ```
+   $ vault server -log-level=debug -dev -config=vault-config.hcl
+   ```
 
-1. Start your Vault (note: if you don't have working configuration you can start it in dev mode.):  
-    **Dev mode is only for educational or development purposes. Don't use it in production!**
-    ```
-    vault server -log-level=debug -dev -config=vault-config.hcl
-    ```
+1. Export the VAULT_ADDR environment variable so that the Vault client will interact with the local Vault:
+   ```
+   $ export VAULT_ADDR=http://127.0.0.1:8200
+   ```
 
-1.  Export the VAULT_ADDR environment variable so that the Vault client will interact with the local Vault:
-    ```
-    export VAULT_ADDR=http://127.0.0.1:8200
-    ```
+1. Calculate the SHA-256 checksum of `vault-pki-monitor-venafi` plugin binary:
+   ```
+   $ SHA256=$(sha256sum /etc/vault/vault_plugins/vault-pki-monitor-venafi_strict |cut -d' ' -f1)
+   $ echo $SHA256
+   add88792d6b541f30ec8e7b015a157379a25263e1017dc283b1f3dc2e7c8944f
+   ```
 
-1. Get the SHA-256 checksum of `vault-pki-monitor-venafi` plugin binary from checksum file:
-    ```
-    SHA256=$(cut -d' ' -f1 vault-pki-monitor-venafi_0.4.0+181_linux_strict.SHA256SUM)
-    echo $SHA256
-    ```
+1. Register the `vault-pki-monitor-venafi` plugin in the Vault system catalog:
+   ```
+   $ vault write sys/plugins/catalog/secret/vault-pki-monitor-venafi_strict \
+       sha_256="${SHA256}" command="vault-pki-monitor-venafi_strict"
+   Success! Data written to: sys/plugins/catalog/secret/vault-pki-monitor-venafi_strict
+   ```
 
-1. Add the `vault-pki-monitor-venafi` plugin to the Vault system catalog:
-    ```
-    vault write sys/plugins/catalog/secret/vault-pki-monitor-venafi_strict sha_256="${SHA256}" command="vault-pki-monitor-venafi_strict"
-    ```
-
-1. Enable the secrets backend for the `vault-pki-monitor-venafi` plugin:
-    ```
-    vault secrets enable -path=pki -plugin-name=vault-pki-monitor-venafi_strict plugin
-    ```
+1. Enable the secrets engine for the `vault-pki-monitor-venafi` plugin:
+   ```
+   $ vault secrets enable -path=pki -plugin-name=vault-pki-monitor-venafi_strict plugin
+   Success! Enabled the vault-pki-monitor-venafi_strict secrets engine at: pki/
+   ```
 
 [![asciicast](https://asciinema.org/a/vmo1iE4fj3bDQFOByCSVH5h4D.svg)](https://asciinema.org/a/vmo1iE4fj3bDQFOByCSVH5h4D)
 
-### Running under Windows
- If you want to run plugin on Windows the following environment variables must specified to restrict the port that will be assigned to be from within a specific range. If not values are provided plugin will exit with error. For more information please see https://github.com/hashicorp/go-plugin/pull/111
-
-  * `PLUGIN_MIN_PORT`: Specifies the minimum port value that will be assigned to the listener.
-  * `PLUGIN_MAX_PORT`: Specifies the maximum port value that will be assigned to the listener.
- 
 ## Quickstart: Enabling Venafi Policy Enforcement
 
 Venafi Policy limits the PKI role based on Venafi Platform policies or Venafi Cloud zones.  Policy enforcement is
 configured using the special *venafi-policy* path which InfoSec teams can use to require compliance from a Vault CA.
 
 1. Write default Venafi policy configuration into *venafi-policy* path:
-    1. For Trust Protection Platform:
+    1. Make credentials variable for Trust Protection Platform:
     ```
-    vault write pki/venafi-policy/default \
-        tpp_url="https://tpp.venafi.example:443/vedsdk" \
+    export CREDS='tpp_url="https://tpp.venafi.example:443/vedsdk" \
         tpp_user="local:admin" \
         tpp_password="password" \
-        zone="DevOps\\Default" \
-        trust_bundle_file="/opt/venafi/bundle.pem"
+        zone=DevOps\\Default \
+        trust_bundle_file=/opt/venafi/bundle.pem'
     ```
-    2. For the Cloud:
+    1. Or for the Cloud:
     ```
-    vault write pki/venafi-policy/default \
-        apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
-        zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+    export CREDS='api_key="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"'
     ```
-
+   
+    1. Write the configuration into vault
+    ```
+    vault write pki/venafi-policy/default $CREDS
+    ```
     Following options are supported (note: this list can also be viewed from the command line using `vault path-help pki/venafi-policy/default`):  
     
     | Parameter           | Type    | Description                                                                   | Example   |
     | ------------------- | ------- | ------------------------------------------------------------------------------| --------- |
-    |`apikey`               |string   | API key for Venafi Cloud.                                                   |`142231b7-cvb0-412e-886b-6aeght0bc93d`|
+    |`api_key`               |string   | API key for Venafi Cloud.                                                   |`142231b7-cvb0-412e-886b-6aeght0bc93d`|
     |`ext_key_usage`        |string   | A comma-separated string or list of allowed extended key usages.            |`ServerAuth,ClientAuth`|
     |`name`                 |string   | Name of the Venafi policy config. IS not set will be `default`              |`another-policy`|
     |`tpp_password`         |string   | Password for web API user                                                   |`password`|
     |`tpp_url`              |string   | URL of Venafi Platform.                                                     |`https://tpp.venafi.example/vedsdk`|
     |`tpp_user`             |string   | Web API user for Venafi Platform                                            |`admin`|
     |`trust_bundle_file`    |string   | Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server.|`"/full/path/to/chain.pem"`|
-    |`zone`                 |string   | Name of Venafi Platform policy or Venafi Cloud Zone ID.                     |`testpolicy\\vault` or `zzzzzz-zzzz-zzzz-zzzz-zzzzzzzzz`|
-    |`cloud_url`            |string   | Url of Venafi Cloud, this is only needed if you aren't pointing to the prod environment (ui.venafi.cloud).|`ui.dev.venafi.cloud`|
-    
-    <!--TODO: add scheduled update script with prod ready security example here.-->
+    |`zone`                 |string   | Name of Venafi Platform policy or Venafi Cloud Zone ID.                     |`testpolicy\\vault`|
+    |`auto_refresh_interval`| int | Interval of policy update from Venafi in seconds. Set it to 0 to disable automatic policy| 0|    
+    | `import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
+    | `import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 12        |
+    |`enforcement_roles`   |string   | List of roles where policy enfrcement is enabled                            |`tpp`|
+    |`defaults_roles`      |string   | List of roles where default values from Venafi will be set                            |`tpp`|
+    |`import_roles`               |string   | List of roles from where certificates will be imported to Venafi                          |`tpp`|        
+    |
 
     Policy will be downloaded from Venafi, parsed, saved under the specified path, and displayed to the user. After policy
     creation, any requested certificate will be checked against it.  If the request fails compliance with the policy, the
     user will see error similar to that of standard PKI role checking except stating "not allowed by Venafi policy":
+
     ```
     URL: PUT http://127.0.0.1:8200/v1/vault-pki-monitor-venafi/issue/domain.com
     Code: 400. Errors:
 
     * common name import-vl9kt.import.example.com not allowed by Venafi policy
     ```
+
+1. Create a role with which you want to use enforcement policy
+    ```
+    vault write pki/roles/test-role \
+        generate_lease=true ttl=1h max_ttl=1h \
+        allow_any_name=true
+    ``` 
+   
+1. Update the policy and add created role to the defaults and enforcement lists
+   ```
+   vault write pki/venafi-policy/default $CREDS defaults_roles="test-role" enforcement_roles="test-role"
+   ```
 
 1. The following command can be used to display the current Venafi policy:
     ```
@@ -160,8 +190,8 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     ```
     vault read pki/venafi-policy/default
     ``` 
-        
-1. You can also use multiple Venafi policies by simply applying them to separate roles.
+
+1. You can also use multiple Venafi policies by simply applying them to different roles.
     1. Write another policy configuration:
     ```
     vault write pki/venafi-policy/another-policy \
@@ -169,14 +199,9 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
         tpp_user="local:admin" \
         tpp_password="password" \
         zone="DevOps\\Another policy" \
-        trust_bundle_file="/opt/venafi/bundle.pem"
-    ```
-    2. Then specify the policy name when configuring the role:
-    ```
-    vault write pki/roles/venafi-role \
-        venafi_check_policy="another-policy" \
-        generate_lease=true ttl=1h max_ttl=1h \
-        allow_any_name=true
+        trust_bundle_file="/opt/venafi/bundle.pem" \
+        defaults_roles="venafi-role2" \
+        enforcement_roles="venafi-role2"
     ```
 
 1. Venafi policy can be cleared using `delete` operation on the *venafi-policy* path (useful if you want to see the
@@ -214,6 +239,7 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     
 ## Quickstart: Enabling Venafi Visibility
 
+# !! Need to rewrite this section. Visibility is on on the policy level now
 1. Visibiliy is enabled at the [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) by enabling the `venafi_import` option:
     1. For the Venafi Platform:
     ```
@@ -241,18 +267,8 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
 
 The following options are supported (note: this list can also be viewed from the command line using `vault path-help pki/roles/<ROLE_NAME>`):
 
-| Parameter               | Type    | Description                                                                   | Default   |
-| ----------------------- | ------- | ------------------------------------------------------------------------------| --------- |
-| `venafi_import`         | bool    | Controls whether certificates are forwarded to the Venafi Platform or Venafi Cloud            | `true`    |
-| `zone`                  | string  | Venafi Platform policy folder where certificates will be imported; for Venafi Cloud this is the endpoint that the certificates will be sent to.             | "Default" |
-| `tpp_url`               | string  | Venafi URL (e.g. "https://tpp.venafi.example:443/vedsdk")                     |           |
-| `tpp_username`          | string  | Venafi Platform WebSDK account username                                       |           |
-| `tpp_password`          | string  | Venafi Platform WebSDK account password                                       |           |
-| `trust_bundle_file`     | string  | PEM trust bundle for Venafi Platform server certificate                       |           |
-| `venafi_import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
-| `venafi_import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 3         |
-| `venafi_check_policy`   | string  | Which Venafi policy check to use                                              | "default" |
-| `cloud_url`             | string  | Url of Venafi Cloud, this is only needed if you aren't pointing to the prod environment (ui.venafi.cloud).|`ui.dev.venafi.cloud`|
+
+
 
 ### Import Queue
 After a certificate has been signed by the Vault CA it is added to the import queue. Processing of certificates in the queue
@@ -445,20 +461,70 @@ that restrictions are working):
 
 [![asciicast](https://asciinema.org/a/T6DKJ1gu2B2s22AIglJCsxTkd.svg)](https://asciinema.org/a/T6DKJ1gu2B2s22AIglJCsxTkd)
 
+
+### Venafi Policy Synchronization
+You can automatically synchronize PKI role values (e.g. OU, O, L, ST, and C) with Venafi policy. To do so, simply set the
+`venafi_sync_policy` parameter to the Venafi enforcement policy name as shown in the following example:  
+ 
+1. Configure Venafi policy:
+
+    ```
+    vault write pki/venafi-policy/tpp \ 
+        tpp_url="https://tpp.example.com/vedsdk" \
+        tpp_user="admin" \
+        tpp_password="strongPassword" \ 
+        zone="devops\\vcert" \
+        trust_bundle_file="/opt/venafi/bundle.pem"
+    ```
+
+1. Create a role with the sync parameter:
+
+    ```
+    vault write pki/roles/tpp-sync-role \
+        venafi_sync_policy="tpp"
+    ```
+
+1. After approximately 15 seconds the role values should be synchronized with Venafi policy:
+
+    ```
+    $ vault read pki/roles/tpp-sync-role
+    Key                                   Value
+    ---                                   -----
+    .....
+    country                               [US]
+    .....
+    locality                              [Salt Lake]
+    .....
+    organization                          [Venafi Inc.]
+    ou                                    [Integrations]
+    ......
+    province                              [Utah]
+    ......
+    ```
+    
+1. To check which roles are synchronizing with Venafi policy, read from the _pki/venafi-sync-policies_ path:
+
+    ```
+    $ vault read pki/venafi-sync-policies
+    Key     Value
+    ---     -----
+    keys    [role: tpp-sync-role sync policy: tpp]
+    ```
+
 ## Developer Quickstart (Linux only)
 
 1. We supportiong Go versions from 1.11
 
 1. Export your Venafi Platform configuration variables:
     ```
-    export TPPUSER=<WebSDK User for Venafi Platform, e.g. "admin">
-    export TPPPASSWORD=<Password for WebSDK User, e.g. "password">
-    export TPPURL=<URL of Venafi Platform WebSDK, e.g. "https://venafi.example.com/vedsdk">
-    export TPPZONE=<Name of the policy folder under which all certificates will be requested>
+    export TPP_USER=<WebSDK User for Venafi Platform, e.g. "admin">
+    export TPP_PASSWORD=<Password for WebSDK User, e.g. "password">
+    export TPP_URL=<URL of Venafi Platform WebSDK, e.g. "https://venafi.example.com/vedsdk">
+    export TPP_ZONE=<Name of the policy folder under which all certificates will be requested>
     ```
 
-    * Use double-quotes if there are spaces in the policy folder name: `export TPPZONE="Vault Import"`
-    * Double escape backslashes (4 total) if you have nested policy folders: `export TPPZONE="DevOps\\\\Vault Import"`
+    * Use double-quotes if there are spaces in the policy folder name: `export TPP_ZONE="Vault Import"`
+    * Double escape backslashes (4 total) if you have nested policy folders: `export TPP_ZONE="DevOps\\\\Vault Import"`
 
 1. Run `make dev_server` to start Vault server.
 

@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type revocationInfo struct {
@@ -186,7 +186,7 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bo
 			// TODO: In this case, remove it and continue? How likely is this to
 			// happen? Alternately, could skip it entirely, or could implement a
 			// delete function so that there is a way to remove these
-			return errutil.InternalError{Err: fmt.Sprintf("found revoked serial but actual certificate is empty")}
+			return errutil.InternalError{Err: "found revoked serial but actual certificate is empty"}
 		}
 
 		err = revokedEntry.DecodeJSON(&revInfo)

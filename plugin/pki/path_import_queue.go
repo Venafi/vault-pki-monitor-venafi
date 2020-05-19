@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"github.com/Venafi/vcert/pkg/certificate"
-	hconsts "github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/Venafi/vcert/pkg/verror"
+	"github.com/hashicorp/vault/sdk/framework"
+	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	"log"
 	"strings"
 	"sync"
@@ -20,16 +22,11 @@ type Job struct {
 	id         int
 	entry      string
 	roleName   string
+	policyName string
 	importPath string
 	ctx        context.Context
 	//req        *logical.Request
 	storage logical.Storage
-}
-
-//Result tructure for import queue worker
-type Result struct {
-	job    Job
-	result string
 }
 
 // This returns the list of queued for import to TPP certificates
@@ -71,7 +68,7 @@ func (b *backend) pathFetchImportQueueList(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 	for _, role := range roles {
-		log.Printf("Getting entry %s", role)
+		log.Printf("%s Getting entry %s", logPrefixVenafiImport, role)
 		rawEntry, err := req.Storage.List(ctx, "import-queue/"+role)
 		if err != nil {
 			return nil, err
@@ -87,7 +84,7 @@ func (b *backend) pathFetchImportQueueList(ctx context.Context, req *logical.Req
 
 func (b *backend) pathUpdateImportQueue(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
 	roleName := data.Get("role").(string)
-	log.Printf("Using role: %s", roleName)
+	log.Printf("%s Using role: %s", logPrefixVenafiImport, roleName)
 
 	entries, err := req.Storage.List(ctx, "import-queue/"+data.Get("role").(string)+"/")
 	if err != nil {
@@ -97,149 +94,149 @@ func (b *backend) pathUpdateImportQueue(ctx context.Context, req *logical.Reques
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) importToTPP(storage logical.Storage, conf *logical.BackendConfig) {
+func (b *backend) fillImportQueueTask(roleName string, policyName string, noOfWorkers int, storage logical.Storage, conf *logical.BackendConfig) {
 	ctx := context.Background()
-	log.Printf("Locking import mutex on backend for the import queue\n")
-	b.importQueue.Lock()
-	defer func() {
-		log.Printf("Unlocking import mutex for the import queue on backend\n")
-		b.importQueue.Unlock()
-	}()
-
-	log.Println("Starting new import routine")
-	for {
-		replicationState := conf.System.ReplicationState()
-		//Checking if we are on master or on the stanby Vault server
-		if (conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) &&
-			!replicationState.HasState(hconsts.ReplicationDRSecondary) &&
-			!replicationState.HasState(hconsts.ReplicationPerformanceStandby) {
-
-			log.Println("We're on master. Starting to import certificates")
-			roles, err := storage.List(ctx, "role/")
-			if err != nil {
-				log.Printf("Couldn't get list of roles %s", roles)
-				time.Sleep(time.Second)
-				continue
-			}
-
-			if len(roles) == 0 {
-				log.Printf("Role list is empty. Sleeping.")
-				time.Sleep(time.Second)
-				continue
-			}
-
-			var wg sync.WaitGroup
-			for _, roleName := range roles {
-				//Firing go routine for each role
-				wg.Add(1)
-				go func(roleName string) {
-					log.Println("Started routine for role", roleName)
-					//var err error
-					importPath := "import-queue/" + roleName + "/"
-
-					entries, err := storage.List(ctx, importPath)
-					if err != nil {
-						log.Printf("Could not get queue list from path %s: %s", err, importPath)
-						time.Sleep(3 * time.Second)
-						return
-					}
-					log.Printf("Queue list on path %s is: %s", importPath, entries)
-
-					//Update role since it's settings may be changed
-					role, err := b.getRole(ctx, storage, roleName)
-					if err != nil {
-						log.Printf("Error getting role %v: %s\n Exiting.", role, err)
-						time.Sleep(3 * time.Second)
-						return
-					}
-					if role == nil {
-						log.Printf("Unknown role %v\n Exiting for path %s.", role, importPath)
-						time.Sleep(3 * time.Second)
-						return
-					}
-
-					noOfWorkers := role.TPPImportWorkers
-					if len(entries) > 0 {
-						log.Printf("Creating %d of jobs for %d workers.\n", len(entries), noOfWorkers)
-						var jobs = make(chan Job, len(entries))
-						var results = make(chan Result, len(entries))
-						startTime := time.Now()
-						go b.createWorkerPool(noOfWorkers, results, jobs)
-						go allocate(jobs, entries, ctx, storage, roleName, importPath)
-						for result := range results {
-							log.Printf("Job id: %d ### Processed entry: %s , result:\n %v\n", result.job.id, result.job.entry, result.result)
-						}
-						log.Printf("Total time taken %v seconds.\n", time.Since(startTime))
-					}
-					log.Println("Waiting for next turn")
-					time.Sleep(time.Duration(role.TPPImportTimeout) * time.Second) //todo: maybe need to sub working time from prev line
-					wg.Done()
-				}(roleName)
-			}
-			wg.Wait()
-		} else {
-			log.Println("We're on slave. Sleeping")
-			time.Sleep(10 * time.Second)
-		}
+	jobs := make(chan Job, 100)
+	replicationState := conf.System.ReplicationState()
+	//Checking if we are on master or on the stanby Vault server
+	isSlave := !(conf.System.LocalMount() || !replicationState.HasState(hconsts.ReplicationPerformanceSecondary)) ||
+		replicationState.HasState(hconsts.ReplicationDRSecondary) ||
+		replicationState.HasState(hconsts.ReplicationPerformanceStandby)
+	if isSlave {
+		log.Printf("%s We're on slave. Sleeping", logPrefixVenafiImport)
+		return
 	}
-}
+	log.Printf("%s We're on master. Starting to import certificates", logPrefixVenafiImport)
+	//var err error
+	importPath := "import-queue/" + roleName + "/"
 
-func (b *backend) createWorkerPool(noOfWorkers int, results chan Result, jobs chan Job) {
+	entries, err := storage.List(ctx, importPath)
+	if err != nil {
+		log.Printf("%s Could not get queue list from path %s: %s", logPrefixVenafiImport, err, importPath)
+		return
+	}
+	log.Printf("%s Queue list on path %s has length %v", logPrefixVenafiImport, importPath, len(entries))
+
 	var wg sync.WaitGroup
+	wg.Add(noOfWorkers)
 	for i := 0; i < noOfWorkers; i++ {
-		wg.Add(1)
-		go b.worker(&wg, results, jobs)
+		go func() {
+			defer func() {
+				r := recover()
+				if r != nil {
+					log.Printf("%s recover %s", logPrefixVenafiImport, r)
+				}
+				wg.Done()
+			}()
+			for job := range jobs {
+				result := b.processImportToTPP(job)
+				log.Printf("%s Job id: %d ### Processed entry: %s , result:\n %v\n", logPrefixVenafiImport, job.id, job.entry, result)
+			}
+		}()
 	}
-	wg.Wait()
-	close(results)
-}
-
-func (b *backend) worker(wg *sync.WaitGroup, results chan Result, jobs chan Job) {
-	for job := range jobs {
-		output := Result{job, b.processImportToTPP(job)}
-		results <- output
-	}
-	wg.Done()
-}
-
-func allocate(jobs chan Job, entries []string, ctx context.Context, storage logical.Storage, roleName string, importPath string) {
 	for i, entry := range entries {
-		log.Printf("Allocating job for entry %s", entry)
+		log.Printf("%s Allocating job for entry %s", logPrefixVenafiImport, entry)
 		job := Job{
 			id:         i,
 			entry:      entry,
 			importPath: importPath,
 			roleName:   roleName,
+			policyName: policyName,
 			storage:    storage,
 			ctx:        ctx,
 		}
 		jobs <- job
 	}
 	close(jobs)
+	wg.Wait()
+}
+
+func (b *backend) importToTPP(conf *logical.BackendConfig) {
+
+	log.Printf("%s starting importcontroler", logPrefixVenafiImport)
+	b.taskStorage.register("importcontroler", func() {
+		b.controlImportQueue(conf)
+	}, 1, time.Second*1)
+}
+
+func (b *backend) controlImportQueue(conf *logical.BackendConfig) {
+	log.Printf("%s running control import queue", logPrefixVenafiImport)
+	ctx := context.Background()
+	const fillQueuePrefix = "fillqueue-"
+	roles, err := b.storage.List(ctx, "role/")
+	if err != nil {
+		log.Printf("%s Couldn't get list of roles %s", logPrefixVenafiImport, err)
+		return
+	}
+
+	policyMap, err := getPolicyRoleMap(ctx, b.storage)
+	if err != nil {
+		log.Printf("Can get policy map: %s", err)
+		return
+	}
+
+	for i := range roles {
+		roleName := roles[i]
+		if policyMap.Roles[roleName].ImportPolicy == "" {
+			//no import policy defined for role. Skipping
+			continue
+		}
+
+		//Update role since it's settings may be changed
+		role, err := b.getRole(ctx, b.storage, roleName)
+		if err != nil {
+			log.Printf("%s Error getting role %v: %s\n Exiting.", logPrefixVenafiImport, role, err)
+			continue
+		}
+
+		if role == nil {
+			log.Printf("%s Unknown role %v\n", logPrefixVenafiImport, role)
+			continue
+		}
+
+		policyConfig, err := b.getVenafiPolicyConfig(ctx, b.storage, policyMap.Roles[roleName].ImportPolicy)
+		if err != nil || policyConfig == nil {
+			log.Printf("%s Error getting policy %v: %v\n Exiting.", logPrefixVenafiImport, policyMap.Roles[roleName].ImportPolicy, err)
+			continue
+		}
+		b.taskStorage.register(fillQueuePrefix+roleName, func() {
+			log.Printf("%s run queue filler %s", logPrefixVenafiImport, roleName)
+			b.fillImportQueueTask(roleName, policyMap.Roles[roleName].ImportPolicy, policyConfig.VenafiImportWorkers, b.storage, conf)
+		}, 1, time.Duration(policyConfig.VenafiImportTimeout)*time.Second)
+
+	}
+	stringInSlice := func(s string, sl []string) bool {
+		for i := range sl {
+			if sl[i] == s {
+				return true
+			}
+		}
+		return false
+	}
+	for _, taskName := range b.taskStorage.getTasksNames() {
+		if strings.HasPrefix(taskName, fillQueuePrefix) && !stringInSlice(strings.TrimPrefix(taskName, fillQueuePrefix), roles) {
+			b.taskStorage.del(taskName)
+		}
+	}
+	log.Printf("%s finished running control import queue", logPrefixVenafiImport)
 }
 
 func (b *backend) processImportToTPP(job Job) string {
-	ctx := job.ctx
-	//req := job.req
-	roleName := job.roleName
-	storage := job.storage
-	entry := job.entry
-	id := job.id
-	msg := fmt.Sprintf("Job id: %v ###", id)
+
+	msg := fmt.Sprintf("Job id: %v ###", job.id)
 	importPath := job.importPath
-	log.Printf("%s Processing entry %s\n", msg, entry)
-	log.Printf("%s Trying to import certificate with SN %s", msg, entry)
-	cl, err := b.ClientVenafi(ctx, storage, roleName, "role")
+	log.Printf("%s %s Trying to import certificate with SN %s", logPrefixVenafiImport, msg, job.entry)
+	cl, err := b.ClientVenafi(job.ctx, job.storage, job.policyName)
 	if err != nil {
 		return fmt.Sprintf("%s Could not create venafi client: %s", msg, err)
 	}
 
-	certEntry, err := storage.Get(ctx, importPath+entry)
+	certEntry, err := job.storage.Get(job.ctx, importPath+job.entry)
 	if err != nil {
-		return fmt.Sprintf("%s Could not get certificate from %s: %s", msg, importPath+entry, err)
+		return fmt.Sprintf("%s Could not get certificate from %s: %s", msg, importPath+job.entry, err)
 	}
 	if certEntry == nil {
-		return fmt.Sprintf("%s Could not get certificate from %s: cert entry not found", msg, importPath+entry)
+		return fmt.Sprintf("%s Could not get certificate from %s: cert entry not found", msg, importPath+job.entry)
 	}
 	block := pem.Block{
 		Type:  "CERTIFICATE",
@@ -248,13 +245,13 @@ func (b *backend) processImportToTPP(job Job) string {
 
 	Certificate, err := x509.ParseCertificate(certEntry.Value)
 	if err != nil {
-		return fmt.Sprintf("%s Could not get certificate from entry %s: %s", msg, importPath+entry, err)
+		return fmt.Sprintf("%s Could not get certificate from entry %s: %s", msg, importPath+job.entry, err)
 	}
 	//TODO: here we should check for existing CN and set it to DNS or throw error
 	cn := Certificate.Subject.CommonName
 
 	certString := string(pem.EncodeToMemory(&block))
-	log.Printf("%s Importing cert to %s:\n", msg, cn)
+	log.Printf("%s %s Importing cert to %s:\n", logPrefixVenafiImport, msg, cn)
 
 	importReq := &certificate.ImportRequest{
 		// if PolicyDN is empty, it is taken from cfg.Zone
@@ -263,39 +260,36 @@ func (b *backend) processImportToTPP(job Job) string {
 		PrivateKeyData:  "",
 		Password:        "",
 		Reconcile:       false,
+		CustomFields:    []certificate.CustomField{{Type: certificate.CustomFieldOrigin, Value: "HashiCorp Vault"}},
 	}
 	importResp, err := cl.ImportCertificate(importReq)
 	if err != nil {
-		if strings.Contains(string(err.Error()), "Import error. The certificate already exists at Certificate DN") {
+		if errors.Is(err, verror.ServerBadDataResponce) || errors.Is(err, verror.UserDataError) {
 			//TODO: Here should be renew instead of deletion
 			b.deleteCertFromQueue(job)
 		}
 		return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
 
 	}
-	log.Printf("%s Certificate imported:\n %s", msg, pp(importResp))
+	log.Printf("%s %s Certificate imported:\n %s", logPrefixVenafiImport, msg, pp(importResp))
 	b.deleteCertFromQueue(job)
 	return pp(importResp)
 
 }
 
 func (b *backend) deleteCertFromQueue(job Job) {
-	ctx := job.ctx
-	s := job.storage
-	entry := job.entry
+
 	msg := fmt.Sprintf("Job id: %v ###", job.id)
 	importPath := job.importPath
-	log.Printf("%s Removing certificate from import path %s", msg, importPath+entry)
-	err := s.Delete(ctx, importPath+entry)
+	log.Printf("%s %s Removing certificate from import path %s", logPrefixVenafiImport, msg, importPath+job.entry)
+	err := job.storage.Delete(job.ctx, importPath+job.entry)
 	if err != nil {
-		log.Printf("%s Could not delete %s from queue: %s", msg, importPath+entry, err)
+		log.Printf("%s %s Could not delete %s from queue: %s", logPrefixVenafiImport, msg, importPath+job.entry, err)
 	} else {
-		log.Printf("%s Certificate with SN %s removed from queue", msg, entry)
-		entries, err := s.List(ctx, importPath)
+		log.Printf("%s %s Certificate with SN %s removed from queue", logPrefixVenafiImport, msg, job.entry)
+		_, err := job.storage.List(job.ctx, importPath)
 		if err != nil {
-			log.Printf("%s Could not get queue list: %s", msg, err)
-		} else {
-			log.Printf("%s Queue for path %s is:\n %s", msg, importPath, entries)
+			log.Printf("%s %s Could not get queue list: %s", logPrefixVenafiImport, msg, err)
 		}
 	}
 }
@@ -305,14 +299,14 @@ func (b *backend) cleanupImportToTPP(roleName string, ctx context.Context, req *
 	importPath := "import-queue/" + roleName + "/"
 	entries, err := req.Storage.List(ctx, importPath)
 	if err != nil {
-		log.Printf("Could not read from queue: %s", err)
+		log.Printf("%s Could not read from queue: %s", logPrefixVenafiImport, err)
 	}
 	for _, sn := range entries {
 		err = req.Storage.Delete(ctx, importPath+sn)
 		if err != nil {
-			log.Printf("Could not delete %s from queue: %s", importPath+sn, err)
+			log.Printf("%s Could not delete %s from queue: %s", logPrefixVenafiImport, importPath+sn, err)
 		} else {
-			log.Printf("Deleted %s from queue", importPath+sn)
+			log.Printf("%s Deleted %s from queue", logPrefixVenafiImport, importPath+sn)
 		}
 	}
 

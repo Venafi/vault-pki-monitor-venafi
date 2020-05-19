@@ -2,160 +2,12 @@ package pki
 
 import (
 	"context"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"encoding/json"
+	"github.com/hashicorp/vault/sdk/logical"
 	"log"
-	"os"
 	"strings"
 	"testing"
 )
-
-const msg_denied_by_policy = "certificate issue should be denied by policy, %#v"
-const wrong_csr = `-----BEGIN CERTIFICATE REQUEST-----
-MIIFSjCCAzICAQAwgaQxCzAJBgNVBAYTAldDMQ0wCwYDVQQIDARVdGFoMRcwFQYD
-VQQHDA5Xcm9uZyBMb2NhbGl0eTESMBAGA1UECgwJV3JvbmcgT3JnMRMwEQYDVQQL
-DApXcm9uZyBVbml0MR4wHAYJKoZIhvcNAQkBFg9lbWFpbEB3cm9uZy5jb20xJDAi
-BgNVBAMMG3Rlc3QtY3NyLTMyMzEzMTMxLndyb25nLmNvbTCCAiIwDQYJKoZIhvcN
-AQEBBQADggIPADCCAgoCggIBALuwFXjQk0BY2z35uS7rp+tpznZS2oyY1HZC2ZXb
-w8vIp9UOoYa9+919Gl+28Zr1K0ClW/4VY4h/p93HxuaJ0Emg9PlF2qHvwbR+uY1/
-nY+0NK1deNy4xB1D0RQ9zMULzYhFXRE0ryrcEFVmad75tPQcvn+s61G4itY28uVu
-d+7IKkMBvf1t2516dwrD9mMP5lUZQaLgeMvBWh/dDt94Ag/MIcHo7ceOTuMe10II
-tqzBz6/qcCYt2glKoJFsmDomR3x/29451nF7orIFafg3dXum8LQy26XG9j8fcUUz
-DxQHPp40k8Oc2pHuqKo7cCu9Oql4P+F9EGng1dJwMmVOQbuUj0OdqkVHwygabx/w
-3WfBZqdFYbkvOFYJiMC3b+7GsWPvqf9/eA+l4Vnq/8LwUQbKdt23k7MDzw75uqO/
-sntkBw9XgQeny6p4s7b0lLiFmyKwiKScws/dwdQ5s6y+H7u6lQNfsicDitTPMP20
-EQ3nnjM9ENfEhDl7Muhyb+DAb7Vs1rARc6BOclwxYUDMNOErRBqedRCrj1nchOxy
-HM4Nz/Csn+PhHyoOFuCGdc0lrvegjNF/inVYlicyzqH6WUlnNUg4k2nrhPJwUo79
-FKsJ/UEsNvrxSr5L7kX6l/F6DKLHXX5kVEFD/83mTTOKw8AWTw96ASEX7J3AmY7C
-8f/PAgMBAAGgYDBeBgkqhkiG9w0BCQ4xUTBPME0GA1UdEQRGMESCIGFsdDEtdGVz
-dC1jc3ItMzIzMTMxMzEud3JvbmcuY29tgiBhbHQyLXRlc3QtY3NyLTMyMzEzMTMx
-Lndyb25nLmNvbTANBgkqhkiG9w0BAQsFAAOCAgEAnVM3zi+Zeknpg3R/XTyVYdpX
-31EA0aDg7SVm6iSIyD1iITPJQ1fGDY3/GaRUdD5TLzmyOohFS4dj2FV2zRi9BzfU
-xqgy5zONGtXxzefiDCicc1aP2eduiQ/Gg1NSMopOYK5ppKfPHqSp+k4O3oYpn3oS
-lkox7dez84gw3TdA68EFizE7JbwRV6CCit4EY1ZHM/tzhBogmr9yDxdNlNd1zzTL
-tWMRU2vOVubbGCScapJehTIc+aOchNGrxDazmRwVuVFIE4Mw+9ALJJ3rJvGqZ6XF
-5Fk0TVSuOTto4m0WHUAh+VeyfV4ZZEHwRtCv0y7e7mp7ZHiFKHsGUT2Ll7Ssp2o+
-gdvwXrPsWhkbvuO9CQuh75BRCDqgBO4eVzIZ5DBur5/H8Nl6y9M44Mh2LRR/FYr5
-pSyelv3jpGOuIq4obNch2yYLDwftEm7KuQI4YUpsZFZXeMUmvKop1rVBqLejcotK
-NwnkGHoG3xeCk3x01af09B7YJfMnV/HCh3k5gf8XGgdpfNg4MjsrYRdFQ/fNTiv1
-b7/jDBHlXox4Nxptg2aASDJR3iFfMdBju548SAeD984lq/lXcjII2yL6h8VkCQpd
-kBLCbOylNnLu/CGd907fpBpWQ6rptGLnVEAs2ab02mcD0Ul4iVA4lXoLlj39JGyB
-lICcWSA1Gqz34IAXJco=
------END CERTIFICATE REQUEST-----
-`
-const allowed_csr = `-----BEGIN CERTIFICATE REQUEST-----
-MIIFTDCCAzQCAQAwgaQxCzAJBgNVBAYTAlVTMQ0wCwYDVQQIDARVdGFoMRIwEAYD
-VQQHDAlTYWx0IExha2UxFDASBgNVBAoMC1ZlbmFmaSBJbmMuMRQwEgYDVQQLDAtJ
-bnRlZ3JhdGlvbjEfMB0GCSqGSIb3DQEJARYQZW1haWxAdmZpZGV2LmNvbTElMCMG
-A1UEAwwcdGVzdC1jc3ItMzIzMTMxMzEudmZpZGV2LmNvbTCCAiIwDQYJKoZIhvcN
-AQEBBQADggIPADCCAgoCggIBALGdS+40Lj1qWDMl9+hKiUtn2/PJzRA0yGSf8xAp
-3HAxm6iXWTMkHBmWdm22FhatXt+6qSb+k2el7jfHEyVesMaKqw91C3Ht9LVuXLK4
-xdb2QlKz/AaBMbh9kVUD//NrJM0VbNxflDMG8EWEpZeE9qUDMQQ8eB1fwBf824TP
-XskiIqzo5HkRWBHmxvvKL0NWCPG4gy33yTyNwH2MBA5xMb+584/TEQkEPQDl14gj
-1uR2B1Ndd8V0Yv/UCu1PjM3Nn2CrcN2/dQLTSNoMhLt/woxdxDiUOzumUPJ1vBVg
-fEjGA+EIq/IkDgSNz4h5dUhdnEiMxe2yIHNhrOeomIaTbiRPGaMV/0JLhNQin6ug
-y0ws3Tk8MwM0s+FLka62LFea7WbT5qTlkhvnJZdlbPD8j5h0+OamLmhB5jvTlJUW
-IPpC8fQx4wjYq0xX0R9FMd1YQInoEVwH6Hd57iv+aqGD90UkcfXKj8BvDD8WdRAI
-l4IAKHxLUtNRFAU+hv99kwX8KRIkHLiVJg6AhRhvSm84ClYi4OPEEvaw70gNwOAO
-JkpbOttmSALLVoVn30bdayW0m7UAfiWtI3Ax+okthdELfdHrPPZK7d0SCB3VCeGp
-ydQEjHwwttqEFFnkcpPMMZez7XW6MwJi1mneXvWoRzhX+4gt7OkahHEL6Lhj14nY
-d1rjAgMBAAGgYjBgBgkqhkiG9w0BCQ4xUzBRME8GA1UdEQRIMEaCIWFsdDEtdGVz
-dC1jc3ItMzIzMTMxMzEudmZpZGV2LmNvbYIhYWx0Mi10ZXN0LWNzci0zMjMxMzEz
-MS52ZmlkZXYuY29tMA0GCSqGSIb3DQEBCwUAA4ICAQAwt3Jc78Z1j7fjxQrsBl8m
-ofuqwjqbbtLPu9uYbW9ZHdKwq7zpKShT942UZckzPiQKxy8bXVQ1MDrEzpfJKOpp
-1tAqvn9pN3B3qxYKZOjzEmZgdAT57NiZSziN2vSY89aF28Ppz8ZUOFsiOvwuFBvQ
-LLQopJ6mJEvMlv8+7CCQzumeIVRnxBjqqXnfJCBW9Dwcf1pAnsQv7RFf4XwU86dY
-8GyLtpsq4wOJqzjbReCSjIJydqE/12QLOgzpT8a4Z1Srh6ZHfxWzIiAUQvrE4hHM
-Exs0kkcJkUutlwMeaPACZkg3Tigqc72Y6YUeruBhEST5ypRrZGJJGHJLqpEHSPBb
-w9B20cUctGxUQ4h1ogNCrz5XWjM+Khv+k5rkPhTQo0OnVglTkSzWV9FLufgUyu3E
-O/KCByFbOckP56UxGFvVReJREPqa3Ib3QvTgIi810fe5SSmunpRCYBnKeqq4IVi5
-4kXQNuHvV2wntJyIfEWZub7eXnHqP6OBndbo/0y26wYwKFRAgZDshIyPQUe01YIF
-Gr6H0CHR3dU7Py0S49pAA+Jc93up5w056w5zhmjiv5c2N7m44VYJuxpwqfwtFxFF
-WNHMdQt0cab08o2FGdJ3gtN4Fp1Fq+BRkgnST3ZISozd6nZXLuejXWjC+jNDvU/e
-H2IE+vUez839sw9RlLcjgw==
------END CERTIFICATE REQUEST-----
-`
-
-const allowed_empty_csr = `-----BEGIN CERTIFICATE REQUEST-----
-MIIEyTCCArECAQAwgYMxCzAJBgNVBAYTAlVTMQ0wCwYDVQQIDARVdGFoMRIwEAYD
-VQQHDAlTYWx0IExha2UxFDASBgNVBAoMC1ZlbmFmaSBJbmMuMRQwEgYDVQQLDAtJ
-bnRlZ3JhdGlvbjElMCMGA1UEAwwcdGVzdC1jc3ItMzIzMTMxMzEudmZpZGV2LmNv
-bTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBALsSuhL/AGryMUO+jrtM
-xYfp2vUlgIKu/uGfm+4ILGrtWlH/i5+aoT3I+blUPskDDMLhvG4lD4xT9urxcnJj
-2sO8hOPnSsTvMnAOLgi8OW2JMeeA74BsPi2lxXvW/392EAxPjxuMKULI0gm60vBi
-yFtS6wRinvEUDkSy8r8Z0a0zsqsRKt9VMgJy2tEmRYMT0xkfC8GkARhgKNCe7kHJ
-OjCS6MZgJSHekZBxKsLjblQFrHSCT0SrWJDLlHIwd9CL0uVkqe9UMfJ8Nm7WowXe
-BrDUHNSOUjZo8jjqCSnu9vVw/MR4paMssSKcyXSKQcsUJQBfoWBMGTCUZolA86TM
-U7DMxPorXm94ZfHiOa6qS5A20Z7VUvCp8BR3RF0b/5ntJwGULbMg5QBAZ6sF+rnm
-BN5xAyrGHYck2TqphyZRAFRs/yuVdQx+3wHykAqzzX7cYlzI3EhT/3yQu5VZNclq
-wxvCsT197s2VB8tcPxvAlBddKkLVY+hp4U5dxEDLxOf5+oryGx+6nOZdWlYKxxNZ
-7P83oOjp95+UCVeDGDwI7+8y7OwK8AF82HqbeDm6dliKNQ4tnN1ddzWabXfuzuYl
-OmdTiKDNR/gHUq2HaxekKHs39ToXyJg65+g3baEX5JM6KKmrXL2N8s6YiMMaF13m
-3SPa3pzGKNNLYcqdkEjRjlKBAgMBAAGgADANBgkqhkiG9w0BAQsFAAOCAgEAJ4RK
-9RrnI7AblRCYG5Rnyu/YvVkSu7gnp+04DeECntxv9FyP99aPgGPxlMzH11QFUwKZ
-Kn4XLz8559JGA8umcWT559hQ4XFpYoyzEvnf/vdA9NAmSr0ssMsoZ1DjR4l0rR2m
-Y+doP4CAqRh1rC6JDTMvo/WxwJRImgrnziyOwZba7mwDRNVIXWa70cFPfgb3fKro
-egPkp/Hqvho0Rvu3m3o5Y35UxKiMylZUX3pHdpKXVG2wxj0FgeOepd4cFSHrF85q
-uPhc12CDvv71wtxMcL8mmWizjpuGGBvDx0Tz8uJmaumNkIwZ+GGhqBsAPJI/YCy6
-44WYs9vRDCjHnIXIazJTc3kFwaDOJF3btCYQ6dG1dHh8lRLnfkYLOtKlJ2gbrUqB
-s44QoRhU5ZYUD1+8TYNWQtgceGjCTACsbxH4JKOG38NT4C/mv3ZsEC1yTfjxWRDH
-CqLGi3SbYFiUEk0WRWAbwe80HtcAVCFCa2G3C/FGS/qCiFIbE9op5Ab3NDWJGdSI
-gT230FFz4jsyW4395IiZ8UOoLXxBmnL382+hdB08aEdm4j/ZFeeButG0qb3XhUu3
-/atUO1Boht8DNna1DH/1uLW0ovAAKgX+v3LTi/vadErW/X3S7P/ZnbLY5pA7nEBg
-bOcvXbCN3l5HIY76e+6FbLGGCvNKcgNpSAAPYJg=
------END CERTIFICATE REQUEST-----
-`
-
-var venafiTestTPPConfigAllAllow = map[string]interface{}{
-	"tpp_url":           os.Getenv("TPPURL"),
-	"tpp_user":          os.Getenv("TPPUSER"),
-	"tpp_password":      os.Getenv("TPPPASSWORD"),
-	"zone":              os.Getenv("TPPALLALLOWZONE"),
-	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-}
-
-var venafiTestTPPConfigRestricted = map[string]interface{}{
-	"tpp_url":           os.Getenv("TPPURL"),
-	"tpp_user":          os.Getenv("TPPUSER"),
-	"tpp_password":      os.Getenv("TPPPASSWORD"),
-	"zone":              os.Getenv("TPPRESTRICTEDZONE"),
-	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-}
-
-var venafiTestCloudConfigRestricted = map[string]interface{}{
-	"cloud_url": os.Getenv("CLOUDURL"),
-	"apikey":    os.Getenv("CLOUDAPIKEY"),
-	"zone":      os.Getenv("CLOUDRESTRICTEDZONE"),
-}
-var venafiTestCloudConfigAllAllow = map[string]interface{}{
-	"cloud_url": os.Getenv("CLOUDURL"),
-	"apikey":    os.Getenv("CLOUDAPIKEY"),
-	"zone":      os.Getenv("CLOUDZONE"),
-}
-
-var venafiTPPCreateSimplePolicyStep = logicaltest.TestStep{
-	Operation: logical.UpdateOperation,
-	Path:      venafiPolicyPath + defaultVenafiPolicyName,
-	Data:      venafiTestTPPConfigAllAllow,
-}
-var venafiCloudCreateSimplePolicyStep = logicaltest.TestStep{
-	Operation: logical.UpdateOperation,
-	Path:      venafiPolicyPath + defaultVenafiPolicyName,
-	Data:      venafiTestCloudConfigAllAllow,
-}
-
-func makeVenafiCloudConfig() (domain string, policyData map[string]interface{}) {
-	domain = "vfidev.com"
-	policyData = venafiTestCloudConfigRestricted
-	return
-}
-
-func makeVenafiTPPConfig() (domain string, policyData map[string]interface{}) {
-	domain = "vfidev.com"
-	policyData = venafiTestTPPConfigRestricted
-	return
-}
 
 func TestVenafiPolicyCloud(t *testing.T) {
 	domain, policyData := makeVenafiCloudConfig()
@@ -211,7 +63,7 @@ func venafiPolicyWriteAndReadTest(t *testing.T, policyData map[string]interface{
 	// create the backend
 	b, storage := createBackendWithStorage(t)
 
-	resp := writePolicy(b, storage, policyData, t)
+	resp := writePolicy(b, storage, policyData, t, defaultVenafiPolicyName)
 
 	log.Println("After write policy should be on output")
 	for key, value := range resp.Data {
@@ -280,30 +132,127 @@ func venafiPolicyWriteAndReadTest(t *testing.T, policyData map[string]interface{
 
 }
 
-func writePolicy(b *backend, storage logical.Storage, policyData map[string]interface{}, t *testing.T) *logical.Response {
-	log.Println("Writing Venafi policy configuration")
+func Test_pathShowVenafiPolicyMap(t *testing.T) {
+
+	policy := copyMap(policyCloudData)
+	testRoleName := "test-import"
+
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := Backend(config)
+	err := b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName)
+
+	// create a role entry
+	roleData := map[string]interface{}{
+		"allowed_domains":  "test.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "4h",
+	}
+
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      venafiPolicyPath + defaultVenafiPolicyName,
+		Path:      "roles/" + testRoleName,
 		Storage:   storage,
-		Data:      policyData,
+		Data:      roleData,
 	})
 	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to configure venafi policy, %#v", resp)
+		t.Fatalf("failed to create a role, %#v", resp)
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil {
-		t.Fatalf("after write policy should be on output, but response is nil: %#v", resp)
-	}
-	return resp
-}
 
-func writePolicyToClient(mountPoint string, client *api.Client, t *testing.T) {
-	_, err := client.Logical().Write(mountPoint+"/"+venafiPolicyPath+defaultVenafiPolicyName, venafiTestTPPConfigAllAllow)
+	//create second role
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + testRoleName + "-1",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	policy[policyFieldDefaultsRoles] = testRoleName + "-1," + testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName+"-1")
+
+	//create third role and write policy
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/" + testRoleName + "-2",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	policy[policyFieldDefaultsRoles] = ""
+	policy[policyFieldEnforcementRoles] = testRoleName + "-2"
+	policy[policyFieldImportRoles] = testRoleName
+	writePolicy(b, storage, policy, t, defaultVenafiPolicyName+"-2")
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      venafiRolePolicyMapPath,
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to read policy map, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Data["policy_map_json"] == "" {
+		t.Fatalf("There should be data in resp: %s", resp.Data["policy_map_json"])
+	}
+
+	var policyMap policyRoleMap
+	policyMap.Roles = make(map[string]policyTypes)
+
+	err = json.Unmarshal(resp.Data["policy_map_json"].([]byte), &policyMap)
+	if err != nil {
+		t.Fatalf("Can not parse policy json data: %s", err)
+	}
+
+	var want, have string
+
+	want = defaultVenafiPolicyName + "-1"
+	have = policyMap.Roles[testRoleName].DefaultsPolicy
+	if want != have {
+		t.Fatalf("Policy should be %s but we have %s", want, have)
+	}
+	want = defaultVenafiPolicyName + "-1"
+	have = policyMap.Roles[testRoleName+"-1"].DefaultsPolicy
+	if want != have {
+		t.Fatalf("Policy should be %s but we have %s", want, have)
+	}
+	want = defaultVenafiPolicyName + "-2"
+	have = policyMap.Roles[testRoleName+"-2"].EnforcementPolicy
+	if want != have {
+		t.Fatalf("Policy should be %s but we have %s", want, have)
+	}
+
+	want = defaultVenafiPolicyName + "-2"
+	have = policyMap.Roles[testRoleName].ImportPolicy
+	if want != have {
+		t.Fatalf("Policy should be %s but we have %s", want, have)
 	}
 }
 
@@ -314,9 +263,9 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 	// create the backend
 	rand := randSeq(9)
 	b, storage := createBackendWithStorage(t)
-	writePolicy(b, storage, policyData, t)
+	writePolicy(b, storage, policyData, t, defaultVenafiPolicyName)
 
-	log.Println("Setting up role")
+	t.Log("Setting up role")
 	roleData := map[string]interface{}{
 		"organization":       "Venafi Inc.",
 		"ou":                 "Integration",
@@ -651,7 +600,6 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 	//TODO: check that keys is list of [default second]
 
 	log.Println("Creating PKI role for policy second")
-	roleData["venafi_check_policy"] = "second"
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/test-venafi-second-policy",
@@ -663,6 +611,27 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 	}
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	//TODO: this action should be removed after implementing that writing policy will also update the role
+	log.Println("Updating second Venafi policy configuration to match role second")
+	policyData[policyFieldDefaultsRoles] = ""
+	policyData[policyFieldEnforcementRoles] = "test-venafi-second-policy"
+	policyData[policyFieldImportRoles] = "test-venafi-second-policy"
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      venafiPolicyPath + "second",
+		Storage:   storage,
+		Data:      policyData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to configure venafi policy, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatalf("after write policy should be on output, but response is nil: %#v", resp)
 	}
 
 	log.Println("Issuing certificate for policy second")
@@ -732,6 +701,43 @@ func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain s
 	}
 	if resp.Error() == nil {
 		t.Fatalf("Should fail to generate certificate after deleting policy")
+	}
+
+}
+
+func TestVenafiPolicyAutoRefresh(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
+
+	t.Log("writing TPP configuration")
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, "tpp-policy")
+	t.Log("writing Cloud configuration")
+	writePolicy(b, storage, venafiTestCloudConfigAllAllow, t, "cloud-policy")
+	t.Log("writing TPP no refresh policy")
+	writePolicy(b, storage, venafiTestTPPConfigNoRefresh, t, "tpp-policy-no-refresh")
+	t.Log("writing bad data policy")
+	writePolicy(b, storage, venafiTestConfigBadData, t, "policy-bad-data")
+
+	err := b.refreshVenafiPolicyEnforcementContent(storage, "tpp-policy")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.refreshVenafiPolicyEnforcementContent(storage, "tpp-policy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = b.refreshVenafiPolicyEnforcementContent(storage, "cloud-policy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = b.refreshVenafiPolicyEnforcementContent(storage, "tpp-policy-no-refresh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = b.refreshVenafiPolicyEnforcementContent(storage, "policy-bad-data")
+	if err != nil {
+		t.Fatal(err)
+
 	}
 
 }

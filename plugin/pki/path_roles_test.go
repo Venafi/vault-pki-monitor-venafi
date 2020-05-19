@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -560,7 +560,7 @@ func TestPki_RoleNoStore(t *testing.T) {
 		"allowed_domains": "myvault.com",
 		"ttl":             "5h",
 	}
-	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t)
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, defaultVenafiPolicyName)
 
 	roleReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -664,7 +664,7 @@ func TestPki_CertsLease(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
-	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t)
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, defaultVenafiPolicyName)
 
 	caData := map[string]interface{}{
 		"common_name": "myvault.com",

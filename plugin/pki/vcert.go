@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/Venafi/vcert"
 	"github.com/Venafi/vcert/pkg/endpoint"
-	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/sdk/logical"
 	"io/ioutil"
 	"log"
 )
@@ -15,37 +15,22 @@ import (
 const venafiPolciyCheck = true
 const venafiPolicyDenyAll = true
 
-func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, configName string, configType string) (
+func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, policyName string) (
 	endpoint.Connector, error) {
 
-	if configName == "" {
-		return nil, fmt.Errorf("missing %s name", configType)
+	if policyName == "" {
+		return nil, fmt.Errorf("empty policy name")
 	}
 
-	log.Printf("Using %s: %s", configType, configName)
-	if configType == "role" {
-		role, err := b.getRole(ctx, s, configName)
-		if err != nil {
-			return nil, err
-		}
-		if role == nil {
-			return nil, fmt.Errorf("unknown role %v", role)
-		}
-		return role.venafiConnectionConfig.getConnection()
-
-	} else if configType == "policy" {
-		policy, err := b.getPolicyConfig(ctx, s, configName)
-		if err != nil {
-			return nil, err
-		}
-		if policy == nil {
-			return nil, fmt.Errorf("expected policy but got nil from Vault storage %v", policy)
-		}
-
-		return policy.venafiConnectionConfig.getConnection()
-	} else {
-		return nil, fmt.Errorf("couldn't determine config type")
+	policy, err := b.getVenafiPolicyConfig(ctx, s, policyName)
+	if err != nil {
+		return nil, err
 	}
+	if policy == nil {
+		return nil, fmt.Errorf("expected policy but got nil from Vault storage %v", policy)
+	}
+
+	return policy.venafiConnectionConfig.getConnection()
 }
 
 func pp(a interface{}) string {

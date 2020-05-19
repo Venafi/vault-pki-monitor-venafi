@@ -14,6 +14,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+
 	"log"
 	"net"
 	"net/url"
@@ -23,11 +24,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	glob "github.com/ryanuber/go-glob"
 	"golang.org/x/crypto/cryptobyte"
 	cbbasn1 "golang.org/x/crypto/cryptobyte/asn1"
@@ -623,7 +624,7 @@ func signCert(b *backend,
 
 	csrString := data.apiData.Get("csr").(string)
 	if csrString == "" {
-		return nil, errutil.UserError{Err: fmt.Sprintf("\"csr\" is empty")}
+		return nil, errutil.UserError{Err: "\"csr\" is empty"}
 	}
 
 	pemBlock, _ := pem.Decode([]byte(csrString))
@@ -876,8 +877,7 @@ func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
 		if data.csr != nil && data.role.UseCSRSANs {
 			if len(data.csr.IPAddresses) > 0 {
 				if !data.role.AllowIPSANs {
-					return errutil.UserError{Err: fmt.Sprintf(
-						"IP Subject Alternative Names are not allowed in this role, but was provided some via CSR")}
+					return errutil.UserError{Err: "IP Subject Alternative Names are not allowed in this role, but was provided some via CSR"}
 				}
 				ipAddresses = data.csr.IPAddresses
 			}
@@ -905,9 +905,7 @@ func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
 		if data.csr != nil && data.role.UseCSRSANs {
 			if len(data.csr.URIs) > 0 {
 				if len(data.role.AllowedURISANs) == 0 {
-					return errutil.UserError{Err: fmt.Sprintf(
-						"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
-					}
+					return errutil.UserError{Err: "URI Subject Alternative Names are not allowed in this role, but were provided via CSR"}
 				}
 
 				// validate uri sans
@@ -922,9 +920,7 @@ func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
 					}
 
 					if !valid {
-						return errutil.UserError{Err: fmt.Sprintf(
-							"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
-						}
+						return errutil.UserError{Err: "URI Subject Alternative Names were provided via CSR which are not valid for this role"}
 					}
 
 					URIs = append(URIs, uri)
@@ -934,11 +930,8 @@ func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
 			uriAlt := data.apiData.Get("uri_sans").([]string)
 			if len(uriAlt) > 0 {
 				if len(data.role.AllowedURISANs) == 0 {
-					return errutil.UserError{Err: fmt.Sprintf(
-						"URI Subject Alternative Names are not allowed in this role, but were provided via the API"),
-					}
+					return errutil.UserError{Err: "URI Subject Alternative Names are not allowed in this role, but were provided via the API"}
 				}
-
 				for _, uri := range uriAlt {
 					valid := false
 					for _, allowed := range data.role.AllowedURISANs {
@@ -950,16 +943,12 @@ func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
 					}
 
 					if !valid {
-						return errutil.UserError{Err: fmt.Sprintf(
-							"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
-						}
+						return errutil.UserError{Err: "URI Subject Alternative Names were provided via CSR which are not valid for this role"}
 					}
 
 					parsedURI, err := url.Parse(uri)
 					if parsedURI == nil || err != nil {
-						return errutil.UserError{Err: fmt.Sprintf(
-							"the provided URI Subject Alternative Name '%s' is not a valid URI", uri),
-						}
+						return errutil.UserError{Err: fmt.Sprintf("the provided URI Subject Alternative Name '%s' is not a valid URI", uri)}
 					}
 
 					URIs = append(URIs, parsedURI)

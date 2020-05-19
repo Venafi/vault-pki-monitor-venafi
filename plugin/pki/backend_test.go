@@ -27,11 +27,11 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/strutil"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/logical"
-	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/idna"
@@ -1435,7 +1435,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t)
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, defaultVenafiPolicyName)
 	// generate root
 	rootData := map[string]interface{}{
 		"common_name": "test.com",
@@ -1562,7 +1562,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t)
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, defaultVenafiPolicyName)
 
 	// generate root
 	rootData := map[string]interface{}{
@@ -1945,7 +1945,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t)
+	writePolicy(b, storage, venafiTestTPPConfigAllAllow, t, defaultVenafiPolicyName)
 
 	// generate root
 	rootData := map[string]interface{}{
