@@ -347,7 +347,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		//retrieve imported certificate
 		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
 		log.Println("Trying to retrieve requested certificate", singleCN)
-		
+
 		req := &certificate.Request{}
 		req.PickupID = os.Getenv("TPP_ZONE") + "\\" + singleCN
 		req.ChainOption = certificate.ChainOptionIgnore
@@ -507,7 +507,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		//retrieve imported certificate
 		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
 		log.Println("Trying to retrieve requested certificate", singleCN)
-		
+
 		req := &certificate.Request{}
 		req.PickupID = os.Getenv("TPP_ZONE") + "\\" + singleCN
 		req.ChainOption = certificate.ChainOptionIgnore
