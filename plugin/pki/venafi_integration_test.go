@@ -292,7 +292,7 @@ func TestAllVenafiIntegrations(t *testing.T) {
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 		req := &certificate.Request{}
-		req.PickupID = os.Getenv("TPP_ZONE") + "\\" + singleCN
+		req.PickupID = "\\VED\\Policy\\" + os.Getenv("TPP_ZONE") + "\\" + singleCN
 		req.ChainOption = certificate.ChainOptionIgnore
 		//req.Thumbprint = "111111"
 
