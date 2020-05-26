@@ -349,7 +349,7 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		log.Println("Trying to retrieve requested certificate", singleCN)
 
 		req := &certificate.Request{}
-		req.PickupID = "\\VED\\Policy\\devops\\vcert\\" + singleCN
+		req.PickupID = "\\VED\\Policy\\" + os.Getenv("TPP_ZONE") + "\\" + singleCN
 		req.ChainOption = certificate.ChainOptionIgnore
 		//req.Thumbprint = "111111"
 
@@ -509,7 +509,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		log.Println("Trying to retrieve requested certificate", singleCN)
 
 		req := &certificate.Request{}
-		req.PickupID = "\\VED\\Policy\\devops\\vcert\\" + singleCN
+		req.PickupID = "\\VED\\Policy\\" + os.Getenv("TPP_ZONE") + "\\" + singleCN
 		req.ChainOption = certificate.ChainOptionIgnore
 		//req.Thumbprint = "111111"
 
@@ -668,7 +668,7 @@ func Test_fillImportQueueTask(t *testing.T) {
 	log.Println("Trying to retrieve requested certificate", singleCN)
 
 	req := &certificate.Request{}
-	req.PickupID = "\\VED\\Policy\\devops\\vcert\\" + singleCN
+	req.PickupID = "\\VED\\Policy\\" + os.Getenv("TPP_ZONE") + "\\" + singleCN
 	req.ChainOption = certificate.ChainOptionIgnore
 	//req.Thumbprint = "111111"
 
