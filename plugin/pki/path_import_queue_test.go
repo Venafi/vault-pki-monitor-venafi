@@ -347,14 +347,13 @@ func TestBackend_PathImportToTPPTwice(t *testing.T) {
 		//retrieve imported certificate
 		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
 		log.Println("Trying to retrieve requested certificate", singleCN)
-
-		cl := getTPPConnection(t)
 		
 		req := &certificate.Request{}
-		req.PickupID = cl.Zone + "\\" + singleCN
+		req.PickupID = os.Getenv("TPP_ZONE") + "\\" + singleCN
 		req.ChainOption = certificate.ChainOptionIgnore
 		//req.Thumbprint = "111111"
 
+		cl := getTPPConnection(t)
 		pcc, err := cl.RetrieveCertificate(req)
 		if err != nil {
 			t.Fatalf("could not retrieve certificate using requestId %s: %s", req.PickupID, err)
@@ -508,15 +507,13 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		//retrieve imported certificate
 		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
 		log.Println("Trying to retrieve requested certificate", singleCN)
-
-		cl := getTPPConnection(t)		
 		
 		req := &certificate.Request{}
-		req.PickupID = cl.Zone + "\\" + singleCN
+		req.PickupID = os.Getenv("TPP_ZONE") + "\\" + singleCN
 		req.ChainOption = certificate.ChainOptionIgnore
 		//req.Thumbprint = "111111"
 
-
+		cl := getTPPConnection(t)
 		pcc, err := cl.RetrieveCertificate(req)
 		if err != nil {
 			t.Fatalf("could not retrieve certificate using requestId %s: %s", req.PickupID, err)
@@ -670,13 +667,12 @@ func Test_fillImportQueueTask(t *testing.T) {
 	//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
 	log.Println("Trying to retrieve requested certificate", singleCN)
 
-	cl := getTPPConnection(t)
-
 	req := &certificate.Request{}
-	req.PickupID = cl.Zone + "\\" + singleCN
+	req.PickupID = os.Getenv("TPP_ZONE") + "\\" + singleCN
 	req.ChainOption = certificate.ChainOptionIgnore
 	//req.Thumbprint = "111111"
 
+	cl := getTPPConnection(t)
 	pcc, err := cl.RetrieveCertificate(req)
 	if err != nil {
 		t.Fatalf("could not retrieve certificate using requestId %s: %s", req.PickupID, err)
