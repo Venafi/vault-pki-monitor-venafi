@@ -12,7 +12,6 @@ require (
 	github.com/hashicorp/vault v1.3.2
 	github.com/hashicorp/vault/api v1.0.5-0.20200117231345-460d63e36490
 	github.com/hashicorp/vault/sdk v0.1.14-0.20200121232954-73f411823aa0
-	github.com/imdario/mergo v0.3.9
 	github.com/michaelklishin/rabbit-hole v1.5.0 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/onsi/ginkgo v1.10.1 // indirect
