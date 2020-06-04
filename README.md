@@ -153,7 +153,7 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     |`auto_refresh_interval`| int | Interval of policy update from Venafi in seconds. Set it to 0 to disable automatic policy| 0|    
     | `import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
     | `import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 12        |
-    |`enforcement_roles`   |string   | List of roles where policy enfrcement is enabled                            |`tpp`|
+    |`enforcement_roles`   |string   | List of roles where policy enforcement is enabled                            |`tpp`|
     |`defaults_roles`      |string   | List of roles where default values from Venafi will be set                            |`tpp`|
     |`import_roles`               |string   | List of roles from where certificates will be imported to Venafi                          |`tpp`|        
     |
@@ -239,7 +239,7 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     
 ## Quickstart: Enabling Venafi Visibility
 
-1. Visibiliy is enabled at the policy level by enabling the `venafi_import` option. The roles that
+1. Visibility is enabled at the policy level by enabling the `venafi_import` option. The roles that
    the policy apply to are specified via the 'import_roles' value of the Venafi policy:
     1. For the Venafi Platform:
     ```
@@ -515,7 +515,7 @@ You can automatically synchronize PKI role values (e.g. OU, O, L, ST, and C) wit
 
 ## Developer Quickstart (Linux only)
 
-1. We supportiong Go versions from 1.11
+1. Go versions 1.11 or later are supported.
 
 1. Export your Venafi Platform configuration variables:
     ```
