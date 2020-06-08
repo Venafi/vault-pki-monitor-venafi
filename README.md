@@ -153,7 +153,7 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     |`auto_refresh_interval`| int | Interval of policy update from Venafi in seconds. Set it to 0 to disable automatic policy| 0|    
     | `import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
     | `import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 12        |
-    |`enforcement_roles`   |string   | List of roles where policy enfrcement is enabled                            |`tpp`|
+    |`enforcement_roles`   |string   | List of roles where policy enforcement is enabled                            |`tpp`|
     |`defaults_roles`      |string   | List of roles where default values from Venafi will be set                            |`tpp`|
     |`import_roles`               |string   | List of roles from where certificates will be imported to Venafi                          |`tpp`|        
     |
@@ -239,12 +239,12 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     
 ## Quickstart: Enabling Venafi Visibility
 
-# !! Need to rewrite this section. Visibility is on on the policy level now
-1. Visibiliy is enabled at the [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) by enabling the `venafi_import` option:
+1. Visibility is enabled at the policy level by enabling the `venafi_import` option. The roles that
+   the policy apply to are specified via the 'import_roles' value of the Venafi policy:
     1. For the Venafi Platform:
     ```
-    vault write pki/roles/venafi-role \
-        venafi_import=true \
+    vault write pki/venafi-policy/default \
+        import_roles="venafi-role" \
         tpp_url="https://tpp.venafi.example:443/vedsdk" \
         tpp_user="local:admin" \
         tpp_password="password" \
@@ -256,14 +256,17 @@ configured using the special *venafi-policy* path which InfoSec teams can use to
     ```
     2. For Venafi Cloud:
     ```
-    vault write pki/roles/venafi-role \
-        venafi_import=true \
+    vault write pki/venafi-policy/default \
+        import_roles="venafi-role" \
         apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
         zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz" \
         generate_lease=true ttl=1h max_ttl=1h \
         allowed_domains=example.com \
         allow_subdomains=true
     ```
+    Once the policies have been created and the roles are specified in the policy's import_roles, any
+    certificates that are issued by the role will be governed by the policy and the vault-pki-monitor
+    will upload any certificates issued via the role to TPP/Venafi Cloud.
 
 The following options are supported (note: this list can also be viewed from the command line using `vault path-help pki/roles/<ROLE_NAME>`):
 
@@ -310,8 +313,7 @@ vault read pki/import-queue/<ROLE_NAME>
 1. Check the result in Venafi:
     1. For Venafi Platform, navigate to the policy folder (zone) you specified when you created the role, and review
     the certificate that was created.
-    1. For Venafi Cloud, navigate to the Venafi Cloud Risk Assessement certificate inventory page and use the 'Newly Discovered' filter to view
-    certificates that were uploaded from Vault within the specified timeframe.
+    1. For Venafi Cloud, navigate to the Venafi Cloud DevOpsACCELERATE inventory view. use the 'Owner' filter and select the Venafi Cloud user that corresponds to the API key that was used to configure the vault-pki-monitor plugin. A new dashboard will be available soon that will provide statistics on certificate issuance/upload activity. 
 
 <!-- TODO: show example of separating permissions between InfoSec and DevOps -->
 ## Usage Example of Venafi Policy Enforcement
@@ -513,7 +515,7 @@ You can automatically synchronize PKI role values (e.g. OU, O, L, ST, and C) wit
 
 ## Developer Quickstart (Linux only)
 
-1. We supportiong Go versions from 1.11
+1. Go versions 1.11 or later are supported.
 
 1. Export your Venafi Platform configuration variables:
     ```
