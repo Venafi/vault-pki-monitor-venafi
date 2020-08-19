@@ -10,9 +10,9 @@ import (
 	"github.com/Venafi/vcert/pkg/certificate"
 	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/hashicorp/vault/sdk/framework"
-
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
+	"regexp"
 	"strings"
 )
 
@@ -40,6 +40,21 @@ func pathVenafiPolicy(b *backend) *framework.Path {
 			"tpp_url": {
 				Type:        framework.TypeString,
 				Description: `URL of Venafi Platform. Example: https://tpp.venafi.example/vedsdk`,
+				Required:    true,
+			},
+			"url": {
+				Type:        framework.TypeString,
+				Description: `URL of Venafi Platform. Example: https://tpp.venafi.example/vedsdk`,
+				Required:    true,
+			},
+			"access_token": {
+				Type:        framework.TypeString,
+				Description: `Access token for TPP, user should use this for authenticatio`,
+				Required:    true,
+			},
+			"refresh_token": {
+				Type:        framework.TypeString,
+				Description: `Refresh token for updating access TPP token`,
 				Required:    true,
 			},
 			"zone": {
@@ -282,6 +297,9 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	venafiPolicyConfig := &venafiPolicyConfigEntry{
 		venafiConnectionConfig: venafiConnectionConfig{
 			TPPURL:          data.Get("tpp_url").(string),
+			URL:             data.Get("url").(string),
+			AccessToken:     data.Get("access_token").(string),
+			RefreshToken:    data.Get("refresh_token").(string),
 			CloudURL:        data.Get("cloud_url").(string),
 			Zone:            data.Get("zone").(string),
 			TPPPassword:     data.Get("tpp_password").(string),
@@ -299,7 +317,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return
 	}
-	if venafiPolicyConfig.Apikey == "" && (venafiPolicyConfig.TPPURL == "" || venafiPolicyConfig.TPPUser == "" || venafiPolicyConfig.TPPPassword == "") {
+	if venafiPolicyConfig.Apikey == "" && (venafiPolicyConfig.TPPURL == "" || venafiPolicyConfig.TPPUser == "" || venafiPolicyConfig.TPPPassword == "") && venafiPolicyConfig.AccessToken==""{
 		return logical.ErrorResponse("Invalid mode. apikey or tpp credentials required"), nil
 	}
 	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+name, venafiPolicyConfig)
@@ -329,9 +347,11 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 
 	//Send policy to the user output
 	respData := formPolicyRespData(*policyEntry)
+	warnings := getWarnings(venafiPolicyConfig, name)
 
 	return &logical.Response{
 		Data: respData,
+		Warnings: warnings,
 	}, nil
 
 }
@@ -508,12 +528,53 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Stora
 	if err != nil {
 		return
 	}
-
 	log.Printf("%s Getting policy from Venafi endpoint", logPrefixVenafiPolicyEnforcement)
 
 	policy, err = cl.ReadPolicyConfiguration()
-	if err != nil {
-		return
+	if (err != nil) && (cl.GetType() == endpoint.ConnectorTypeTPP) {
+		msg := err.Error()
+
+		//catch the scenario when token is expired and deleted.
+		var regex = regexp.MustCompile("(Token).*(not found)")
+
+		//validate if the error is related to a expired accces token, at this moment the only way can validate this is using the error message
+		//and verify if that message describes errors related to expired access token.
+		if (strings.Contains(msg, "\"error\":\"expired_token\"") && strings.Contains(msg, "\"error_description\":\"Access token expired\"")) || regex.MatchString(msg) {
+
+			cfg, err := b.getConfing(ctx, storage, policyConfig)
+
+			if err != nil {
+				return nil, err
+			}
+
+			if cfg.Credentials.RefreshToken != "" {
+				err = updateAccessToken(cfg, b, ctx, &storage, policyConfig)
+
+				if err != nil {
+					return nil, err
+				}
+
+				//everything went fine so get the new client with the new refreshed acces token
+				cl, err := b.ClientVenafi(ctx, storage, policyConfig)
+				if err != nil {
+					return nil, err
+				}
+
+				b.Logger().Debug("Making certificate request again")
+
+				policy, err = cl.ReadPolicyConfiguration()
+				if err != nil {
+					return nil, err
+				}else{
+					return policy, nil
+				}
+			} else {
+				return nil, err
+			}
+
+		}else{
+			return nil, err
+		}
 	}
 	if policy == nil {
 		err = fmt.Errorf("expected policy but got nil from Venafi endpoint %v", policy)
@@ -578,6 +639,26 @@ type rolesListForVenafiPolicy struct {
 	importRoles   []string
 	enforceRoles  []string
 	defaultsRoles []string
+}
+
+
+func getWarnings(entry *venafiPolicyConfigEntry, name string) []string {
+
+	warnings := []string{}
+
+	if entry.venafiConnectionConfig.TPPURL != "" {
+		warnings = append(warnings, "Policy: "+name+", saved successfully, but tpp_url is deprecated, please use url instead")
+	}
+
+	if entry.venafiConnectionConfig.TPPUser != "" {
+		warnings = append(warnings, "Policy: "+name+", saved successfully, but tpp_user is deprecated, please use access_token token instead")
+	}
+
+	if entry.venafiConnectionConfig.TPPPassword != "" {
+		warnings = append(warnings, "Policy: "+name+", saved successfully, but tpp_password is deprecated, please use access_token instead")
+	}
+
+	return warnings
 }
 
 func (b *backend) getRolesListForVenafiPolicy(ctx context.Context, storage logical.Storage, policyName string) (rolesList rolesListForVenafiPolicy, err error) {
