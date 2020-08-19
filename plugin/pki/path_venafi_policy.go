@@ -569,6 +569,7 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Stora
 					return policy, nil
 				}
 			} else {
+				err = fmt.Errorf("Tried to get new access token but refresh token is empty")
 				return nil, err
 			}
 
