@@ -39,12 +39,12 @@ func pathVenafiPolicy(b *backend) *framework.Path {
 
 			"tpp_url": {
 				Type:        framework.TypeString,
-				Description: `URL of Venafi Platform. Example: https://tpp.venafi.example/vedsdk`,
-				Required:    true,
+				Description: `URL of Venafi Platform. Deprecated, use 'url' instead`,
+				Deprecated:  true,
 			},
 			"url": {
 				Type:        framework.TypeString,
-				Description: `URL of Venafi Platform. Example: https://tpp.venafi.example/vedsdk`,
+				Description: `URL of Venafi API endpoint. Example: https://tpp.venafi.example/vedsdk`,
 				Required:    true,
 			},
 			"access_token": {
@@ -92,7 +92,8 @@ Example:
 			},
 			"cloud_url": {
 				Type:        framework.TypeString,
-				Description: `URL for Venafi Cloud. Set it only if you want to use non production Cloud`,
+				Description: `URL for Venafi Cloud. Set it only if you want to use non production Cloud. Deprecated, use 'url' instead`,
+				Deprecated:  true,
 			},
 			"ext_key_usage": {
 				Type:    framework.TypeCommaStringSlice,
@@ -294,13 +295,26 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	name := data.Get("name").(string)
 
 	log.Printf("%s Write policy endpoint configuration into storage", logPrefixVenafiPolicyEnforcement)
+
+	url := data.Get("url").(string)
+	var tppUrl, cloudUrl string
+
+	if url == "" {
+		tppUrl = data.Get("tpp_url").(string)
+		url = tppUrl
+	}
+	if url == "" {
+		cloudUrl = data.Get("cloud_url").(string)
+		url = cloudUrl
+	}
+
 	venafiPolicyConfig := &venafiPolicyConfigEntry{
 		venafiConnectionConfig: venafiConnectionConfig{
-			TPPURL:          data.Get("tpp_url").(string),
-			URL:             data.Get("url").(string),
+			TPPURL:          tppUrl,
+			URL:             url,
 			AccessToken:     data.Get("access_token").(string),
 			RefreshToken:    data.Get("refresh_token").(string),
-			CloudURL:        data.Get("cloud_url").(string),
+			CloudURL:        cloudUrl,
 			Zone:            data.Get("zone").(string),
 			TPPPassword:     data.Get("tpp_password").(string),
 			Apikey:          data.Get("apikey").(string),
@@ -317,8 +331,8 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return
 	}
-	if venafiPolicyConfig.Apikey == "" && (venafiPolicyConfig.TPPURL == "" || venafiPolicyConfig.TPPUser == "" || venafiPolicyConfig.TPPPassword == "") && venafiPolicyConfig.AccessToken==""{
-		return logical.ErrorResponse("Invalid mode. apikey or tpp credentials required"), nil
+	if venafiPolicyConfig.Apikey == "" && (venafiPolicyConfig.URL == "" || venafiPolicyConfig.TPPUser == "" || venafiPolicyConfig.TPPPassword == "") && (venafiPolicyConfig.URL == "" || venafiPolicyConfig.AccessToken == "") {
+		return logical.ErrorResponse("Invalid mode. apikey or tpp credentials/token required"), nil
 	}
 	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+name, venafiPolicyConfig)
 	if err != nil {
@@ -350,7 +364,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	warnings := getWarnings(venafiPolicyConfig, name)
 
 	return &logical.Response{
-		Data: respData,
+		Data:     respData,
 		Warnings: warnings,
 	}, nil
 
@@ -565,7 +579,7 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Stora
 				policy, err = cl.ReadPolicyConfiguration()
 				if err != nil {
 					return nil, err
-				}else{
+				} else {
 					return policy, nil
 				}
 			} else {
@@ -573,7 +587,7 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Stora
 				return nil, err
 			}
 
-		}else{
+		} else {
 			return nil, err
 		}
 	}
@@ -614,20 +628,40 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
+	var tppPass, accessToken, refreshToken, apiKey, strMask string
+
+	strMask = "********"
+
+	if config.TPPPassword != "" {
+		tppPass = strMask
+	}
+	if config.Apikey != "" {
+		apiKey = strMask
+	}
+	if config.AccessToken != "" {
+		accessToken = strMask
+	}
+	if config.RefreshToken != "" {
+		refreshToken = strMask
+	}
+
 	//Send config to the user output
 	respData := map[string]interface{}{
-		"tpp_url":                   config.TPPURL,
+		"url":                       config.URL,
 		"zone":                      config.Zone,
 		"tpp_user":                  config.TPPUser,
+		"tpp_password":              tppPass,
+		"apikey":                    apiKey,
+		"acces_token":               accessToken,
+		"refresh_token":             refreshToken,
 		"trust_bundle_file":         config.TrustBundleFile,
-		"cloud_url":                 config.CloudURL,
 		policyFieldImportRoles:      rolesList.importRoles,
 		policyFieldDefaultsRoles:    rolesList.defaultsRoles,
 		policyFieldEnforcementRoles: rolesList.enforceRoles,
 		"auto_refresh_interval":     config.AutoRefreshInterval,
 		"last_policy_update_time":   config.LastPolicyUpdateTime,
-		"import_timeout":     config.VenafiImportTimeout,
-		"import_workers":     config.VenafiImportWorkers,
+		"import_timeout":            config.VenafiImportTimeout,
+		"import_workers":            config.VenafiImportWorkers,
 		"create_role":               config.CreateRole,
 	}
 
@@ -642,21 +676,29 @@ type rolesListForVenafiPolicy struct {
 	defaultsRoles []string
 }
 
-
 func getWarnings(entry *venafiPolicyConfigEntry, name string) []string {
 
-	warnings := []string{}
+	var warnings []string
 
 	if entry.venafiConnectionConfig.TPPURL != "" {
-		warnings = append(warnings, "Policy: "+name+", saved successfully, but tpp_url is deprecated, please use url instead")
+		warnings = append(warnings, "tpp_url is deprecated, please use url instead")
+	}
+
+	if entry.venafiConnectionConfig.CloudURL != "" {
+		warnings = append(warnings, "cloud_url is deprecated, please use url instead")
 	}
 
 	if entry.venafiConnectionConfig.TPPUser != "" {
-		warnings = append(warnings, "Policy: "+name+", saved successfully, but tpp_user is deprecated, please use access_token token instead")
+		warnings = append(warnings, "tpp_user is deprecated, please use access_token instead")
 	}
 
 	if entry.venafiConnectionConfig.TPPPassword != "" {
-		warnings = append(warnings, "Policy: "+name+", saved successfully, but tpp_password is deprecated, please use access_token instead")
+		warnings = append(warnings, "tpp_password is deprecated, please use access_token instead")
+	}
+
+	//Include success message in warnings
+	if len(warnings) > 0 {
+		warnings = append(warnings, "Policy: "+name+" saved successfully")
 	}
 
 	return warnings
