@@ -49,7 +49,7 @@ func pathVenafiPolicy(b *backend) *framework.Path {
 			},
 			"access_token": {
 				Type:        framework.TypeString,
-				Description: `Access token for TPP, user should use this for authenticatio`,
+				Description: `Access token for TPP, user should use this for authentication`,
 				Required:    true,
 			},
 			"refresh_token": {

@@ -1,8 +1,8 @@
 package pki
 
 import (
-	"crypto/x509"
 	"context"
+	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
 	"github.com/Venafi/vcert"
@@ -236,13 +236,13 @@ func getTppConnector(cfg *vcert.Config) (*tpp.Connector, error) {
 	return tppConnector, nil
 }
 
-func 	updateAccessToken(cfg *vcert.Config, b *backend, ctx context.Context, storage *logical.Storage, roleName string) error {
+func updateAccessToken(cfg *vcert.Config, b *backend, ctx context.Context, storage *logical.Storage, roleName string) error {
 	tppConnector, _ := getTppConnector(cfg)
 
 	resp, err := tppConnector.RefreshAccessToken(&endpoint.Authentication{
 		RefreshToken: cfg.Credentials.RefreshToken,
-		ClientId:     "hashicorp-vault-by-venafi",
-		Scope:        "certificate:manage,revoke",
+		ClientId:     "hashicorp-vault-monitor-by-venafi",
+		Scope:        "certificate:discover,manage",
 	})
 	if resp.Access_token != "" && resp.Refresh_token != "" {
 
@@ -276,7 +276,6 @@ func storeAccessData(b *backend, ctx context.Context, storage *logical.Storage, 
 	if err != nil {
 		return err
 	}
-
 
 	if err := (*storage).Put(ctx, jsonEntry); err != nil {
 		return err
