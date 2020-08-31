@@ -54,7 +54,7 @@ func pathVenafiPolicy(b *backend) *framework.Path {
 			},
 			"refresh_token": {
 				Type:        framework.TypeString,
-				Description: `Refresh token for updating access TPP token`,
+				Description: `Refresh token for obtaining a new access token for TPP`,
 				Required:    true,
 			},
 			"zone": {
@@ -652,7 +652,7 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		"tpp_user":                  config.TPPUser,
 		"tpp_password":              tppPass,
 		"apikey":                    apiKey,
-		"acces_token":               accessToken,
+		"access_token":               accessToken,
 		"refresh_token":             refreshToken,
 		"trust_bundle_file":         config.TrustBundleFile,
 		policyFieldImportRoles:      rolesList.importRoles,
