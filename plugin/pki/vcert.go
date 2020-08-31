@@ -118,6 +118,15 @@ func (c venafiConnectionConfig) getConfig(includeRefToken bool) (*vcert.Config, 
 			AccessToken: c.AccessToken,
 		}
 
+		if c.TrustBundleFile != "" {
+			trustBundle, err := ioutil.ReadFile(c.TrustBundleFile)
+			if err != nil {
+				log.Printf("Can`t read trust bundle from file %s: %v\n", c.TrustBundleFile, err)
+				return nil, err
+			}
+			cfg.ConnectionTrust = string(trustBundle)
+		}
+
 		if includeRefToken {
 			cfg.Credentials.RefreshToken = c.RefreshToken
 		}

@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
@@ -10,9 +11,12 @@ import (
 	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/Venafi/vcert/pkg/venafi/tpp"
 	"github.com/hashicorp/vault/sdk/logical"
+	"net"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func normalizeSerial(serial string) string {
@@ -239,6 +243,13 @@ func getTppConnector(cfg *vcert.Config) (*tpp.Connector, error) {
 func updateAccessToken(cfg *vcert.Config, b *backend, ctx context.Context, storage *logical.Storage, roleName string) error {
 	tppConnector, _ := getTppConnector(cfg)
 
+	httpClient, err := getHTTPClient(cfg.ConnectionTrust)
+	if err != nil {
+		return err
+	}
+
+	tppConnector.SetHTTPClient(httpClient)
+
 	resp, err := tppConnector.RefreshAccessToken(&endpoint.Authentication{
 		RefreshToken: cfg.Credentials.RefreshToken,
 		ClientId:     "hashicorp-vault-monitor-by-venafi",
@@ -281,4 +292,62 @@ func storeAccessData(b *backend, ctx context.Context, storage *logical.Storage, 
 		return err
 	}
 	return nil
+}
+
+func getHTTPClient(trustBundlePem string) (*http.Client, error) {
+
+	var netTransport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+
+	tlsConfig := http.DefaultTransport.(*http.Transport).TLSClientConfig
+
+	if tlsConfig == nil {
+		/* #nosec */
+		tlsConfig = &tls.Config{}
+	} else {
+		tlsConfig = tlsConfig.Clone()
+	}
+
+	if trustBundlePem != "" {
+		trustBundle, err := parseTrustBundlePEM(trustBundlePem)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.RootCAs = trustBundle
+	}
+
+	tlsConfig.Renegotiation = tls.RenegotiateFreelyAsClient
+	netTransport.TLSClientConfig = tlsConfig
+
+	client := &http.Client{
+		Timeout:   time.Second * 30,
+		Transport: netTransport,
+	}
+
+	return client, nil
+}
+
+func parseTrustBundlePEM(trustBundlePem string) (*x509.CertPool, error) {
+	var connectionTrustBundle *x509.CertPool
+
+	if trustBundlePem != "" {
+		connectionTrustBundle = x509.NewCertPool()
+		if !connectionTrustBundle.AppendCertsFromPEM([]byte(trustBundlePem)) {
+			return nil, fmt.Errorf("failed to parse PEM trust bundle")
+		}
+	} else {
+		return nil, fmt.Errorf("trust bundle PEM data is empty")
+	}
+
+	return connectionTrustBundle, nil
 }
