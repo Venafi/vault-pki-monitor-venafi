@@ -331,9 +331,15 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return
 	}
+
 	if venafiPolicyConfig.Apikey == "" && (venafiPolicyConfig.URL == "" || venafiPolicyConfig.TPPUser == "" || venafiPolicyConfig.TPPPassword == "") && (venafiPolicyConfig.URL == "" || venafiPolicyConfig.AccessToken == "") {
 		return logical.ErrorResponse("Invalid mode. apikey or tpp credentials/token required"), nil
 	}
+
+	if(venafiPolicyConfig.AccessToken != "" && (venafiPolicyConfig.TPPPassword != "" || venafiPolicyConfig.TPPUser != "")) {
+		return logical.ErrorResponse("Mixed credentials, access token and user/password are set"), nil
+	}
+
 	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+name, venafiPolicyConfig)
 	if err != nil {
 		return nil, err

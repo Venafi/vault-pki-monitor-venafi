@@ -90,28 +90,12 @@ func (c venafiConnectionConfig) getConnection() (endpoint.Connector, error) {
 }
 
 func (c venafiConnectionConfig) getConfig(includeRefToken bool) (*vcert.Config, error) {
-	//var cfg *vcert.Config
 	var cfg = &vcert.Config{
 		Zone:       c.Zone,
 		LogVerbose: true,
 	}
-	if c.URL != "" && c.TPPUser != "" && c.TPPPassword != "" {
-		cfg.ConnectorType = endpoint.ConnectorTypeTPP
-		cfg.BaseUrl = c.URL
-		cfg.Credentials = &endpoint.Authentication{
-			User:     c.TPPUser,
-			Password: c.TPPPassword,
-		}
 
-		if c.TrustBundleFile != "" {
-			trustBundle, err := ioutil.ReadFile(c.TrustBundleFile)
-			if err != nil {
-				log.Printf("Can`t read trust bundle from file %s: %v\n", c.TrustBundleFile, err)
-				return nil, err
-			}
-			cfg.ConnectionTrust = string(trustBundle)
-		}
-	} else if c.URL != "" && c.AccessToken != "" {
+	if c.URL != "" && c.AccessToken != "" {
 		cfg.ConnectorType = endpoint.ConnectorTypeTPP
 		cfg.BaseUrl = c.URL
 		cfg.Credentials = &endpoint.Authentication{
@@ -130,6 +114,24 @@ func (c venafiConnectionConfig) getConfig(includeRefToken bool) (*vcert.Config, 
 		if includeRefToken {
 			cfg.Credentials.RefreshToken = c.RefreshToken
 		}
+
+	} else if c.URL != "" && c.TPPUser != "" && c.TPPPassword != "" && c.AccessToken == "" {
+		cfg.ConnectorType = endpoint.ConnectorTypeTPP
+		cfg.BaseUrl = c.URL
+		cfg.Credentials = &endpoint.Authentication{
+			User:     c.TPPUser,
+			Password: c.TPPPassword,
+		}
+
+		if c.TrustBundleFile != "" {
+			trustBundle, err := ioutil.ReadFile(c.TrustBundleFile)
+			if err != nil {
+				log.Printf("Can`t read trust bundle from file %s: %v\n", c.TrustBundleFile, err)
+				return nil, err
+			}
+			cfg.ConnectionTrust = string(trustBundle)
+		}
+
 	} else if c.Apikey != "" {
 		cfg.ConnectorType = endpoint.ConnectorTypeCloud
 		cfg.BaseUrl = c.URL
