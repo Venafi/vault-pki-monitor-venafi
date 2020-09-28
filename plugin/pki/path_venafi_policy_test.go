@@ -19,6 +19,11 @@ func TestVenafiPolicyTPP(t *testing.T) {
 	venafiPolicyTests(t, policyData, domain)
 }
 
+func TestVenafiPolicyToken(t *testing.T) {
+	domain, policyData := makeVenafiTokenConfig()
+	venafiPolicyTests(t, policyData, domain)
+}
+
 func TestVenafiPolicyCloudSignBeforeConfigure(t *testing.T) {
 	domain, _ := makeVenafiCloudConfig()
 	venafiPolicyTestSignBeforeConfigure(t, domain)
@@ -26,6 +31,11 @@ func TestVenafiPolicyCloudSignBeforeConfigure(t *testing.T) {
 
 func TestVenafiPolicyTPPSignBeforeConfigure(t *testing.T) {
 	domain, _ := makeVenafiCloudConfig()
+	venafiPolicyTestSignBeforeConfigure(t, domain)
+}
+
+func TestVenafiPolicyTokenSignBeforeConfigure(t *testing.T) {
+	domain, _ := makeVenafiTokenConfig()
 	venafiPolicyTestSignBeforeConfigure(t, domain)
 }
 
@@ -56,6 +66,11 @@ func TestVenafiPolicyCloudWriteAndReadPolicy(t *testing.T) {
 
 func TestVenafiPolicyTPPWriteAndReadPolicy(t *testing.T) {
 	_, policyData := makeVenafiTPPConfig()
+	venafiPolicyWriteAndReadTest(t, policyData)
+}
+
+func TestVenafiPolicyTokenWriteAndReadPolicy(t *testing.T) {
+	_, policyData := makeVenafiTokenConfig()
 	venafiPolicyWriteAndReadTest(t, policyData)
 }
 

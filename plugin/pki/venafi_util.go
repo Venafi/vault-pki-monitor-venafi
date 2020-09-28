@@ -151,6 +151,15 @@ var venafiTestCloudConfigRestricted = map[string]interface{}{
 	"zone":                  os.Getenv("CLOUD_ZONE_RESTRICTED"),
 	"auto_refresh_interval": 1,
 }
+
+var venafiTestTokenConfigRestricted = map[string]interface{}{
+	"url":                   os.Getenv("TPP_TOKEN_URL"),
+	"access_token":          os.Getenv("TPP_ACCESS_TOKEN"),
+	"zone":                  os.Getenv("TPP_ZONE_RESTRICTED"),
+	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
+	"auto_refresh_interval": 1,
+}
+
 var venafiTestCloudConfigAllAllow = map[string]interface{}{
 	"cloud_url":             os.Getenv("CLOUD_URL"),
 	"apikey":                os.Getenv("CLOUD_APIKEY"),
@@ -178,6 +187,12 @@ func makeVenafiCloudConfig() (domain string, policyData map[string]interface{}) 
 func makeVenafiTPPConfig() (domain string, policyData map[string]interface{}) {
 	domain = "vfidev.com"
 	policyData = copyMap(venafiTestTPPConfigRestricted)
+	return
+}
+
+func makeVenafiTokenConfig() (domain string, policyData map[string]interface{}) {
+	domain = "vfidev.com"
+	policyData = copyMap(venafiTestTokenConfigRestricted)
 	return
 }
 
