@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -291,7 +292,7 @@ func TestAllVenafiIntegrations(t *testing.T) {
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 		req := &certificate.Request{}
-		req.PickupID = "\\VED\\Policy\\devops\\vcert\\" + singleCN
+		req.PickupID = "\\VED\\Policy\\" + os.Getenv("TPP_ZONE") + "\\" + singleCN
 		req.ChainOption = certificate.ChainOptionIgnore
 		//req.Thumbprint = "111111"
 

@@ -121,154 +121,145 @@ Venafi Policy limits the PKI role based on Venafi Platform policies or Venafi Cl
 configured using the special *venafi-policy* path which InfoSec teams can use to require compliance from a Vault CA.
 
 1. Write default Venafi policy configuration into *venafi-policy* path:
-    1. Make credentials variable for Trust Protection Platform:
-    ```
-    export CREDS='tpp_url="https://tpp.venafi.example:443/vedsdk" \
-        tpp_user="local:admin" \
-        tpp_password="password" \
-        zone=DevOps\\Default \
-        trust_bundle_file=/opt/venafi/bundle.pem'
-    ```
-    1. Or for the Cloud:
-    ```
-    export CREDS='api_key="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"'
-    ```
-   
-    1. Write the configuration into vault
-    ```
-    vault write pki/venafi-policy/default $CREDS
-    ```
-    Following options are supported (note: this list can also be viewed from the command line using `vault path-help pki/venafi-policy/default`):  
+
+   **Trust Protection Platform**:
+   ```text
+   vault write pki/venafi-policy/default \
+     zone="DevOps\\Default" \
+     url="https://tpp.example.com" trust_bundle_file="/path/to/bundle.pem" \
+     access_token="tn1PwE1QTZorXmvnTowSyA==" refresh_token="MGxV7DzNnclQi9CkJMCXCg=="
+   ```
     
-    | Parameter           | Type    | Description                                                                   | Example   |
-    | ------------------- | ------- | ------------------------------------------------------------------------------| --------- |
-    |`api_key`               |string   | API key for Venafi Cloud.                                                   |`142231b7-cvb0-412e-886b-6aeght0bc93d`|
-    |`ext_key_usage`        |string   | A comma-separated string or list of allowed extended key usages.            |`ServerAuth,ClientAuth`|
-    |`name`                 |string   | Name of the Venafi policy config. IS not set will be `default`              |`another-policy`|
-    |`tpp_password`         |string   | Password for web API user                                                   |`password`|
-    |`tpp_url`              |string   | URL of Venafi Platform.                                                     |`https://tpp.venafi.example/vedsdk`|
-    |`tpp_user`             |string   | Web API user for Venafi Platform                                            |`admin`|
-    |`trust_bundle_file`    |string   | Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server.|`"/full/path/to/chain.pem"`|
-    |`zone`                 |string   | Name of Venafi Platform policy or Venafi Cloud Zone ID.                     |`testpolicy\\vault`|
-    |`auto_refresh_interval`| int | Interval of policy update from Venafi in seconds. Set it to 0 to disable automatic policy| 0|    
-    | `import_timeout` | int     | Maximum wait in seconds before re-attempting certificate import from queue    | 15        |
-    | `import_workers` | int     | Maximum number of concurrent threads to use for VCert import                  | 12        |
-    |`enforcement_roles`   |string   | List of roles where policy enfrcement is enabled                            |`tpp`|
-    |`defaults_roles`      |string   | List of roles where default values from Venafi will be set                            |`tpp`|
-    |`import_roles`               |string   | List of roles from where certificates will be imported to Venafi                          |`tpp`|        
-    |
+   **Venafi Cloud**:
+   ```text
+   vault write pki/venafi-policy/default \
+     zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz" \
+     api_key="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+   ```
+   
+   Following options are supported (note: this list can also be viewed from the command line using `vault path-help pki/venafi-policy/default`):  
+    
+   | Parameter             | Type   | Description                                                                         | Example   |
+   | --------------------- | ------ | ----------------------------------------------------------------------------------- | --------- |
+   |`access_token`         |string  | Trust Protection Platform access token for the "hashicorp-vault-monitor-by-venafi" API Application |`tn1PwE1QTZorXmvnTowSyA==`|
+   |`api_key`              |string  | Venafi Cloud API key                                                                |`142231b7-cvb0-412e-886b-6aeght0bc93d`|
+   |`auto_refresh_interval`|int     | Interval of Venafi policy update in seconds. Set to 0 to disable automatic refresh  | 0 | 
+   |`defaults_roles`       |string  | List of roles where default values from Venafi will be applied                      |`tpp`|
+   |`enforcement_roles`    |string  | List of roles where Venafi policy enforcement is enabled                            |`tpp`|
+   |`ext_key_usage`        |string  | A comma-separated string of allowed extended key usages                             |`ServerAuth,ClientAuth`|
+   |`import_roles`         |string  | List of roles where issued certificates will be imported into the Venafi `zone`     |`tpp`|
+   |`import_timeout`       |int     | Maximum wait in seconds before re-attempting certificate import from queue          | 15 |
+   |`import_workers`       |int     | Maximum number of concurrent threads to use for VCert import                        | 5 |
+   |`name`                 |string  | Name of the venafi-policy to apply to roles                                         |`another-policy`|
+   |`url`                  |string  | Venafi service URL, generally only applicable to Trust Protection Platform          |`https://tpp.venafi.example`|
+   |`refresh_token`        |string  | Refresh Token for Venafi Platform.                                                  |`MGxV7DzNnclQi9CkJMCXCg==`|
+   |`tpp_password`         |string  | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible |`somePassword?`|
+   |`tpp_user`             |string  | **[DEPRECATED]** Trust Protection Platform WebSDK username, use `access_token` if possible |`admin`|
+   |`trust_bundle_file`    |string  | Text file containing trust anchor certificates in PEM format, generally required for Trust Protection Platform |`"/path/to/chain.pem"`|
+   |`zone`                 |string   | Trust Protection Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI) |`testpolicy\\vault`|
 
-    Policy will be downloaded from Venafi, parsed, saved under the specified path, and displayed to the user. After policy
-    creation, any requested certificate will be checked against it.  If the request fails compliance with the policy, the
-    user will see error similar to that of standard PKI role checking except stating "not allowed by Venafi policy":
+   Policy will be downloaded from Venafi, parsed, saved under the specified path, and displayed to the user. After policy
+   creation, any requested certificate will be checked against it.  If the request fails compliance with the policy, the
+   user will see error similar to that of standard PKI role checking except stating "not allowed by Venafi policy":
+   ```
+   URL: PUT http://127.0.0.1:8200/v1/vault-pki-monitor-venafi/issue/domain.com
+   Code: 400. Errors:
 
-    ```
-    URL: PUT http://127.0.0.1:8200/v1/vault-pki-monitor-venafi/issue/domain.com
-    Code: 400. Errors:
-
-    * common name import-vl9kt.import.example.com not allowed by Venafi policy
-    ```
+   * common name import-vl9kt.import.example.com not allowed by Venafi policy
+   ```
 
 1. Create a role with which you want to use enforcement policy
-    ```
-    vault write pki/roles/test-role \
-        generate_lease=true ttl=1h max_ttl=1h \
-        allow_any_name=true
-    ``` 
+   ```
+   vault write pki/roles/test-role generate_lease=true ttl=1h max_ttl=1h allow_any_name=true
+   ``` 
    
 1. Update the policy and add created role to the defaults and enforcement lists
-   ```
-   vault write pki/venafi-policy/default $CREDS defaults_roles="test-role" enforcement_roles="test-role"
+   ```text
+   vault write pki/venafi-policy/default \
+     defaults_roles="test-role" enforcement_roles="test-role" \
+     zone="DevOps\\Default" \
+     url="https://tpp.example.com" trust_bundle_file="/path/to/bundle.pem" \
+     access_token="tn1PwE1QTZorXmvnTowSyA==" refresh_token="MGxV7DzNnclQi9CkJMCXCg=="
    ```
 
 1. The following command can be used to display the current Venafi policy:
-    ```
-    vault read pki/venafi-policy/default/policy
-    ```
+   ```text
+   vault read pki/venafi-policy/default/policy
+   ```
     
 1. The Venafi configuration for the policy can be viewed using the following:
-    ```
-    vault read pki/venafi-policy/default
-    ``` 
+   ```text
+   vault read pki/venafi-policy/default
+   ``` 
 
 1. You can also use multiple Venafi policies by simply applying them to different roles.
-    1. Write another policy configuration:
-    ```
-    vault write pki/venafi-policy/another-policy \
-        tpp_url="https://tpp.venafi.example:443/vedsdk" \
-        tpp_user="local:admin" \
-        tpp_password="password" \
-        zone="DevOps\\Another policy" \
-        trust_bundle_file="/opt/venafi/bundle.pem" \
-        defaults_roles="venafi-role2" \
-        enforcement_roles="venafi-role2"
-    ```
+    
+   Create another policy configuration:
+   ```text
+   vault write pki/venafi-policy/another-policy \
+     defaults_roles="venafi-role2" enforcement_roles="venafi-role2" \
+     zone="DevOps\\Another Policy" \
+     url="https://tpp.example.com" trust_bundle_file="/path/to/bundle.pem" \
+     access_token="tn1PwE1QTZorXmvnTowSyA==" refresh_token="MGxV7DzNnclQi9CkJMCXCg=="
+   ```
 
 1. Venafi policy can be cleared using `delete` operation on the *venafi-policy* path (useful if you want to see the
    behavior when no Venafi policy is applied):
-    ```
-    vault delete pki/venafi-policy
-    ```
+   ```text
+   vault delete pki/venafi-policy
+   ```
     
 ### Testing Policy Enforcement
 
 1. Initialize the Vault PKI certificate authority:
-    ```
-    vault write pki/root/generate/internal common_name="Vault Test Root CA" ttl=8760h
-    ```
+   ```
+   vault write pki/root/generate/internal common_name="Vault Test Root CA" ttl=8760h
+   ```
 
 1. Create a very permissive role because Venafi policy enforcement will prevent the Vault CA from issuing certificates that
    do not comply with enterprise security policy:
-    ```
-    vault write pki/roles/test-role \
-        generate_lease=true ttl=1h max_ttl=1h \
-        allow_any_name=true
-    ```
+   ```
+   vault write pki/roles/test-role generate_lease=true ttl=1h max_ttl=1h allow_any_name=true
+   ```
 
 1. Enroll a certificate using the CA and specify a domain that will fail policy:
-    ```
-    vault write pki/issue/test-role common_name="test.forbidden.org" alt_names="test-1.forbidden.org,test-2.forbidden.org"
-    ```
+   ```
+   vault write pki/issue/test-role common_name="test.forbidden.org" alt_names="test-1.forbidden.org,test-2.forbidden.org"
+   ```
     
 1. Try again but specify a domain that will comply with policy:
-    ```
-    vault write pki/issue/test-role common_name="test.allowed.org" alt_names="test-1.allowed.org,test-2.allowed.org"
-    ```
+   ```
+   vault write pki/issue/test-role common_name="test.allowed.org" alt_names="test-1.allowed.org,test-2.allowed.org"
+   ```
     
 [![asciicast](https://asciinema.org/a/exZfzOOFyuxjvvQ61RE74B1LC.svg)](https://asciinema.org/a/exZfzOOFyuxjvvQ61RE74B1LC)    
     
 ## Quickstart: Enabling Venafi Visibility
 
-# !! Need to rewrite this section. Visibility is on on the policy level now
-1. Visibiliy is enabled at the [PKI role](https://www.vaultproject.io/docs/secrets/pki/index.html) by enabling the `venafi_import` option:
-    1. For the Venafi Platform:
-    ```
-    vault write pki/roles/venafi-role \
-        venafi_import=true \
-        tpp_url="https://tpp.venafi.example:443/vedsdk" \
-        tpp_user="local:admin" \
-        tpp_password="password" \
-        zone="DevOps\\Vault Monitor" \
-        trust_bundle_file="/opt/venafi/bundle.pem" \
-        generate_lease=true ttl=1h max_ttl=1h \
-        allowed_domains=example.com \
-        allow_subdomains=true
-    ```
-    2. For Venafi Cloud:
-    ```
-    vault write pki/roles/venafi-role \
-        venafi_import=true \
-        apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
-        zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz" \
-        generate_lease=true ttl=1h max_ttl=1h \
-        allowed_domains=example.com \
-        allow_subdomains=true
-    ```
+1. Visibility is enabled at the policy level using the `import_roles` parameter.
+    
+   **Trust Protection Platform**:
+   ```
+   vault write pki/venafi-policy/default \
+     import_roles="venafi-role" \
+     zone="DevOps\\Vault Monitor" \
+     url="https://tpp.example.com" trust_bundle_file="/path/to/bundle.pem" \
+     access_token="tn1PwE1QTZorXmvnTowSyA==" refresh_token="MGxV7DzNnclQi9CkJMCXCg=="
+   ```
+
+   **Venafi Cloud**:
+   ```
+   vault write pki/venafi-policy/default \
+     import_roles="venafi-role" \
+     zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz" \
+     apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+   ```
+    
+   Once the policies have been created and the roles are specified in the policy's import_roles, any
+   certificates that are issued by the role will be governed by the policy and the vault-pki-monitor
+   will upload any certificates issued via the role to TPP/Venafi Cloud.
 
 The following options are supported (note: this list can also be viewed from the command line using `vault path-help pki/roles/<ROLE_NAME>`):
-
-
-
 
 ### Import Queue
 After a certificate has been signed by the Vault CA it is added to the import queue. Processing of certificates in the queue
@@ -310,8 +301,7 @@ vault read pki/import-queue/<ROLE_NAME>
 1. Check the result in Venafi:
     1. For Venafi Platform, navigate to the policy folder (zone) you specified when you created the role, and review
     the certificate that was created.
-    1. For Venafi Cloud, navigate to the Venafi Cloud Risk Assessement certificate inventory page and use the 'Newly Discovered' filter to view
-    certificates that were uploaded from Vault within the specified timeframe.
+    1. For Venafi Cloud, navigate to the Venafi Cloud DevOpsACCELERATE inventory view. use the 'Owner' filter and select the Venafi Cloud user that corresponds to the API key that was used to configure the vault-pki-monitor plugin. A new dashboard will be available soon that will provide statistics on certificate issuance/upload activity. 
 
 <!-- TODO: show example of separating permissions between InfoSec and DevOps -->
 ## Usage Example of Venafi Policy Enforcement
@@ -513,7 +503,7 @@ You can automatically synchronize PKI role values (e.g. OU, O, L, ST, and C) wit
 
 ## Developer Quickstart (Linux only)
 
-1. We supportiong Go versions from 1.11
+1. Go versions 1.11 or later are supported.
 
 1. Export your Venafi Platform configuration variables:
     ```

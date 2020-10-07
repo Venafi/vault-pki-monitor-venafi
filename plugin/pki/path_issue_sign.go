@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -189,6 +190,12 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 }
 
 func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
+	// If storing the certificate and on a performance standby or secondary, forward this request on to the primary
+	if !role.NoStore && b.System().ReplicationState().
+		HasState(consts.ReplicationPerformanceStandby|consts.ReplicationPerformanceSecondary) {
+		return nil, logical.ErrReadOnly
+	}
+
 	format := getFormat(data)
 	if format == "" {
 		return logical.ErrorResponse(
