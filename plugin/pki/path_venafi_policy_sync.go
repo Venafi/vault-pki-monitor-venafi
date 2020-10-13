@@ -3,10 +3,12 @@ package pki
 import (
 	"context"
 	"fmt"
+	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/hashicorp/vault/sdk/framework"
 	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -109,7 +111,7 @@ func (b *backend) syncPolicyEnforcementAndRoleDefaults(conf *logical.BackendConf
 
 	for _, policyName := range policies {
 
-		policyConfig, err := b.getVenafiPolicyConfig(ctx, b.storage, policyName)
+		policyConfig, err := b.getVenafiPolicyConfig(ctx, &b.storage, policyName)
 		if err != nil {
 			log.Printf("%s Error getting policy config for policy %s: %s", logPrefixVenafiPolicyEnforcement, policyName, err)
 			continue
@@ -152,6 +154,9 @@ func (b *backend) syncPolicyEnforcementAndRoleDefaults(conf *logical.BackendConf
 			msg := b.synchronizeRoleDefaults(ctx, b.storage, roleName, policyName)
 			log.Printf("%s %s", logPrefixVenafiRoleyDefaults, msg)
 		}
+
+		//policy config's credentials may be got updated so get it from storage again before saving it.
+		policyConfig, _ = b.getVenafiPolicyConfig(ctx, &b.storage, policyName)
 
 		//set new last updated
 		policyConfig.LastPolicyUpdateTime = time.Now().Unix()
@@ -251,13 +256,66 @@ func replacePKIValue(original *[]string, zone []string) {
 
 func (b *backend) getVenafiPolicyParams(ctx context.Context, storage logical.Storage, policyConfig string, syncZone string) (entry roleEntry, err error) {
 	//Get role params from TPP\Cloud
-	cl, err := b.ClientVenafi(ctx, storage, policyConfig)
+	cl, err := b.ClientVenafi(ctx, &storage, policyConfig)
 	if err != nil {
 		return entry, fmt.Errorf("could not create venafi client: %s", err)
 	}
 
 	cl.SetZone(syncZone)
 	zone, err := cl.ReadZoneConfiguration()
+	if (err != nil) && (cl.GetType() == endpoint.ConnectorTypeTPP) {
+		msg := err.Error()
+
+		//catch the scenario when token is expired and deleted.
+		var regex = regexp.MustCompile("(Token).*(not found)")
+
+		//validate if the error is related to a expired accces token, at this moment the only way can validate this is using the error message
+		//and verify if that message describes errors related to expired access token.
+		if (strings.Contains(msg, "\"error\":\"expired_token\"") && strings.Contains(msg, "\"error_description\":\"Access token expired\"")) || regex.MatchString(msg) {
+
+			cfg, err := b.getConfing(ctx, &storage, policyConfig)
+
+			if err != nil {
+				return entry, err
+			}
+
+			if cfg.Credentials.RefreshToken != "" {
+				err = synchronizedUpdateAccessToken(cfg, b, ctx, &storage, policyConfig)
+
+				if err != nil {
+					return entry, err
+				}
+
+				//everything went fine so get the new client with the new refreshed access token
+				cl, err := b.ClientVenafi(ctx, &storage, policyConfig)
+				if err != nil {
+					return entry, err
+				}
+
+				b.Logger().Debug("Reading policy configuration again")
+
+				zone, err = cl.ReadZoneConfiguration()
+				if err != nil {
+					return entry, err
+				} else {
+					entry = roleEntry{
+						OU:           zone.OrganizationalUnit,
+						Organization: []string{zone.Organization},
+						Country:      []string{zone.Country},
+						Locality:     []string{zone.Locality},
+						Province:     []string{zone.Province},
+					}
+					return entry, nil
+				}
+			} else {
+				err = fmt.Errorf("Tried to get new access token but refresh token is empty")
+				return entry, err
+			}
+
+		} else {
+			return entry, err
+		}
+	}
 	if err != nil {
 		return entry, fmt.Errorf("could not read zone configuration: %s", err)
 	}

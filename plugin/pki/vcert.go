@@ -15,7 +15,7 @@ import (
 const venafiPolciyCheck = true
 const venafiPolicyDenyAll = true
 
-func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, policyName string) (
+func (b *backend) ClientVenafi(ctx context.Context, s *logical.Storage, policyName string) (
 	endpoint.Connector, error) {
 
 	if policyName == "" {
@@ -33,7 +33,7 @@ func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, policyNam
 	return policy.venafiConnectionConfig.getConnection()
 }
 
-func (b *backend) getConfing(ctx context.Context, s logical.Storage, policyName string) (
+func (b *backend) getConfing(ctx context.Context, s *logical.Storage, policyName string) (
 	*vcert.Config, error) {
 
 	if policyName == "" {
