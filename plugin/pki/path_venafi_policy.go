@@ -647,10 +647,10 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		apiKey = strMask
 	}
 	if config.AccessToken != "" {
-		accessToken = config.AccessToken
+		accessToken = strMask
 	}
 	if config.RefreshToken != "" {
-		refreshToken = config.RefreshToken
+		refreshToken = strMask
 	}
 
 	//Send config to the user output

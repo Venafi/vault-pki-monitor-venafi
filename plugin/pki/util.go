@@ -295,8 +295,7 @@ func storeAccessData(b *backend, ctx context.Context, storage *logical.Storage, 
 		return err
 	}
 
-	b.Logger().Debug("changed access token new should be: "+resp.Access_token)
-	b.Logger().Debug("changed refresh token new should be: "+resp.Refresh_token)
+
 	if err := (*storage).Put(ctx, jsonEntry); err != nil {
 		return err
 	}
