@@ -57,7 +57,7 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
    link to /private/etc. To avoid errors, choose an alternative directory such
    as /private/etc/vault/vault_plugins.
 
-1. Download the latest `vault-pki-monitor-venafi` [release package](../../releases/latest) for your operating system. There are two versions, optional and script. The "optional" version allows certificates to be issues by the Vault CA when thre is no Venafi policy applied whereas the "strict" version will return an error.
+1. Download the latest `vault-pki-monitor-venafi` [release package](../../releases/latest) for your operating system. There are two versions, optional and script. The "optional" version allows certificates to be issues by the Vault CA when there is no Venafi policy applied whereas the "strict" version will return an error.
 Note that the URL for the zip file, referenced below, changes as new versions of the plugin are released.
 
     ```text
@@ -159,7 +159,7 @@ Note that the URL for the zip file, referenced below, changes as new versions of
    |`ext_key_usage`        |string  | A comma-separated string of allowed extended key usages                             |`ServerAuth,ClientAuth`|
    |`import_roles`         |string  | List of roles where issued certificates will be imported into the Venafi `zone`     |`tpp`|
    |`import_timeout`       |int     | Maximum wait in seconds before re-attempting certificate import from queue          | 15 |
-   |`import_workers`       |int     | Maximum number of concurrent threads to use for VCert import                        | 5 |
+   |`import_workers`       |int     | Maximum number of concurrent threads to use for Venafi import                       | 5 |
    |`name`                 |string  | Name of the venafi-policy to apply to roles                                         |`another-policy`|
    |`url`                  |string  | Venafi service URL, generally only applicable to Trust Protection Platform          |`https://tpp.venafi.example`|
    |`refresh_token`        |string  | Refresh Token for Venafi Platform.                                                  |`MGxV7DzNnclQi9CkJMCXCg==`|
@@ -225,7 +225,7 @@ Venafi Policy limits the PKI role based on Venafi Platform policies or Venafi Cl
    $ vault write pki/issue/venafi-role common_name="test.allowed.org" alt_names="test-1.allowed.org,test-2.allowed.org"
    ```
 
-   If the request is policy compliant, the request will return a certificate sucessfully. This certificate will also be placed in the visibility import queue to be uploaded to the Venafi Trust Protection Platform.
+   If the request is policy compliant, the request will return a certificate successfully. This certificate will also be placed in the visibility import queue to be uploaded to the Venafi Trust Protection Platform.
 
 1. Or sign a CSR from a file by writing to the `/sign` endpoint with the name of the role: 
 
