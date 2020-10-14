@@ -289,7 +289,7 @@ func (b *backend) processImportToTPP(job Job) string {
 				}
 
 				if cfg.Credentials.RefreshToken != "" {
-					msg := fmt.Sprintf("se actualizara tokem por Job id: %v ###", job.id)
+					msg := fmt.Sprintf("Token will be updated by the Job with id: %v ###", job.id)
 					b.Logger().Debug(msg)
 					err = synchronizedUpdateAccessToken(cfg, b, job.ctx, job.storage, job.policyName)
 
@@ -308,7 +308,8 @@ func (b *backend) processImportToTPP(job Job) string {
 					importResp, err = cl.ImportCertificate(importReq)
 					if err != nil {
 						if errors.Is(err, verror.ServerBadDataResponce) || errors.Is(err, verror.UserDataError) {
-							//TODO: Here should be renew instead of deletion
+							//remove this from current queue, since this is because probably certificate exist on server
+							//or user feed certificate with invalid data.
 							b.deleteCertFromQueue(job)
 						}
 						return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
