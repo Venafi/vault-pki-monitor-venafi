@@ -58,21 +58,22 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
    as /private/etc/vault/vault_plugins.
 
 1. Download the latest `vault-pki-monitor-venafi` [release package](../../releases/latest) for your operating system. There are two versions, optional and script. The "optional" version allows certificates to be issues by the Vault CA when thre is no Venafi policy applied whereas the "strict" version will return an error.
+Note that the URL for the zip file, referenced below, changes as new versions of the plugin are released.
 
     ```text
-    $ wget -q https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/v0.6.0/vault-pki-monitor-venafi_v0.6.0+496_linux_strict.zip
+    $ wget -q https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/v0.0.1/vault-pki-monitor-venafi_v0.0.1+1_linux_strict.zip
     ```
 
 1. Compare the checksum of the package to the listed value on the GitHub release page.
 
     ```text
-    $ sha256sum vault-pki-monitor-venafi_v0.6.0+496_linux_strict.zip
+    $ sha256sum vault-pki-monitor-venafi_v0.0.1+1_linux_strict.zip
     ```
 
-1. Unzip the binary to the plugin director. Note that the URL for the zip file, referenced below, changes as new versions of the plugin are released.
+1. Unzip the binary to the plugin directory.
 
     ```text
-    $ unzip vault-pki-monitor-venafi_v0.6.0+496_linux_strict.zip
+    $ unzip vault-pki-monitor-venafi_v0.0.1+1_linux_strict.zip
     $ mv vault-pki-monitor-venafi_strict /etc/vault/vault_plugins
     ```
 
@@ -97,7 +98,9 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
     $ SHA256=$(sha256sum /etc/vault/vault_plugins/vault-pki-monitor-venafi_strict |cut -d' ' -f1)
     ```
 
-1. Register the `vault-pki-monitor-venafi` plugin in the Vault system catalog:
+1. Register the `vault-pki-monitor-venafi` plugin in the Vault 
+   [system catalog](https://www.vaultproject.io/docs/internals/plugins#plugin-catalog):
+
    ```
    $ vault write sys/plugins/catalog/secret/vault-pki-monitor-venafi_strict \
        sha_256="${SHA256}" command="vault-pki-monitor-venafi_strict"
@@ -118,7 +121,7 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
    Success! Enabled the vault-pki-monitor-venafi_strict secrets engine at: pki/
    ```
 
-1. Configure a Venafi secret that maps a name in Vault to connection and authentication settings for enrolling certificates using Venafi. The zone is a policy folder for Trust Protection Platform or a DevOps project zone for Venafi Cloud. Obtain the `access_token` and `refresh_token` for Trust Protection Platform using the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#obtaining-an-authorization-token) (`getcred` action with `--client-id "hashicorp-vault-monitor-by-venafi"` and `--scope "certificate:manage"`) or the Platform's Authorize REST API method. 
+1. Configure a Venafi secret that maps a name in Vault to connection and authentication settings for enrolling certificates using Venafi. The zone is a policy folder for Trust Protection Platform or a DevOps project zone for Venafi Cloud. Obtain the `access_token` and `refresh_token` for Trust Protection Platform using the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#obtaining-an-authorization-token) (`getcred` action with `--client-id "hashicorp-vault-monitor-by-venafi"` and `--scope "certificate:manage,discover"`) or the Platform's Authorize REST API method. 
 
     **Trust Protection Platform**:
 
@@ -149,7 +152,7 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
     | Parameter             | Type   | Description                                                                         | Example   |
    | --------------------- | ------ | ----------------------------------------------------------------------------------- | --------- |
    |`access_token`         |string  | Trust Protection Platform access token for the "hashicorp-vault-monitor-by-venafi" API Application |`tn1PwE1QTZorXmvnTowSyA==`|
-   |`api_key`              |string  | Venafi Cloud API key                                                                |`142231b7-cvb0-412e-886b-6aeght0bc93d`|
+   |`apikey`               |string  | Venafi Cloud API key                                                                |`142231b7-cvb0-412e-886b-6aeght0bc93d`|
    |`auto_refresh_interval`|int     | Interval of Venafi policy update in seconds. Set to 0 to disable automatic refresh  | 0 | 
    |`defaults_roles`       |string  | List of roles where default values from Venafi will be applied                      |`tpp`|
    |`enforcement_roles`    |string  | List of roles where Venafi policy enforcement is enabled                            |`tpp`|
@@ -218,8 +221,8 @@ Venafi Policy limits the PKI role based on Venafi Platform policies or Venafi Cl
 
 1. Generate a certificate by writing to the Vault CA and the Venafi role.
 
-    ```text
-   vault write pki/issue/venafi-role common_name="test.allowed.org" alt_names="test-1.allowed.org,test-2.allowed.org"
+   ```text
+   $ vault write pki/issue/venafi-role common_name="test.allowed.org" alt_names="test-1.allowed.org,test-2.allowed.org"
    ```
 
    If the request is policy compliant, the request will return a certificate sucessfully. This certificate will also be placed in the visibility import queue to be uploaded to the Venafi Trust Protection Platform.
@@ -235,15 +238,15 @@ Venafi Policy limits the PKI role based on Venafi Platform policies or Venafi Cl
 To upgrade to a new version of this plugin, review the [release notes]() to understand the impact and then follow the [standard procedure](https://www.vaultproject.io/docs/upgrading/plugins). 
 The following command will trigger a plug reload globally:
 
-    ```text
-    $ vault write sys/plugins/reload/backend plugin=vault-pki-monitor-venafi_strict scope= global
+   ```text
+   $ vault write sys/plugins/reload/backend plugin=vault-pki-monitor-venafi_strict scope=global
 
-    Key          Value
-    ---          -----
-    reload_id    d8180af4-01e0-d4d8-10ce-0daf69fbb6ed
-    ```
+   Key          Value
+   ---          -----
+   reload_id    d8180af4-01e0-d4d8-10ce-0daf69fbb6ed
+   ```
 
-    :warning: **IMPORTANT:** Every member of a Vault cluster must be running with the same version of the plugin to avoid inconsistent, unexpected, and possibly erroneous results.
+   :warning: **IMPORTANT:** Every member of a Vault cluster must be running with the same version of the plugin to avoid inconsistent, unexpected, and possibly erroneous results.
 
 ## License
 
