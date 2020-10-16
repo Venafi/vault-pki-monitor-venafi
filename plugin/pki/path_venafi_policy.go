@@ -61,7 +61,7 @@ func pathVenafiPolicy(b *backend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `Name of Venafi Platform or Cloud policy. 
 Example for Platform: testpolicy\\vault
-Example for Venafi Cloud: Default`,
+Example for Venafi Cloud: d2b30123-4567-8910-1112-1314d01372c2`,
 				Default: `Default`,
 			},
 			"tpp_user": {
