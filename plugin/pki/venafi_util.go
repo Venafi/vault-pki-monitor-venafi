@@ -14,6 +14,7 @@ const (
 	logPrefixVenafiPolicyEnforcement = "VENAFI_POLICY_ENFORCEMENT: "
 	logPrefixVenafiRoleyDefaults     = "VENAFI_ROLE_DEFAULTS: "
 	logPrefixVenafiScheduler         = "VENAFI_SCHEDULER: "
+	logPrefixVenafiSecret            = "VENAFI_SECRET: "
 )
 
 const msg_denied_by_policy = "certificate issue should be denied by policy, %#v"
@@ -119,6 +120,7 @@ var venafiTestTPPConfigAllAllow = map[string]interface{}{
 	"zone":                  os.Getenv("TPP_ZONE"),
 	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
 	"auto_refresh_interval": 1,
+	"venafi_secret":         venafiSecretDefaultName,
 }
 
 var venafiTestTPPConfigNoRefresh = map[string]interface{}{
@@ -128,12 +130,14 @@ var venafiTestTPPConfigNoRefresh = map[string]interface{}{
 	"zone":                  os.Getenv("TPP_ZONE"),
 	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
 	"auto_refresh_interval": 0,
+	"venafi_secret":         venafiSecretDefaultName,
 }
 
 var venafiTestConfigBadData = map[string]interface{}{
-	"cloud_url": os.Getenv("CLOUD_URL"),
-	"apikey":    os.Getenv("CLOUD_APIKEY"),
-	"zone":      os.Getenv("CLOUD_ZONE_RESTRICTED"),
+	"cloud_url":     os.Getenv("CLOUD_URL"),
+	"apikey":        os.Getenv("CLOUD_APIKEY"),
+	"zone":          os.Getenv("CLOUD_ZONE_RESTRICTED"),
+	"venafi_secret": venafiSecretDefaultName,
 }
 
 var venafiTestTPPConfigRestricted = map[string]interface{}{
@@ -143,6 +147,7 @@ var venafiTestTPPConfigRestricted = map[string]interface{}{
 	"zone":                  os.Getenv("TPP_ZONE_RESTRICTED"),
 	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
 	"auto_refresh_interval": 1,
+	"venafi_secret":         venafiSecretDefaultName,
 }
 
 var venafiTestCloudConfigRestricted = map[string]interface{}{
@@ -150,6 +155,7 @@ var venafiTestCloudConfigRestricted = map[string]interface{}{
 	"apikey":                os.Getenv("CLOUD_APIKEY"),
 	"zone":                  os.Getenv("CLOUD_ZONE_RESTRICTED"),
 	"auto_refresh_interval": 1,
+	"venafi_secret":         venafiSecretDefaultName,
 }
 
 var venafiTestTokenConfigRestricted = map[string]interface{}{
@@ -158,6 +164,7 @@ var venafiTestTokenConfigRestricted = map[string]interface{}{
 	"zone":                  os.Getenv("TPP_ZONE_RESTRICTED"),
 	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
 	"auto_refresh_interval": 1,
+	"venafi_secret":         venafiSecretDefaultName,
 }
 
 var venafiTestCloudConfigAllAllow = map[string]interface{}{
@@ -165,6 +172,13 @@ var venafiTestCloudConfigAllAllow = map[string]interface{}{
 	"apikey":                os.Getenv("CLOUD_APIKEY"),
 	"zone":                  os.Getenv("CLOUD_ZONE"),
 	"auto_refresh_interval": 1,
+	"venafi_secret":         venafiSecretDefaultName,
+}
+
+var createVenafiSecretStep = logicaltest.TestStep{
+	Operation: logical.UpdateOperation,
+	Path:      venafiSecretsPath + venafiSecretDefaultName,
+	Data:      venafiTestTPPConfigAllAllow,
 }
 
 var venafiTPPCreateSimplePolicyStep = logicaltest.TestStep{
@@ -196,7 +210,27 @@ func makeVenafiTokenConfig() (domain string, policyData map[string]interface{}) 
 	return
 }
 
+func writeVenafiSecret(b *backend, storage logical.Storage, secretData map[string]interface{}, t *testing.T, venafiSecretName string) *logical.Response {
+	t.Log("Writing Venafi secret configuration")
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      venafiSecretsPath + venafiSecretName,
+		Storage:   storage,
+		Data:      secretData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to configure venafi secret, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return resp
+}
+
 func writePolicy(b *backend, storage logical.Storage, policyData map[string]interface{}, t *testing.T, policyName string) *logical.Response {
+	writeVenafiSecret(b, storage, policyData, t, venafiSecretDefaultName)
+
 	t.Log("Writing Venafi policy configuration")
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -217,7 +251,12 @@ func writePolicy(b *backend, storage logical.Storage, policyData map[string]inte
 }
 
 func writePolicyToClient(mountPoint string, client *api.Client, t *testing.T) {
-	_, err := client.Logical().Write(mountPoint+"/"+venafiPolicyPath+defaultVenafiPolicyName, venafiTestTPPConfigAllAllow)
+	_, err := client.Logical().Write(mountPoint+"/"+venafiSecretsPath+venafiSecretDefaultName, venafiTestTPPConfigAllAllow)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write(mountPoint+"/"+venafiPolicyPath+defaultVenafiPolicyName, venafiTestTPPConfigAllAllow)
 	if err != nil {
 		t.Fatal(err)
 	}

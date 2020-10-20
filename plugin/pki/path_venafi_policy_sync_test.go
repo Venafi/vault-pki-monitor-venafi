@@ -15,6 +15,7 @@ var policyTPPData = map[string]interface{}{
 	"tpp_password":      os.Getenv("TPP_PASSWORD"),
 	"zone":              os.Getenv("TPP_ZONE"),
 	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+	"venafi_secret":     venafiSecretDefaultName,
 }
 
 var policyTPPData2 = map[string]interface{}{
@@ -23,12 +24,14 @@ var policyTPPData2 = map[string]interface{}{
 	"tpp_password":      os.Getenv("TPP_PASSWORD"),
 	"zone":              os.Getenv("TPP_ZONE2"),
 	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
+	"venafi_secret":     venafiSecretDefaultName,
 }
 
 var policyCloudData = map[string]interface{}{
-	"apikey":    os.Getenv("CLOUD_APIKEY"),
-	"cloud_url": os.Getenv("CLOUD_URL"),
-	"zone":      os.Getenv("CLOUD_ZONE_RESTRICTED"),
+	"apikey":        os.Getenv("CLOUD_APIKEY"),
+	"cloud_url":     os.Getenv("CLOUD_URL"),
+	"zone":          os.Getenv("CLOUD_ZONE_RESTRICTED"),
+	"venafi_secret": venafiSecretDefaultName,
 }
 
 var wantTPPRoleEntry = roleEntry{
@@ -498,5 +501,5 @@ func Test_backend_getVenafiPolicyParams(t *testing.T) {
 }
 
 func TestAutoRefresh(t *testing.T) {
-//TODO: make it
+	//TODO: make it
 }

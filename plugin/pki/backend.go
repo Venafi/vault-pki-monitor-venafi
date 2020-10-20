@@ -84,6 +84,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathVenafiPolicySync(&b),
 			pathRevoke(&b),
 			pathTidy(&b),
+			pathVenafiSecrets(&b),
+			pathVenafiSecretsList(&b),
 		},
 
 		Secrets: []*framework.Secret{

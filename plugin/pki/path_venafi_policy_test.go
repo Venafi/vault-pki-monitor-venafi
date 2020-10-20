@@ -272,7 +272,7 @@ func Test_pathShowVenafiPolicyMap(t *testing.T) {
 }
 
 //TODO: add test with empty organization
-//TODO: add test for CA with emoty organization
+//TODO: add test for CA with empty organization
 //TODO: add test for CA with SANs
 func venafiPolicyTests(t *testing.T, policyData map[string]interface{}, domain string) {
 	// create the backend

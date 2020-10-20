@@ -169,7 +169,7 @@ func curveInSlice(i certificate.EllipticCurve, s []certificate.EllipticCurve) bo
 	return false
 }
 
-func checkKey(keyType string, bitsize int, curveStr string, allowed []endpoint.AllowedKeyConfiguration) (valid bool) {
+func checkKey(keyType string, bitSize int, curveStr string, allowed []endpoint.AllowedKeyConfiguration) (valid bool) {
 	for _, allowedKey := range allowed {
 		var kt certificate.KeyType
 		if err := kt.Set(keyType); err != nil {
@@ -178,7 +178,7 @@ func checkKey(keyType string, bitsize int, curveStr string, allowed []endpoint.A
 		if allowedKey.KeyType == kt {
 			switch allowedKey.KeyType {
 			case certificate.KeyTypeRSA:
-				return intInSlice(bitsize, allowedKey.KeySizes)
+				return intInSlice(bitSize, allowedKey.KeySizes)
 			case certificate.KeyTypeECDSA:
 				var curve certificate.EllipticCurve
 				if err := curve.Set(curveStr); err != nil {
@@ -193,9 +193,9 @@ func checkKey(keyType string, bitsize int, curveStr string, allowed []endpoint.A
 	return
 }
 
-func checkStringByRegexp(s string, regexs []string) (matched bool) {
+func checkStringByRegexp(s string, regexList []string) (matched bool) {
 	var err error
-	for _, r := range regexs {
+	for _, r := range regexList {
 		matched, err = regexp.MatchString(r, s)
 		if err == nil && matched {
 			return true
@@ -204,7 +204,7 @@ func checkStringByRegexp(s string, regexs []string) (matched bool) {
 	return
 }
 
-func checkStringArrByRegexp(ss []string, regexs []string, optional bool) (matched bool) {
+func checkStringArrByRegexp(ss []string, regexList []string, optional bool) (matched bool) {
 	if optional && len(ss) == 0 {
 		return true
 	}
@@ -212,7 +212,7 @@ func checkStringArrByRegexp(ss []string, regexs []string, optional bool) (matche
 		ss = []string{""}
 	}
 	for _, s := range ss {
-		if !checkStringByRegexp(s, regexs) {
+		if !checkStringByRegexp(s, regexList) {
 			return false
 		}
 	}
@@ -229,7 +229,7 @@ func getTppConnector(cfg *vcert.Config) (*tpp.Connector, error) {
 	if cfg.ConnectionTrust != "" {
 		connectionTrustBundle = x509.NewCertPool()
 		if !connectionTrustBundle.AppendCertsFromPEM([]byte(cfg.ConnectionTrust)) {
-			return nil, fmt.Errorf("Failed to parse PEM trust bundle")
+			return nil, fmt.Errorf("failed to parse PEM trust bundle")
 		}
 	}
 	tppConnector, err := tpp.NewConnector(cfg.BaseUrl, "", cfg.LogVerbose, connectionTrustBundle)
@@ -240,7 +240,7 @@ func getTppConnector(cfg *vcert.Config) (*tpp.Connector, error) {
 	return tppConnector, nil
 }
 
-func updateAccessToken(cfg *vcert.Config, b *backend, ctx context.Context, storage *logical.Storage, roleName string) error {
+func updateAccessToken(cfg *vcert.Config, b *backend, ctx context.Context, storage *logical.Storage, policyConfigName string) error {
 	tppConnector, _ := getTppConnector(cfg)
 
 	httpClient, err := getHTTPClient(cfg.ConnectionTrust)
@@ -255,35 +255,40 @@ func updateAccessToken(cfg *vcert.Config, b *backend, ctx context.Context, stora
 		ClientId:     "hashicorp-vault-monitor-by-venafi",
 		Scope:        "certificate:discover,manage",
 	})
-	if resp.Access_token != "" && resp.Refresh_token != "" {
-
-		err := storeAccessData(b, ctx, storage, roleName, resp)
-		if err != nil {
-			return err
-		}
-
-	} else {
-		return err
-	}
-	return nil
-}
-
-func storeAccessData(b *backend, ctx context.Context, storage *logical.Storage, policyName string, resp tpp.OauthRefreshAccessTokenResponse) error {
-	policy, err := b.getVenafiPolicyConfig(ctx, (*storage), policyName)
 
 	if err != nil {
 		return err
 	}
-	connConfig := policy.venafiConnectionConfig
 
-	connConfig.RefreshToken = resp.Refresh_token
+	if resp.Access_token != "" && resp.Refresh_token != "" {
 
-	connConfig.AccessToken = resp.Access_token
+		err := storeAccessData(b, ctx, storage, policyConfigName, resp)
+		if err != nil {
+			return err
+		}
 
-	policy.venafiConnectionConfig = connConfig
+	}
+
+	return nil
+}
+
+func storeAccessData(b *backend, ctx context.Context, storage *logical.Storage, policyName string, resp tpp.OauthRefreshAccessTokenResponse) error {
+	policy, err := b.getVenafiPolicyConfig(ctx, *storage, policyName)
+	if err != nil {
+		return err
+	}
+
+	secret, err := b.getVenafiSecret(ctx, *storage, policy.VenafiSecret)
+	if err != nil {
+		return err
+	}
+
+	secret.RefreshToken = resp.Refresh_token
+
+	secret.AccessToken = resp.Access_token
 
 	// Store it
-	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+policyName, policy)
+	jsonEntry, err := logical.StorageEntryJSON(venafiSecretsPath+policy.VenafiSecret, secret)
 	if err != nil {
 		return err
 	}
@@ -291,6 +296,7 @@ func storeAccessData(b *backend, ctx context.Context, storage *logical.Storage, 
 	if err := (*storage).Put(ctx, jsonEntry); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -301,7 +307,6 @@ func getHTTPClient(trustBundlePem string) (*http.Client, error) {
 		DialContext: (&net.Dialer{
 			Timeout:   30 * time.Second,
 			KeepAlive: 30 * time.Second,
-			DualStack: true,
 		}).DialContext,
 		MaxIdleConns:          100,
 		IdleConnTimeout:       90 * time.Second,

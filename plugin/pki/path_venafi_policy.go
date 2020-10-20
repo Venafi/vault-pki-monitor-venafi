@@ -36,65 +36,6 @@ func pathVenafiPolicy(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the Venafi policy config",
 			},
-
-			"tpp_url": {
-				Type:        framework.TypeString,
-				Description: `URL of Venafi Platform. Deprecated, use 'url' instead`,
-				Deprecated:  true,
-			},
-			"url": {
-				Type:        framework.TypeString,
-				Description: `URL of Venafi API endpoint. Example: https://tpp.venafi.example/vedsdk`,
-				Required:    true,
-			},
-			"access_token": {
-				Type:        framework.TypeString,
-				Description: `Access token for TPP, user should use this for authentication`,
-				Required:    true,
-			},
-			"refresh_token": {
-				Type:        framework.TypeString,
-				Description: `Refresh token for obtaining a new access token for TPP`,
-				Required:    true,
-			},
-			"zone": {
-				Type: framework.TypeString,
-				Description: `Name of Venafi Platform or Cloud policy. 
-Example for Platform: testpolicy\\vault
-Example for Venafi Cloud: Default`,
-				Default: `Default`,
-			},
-			"tpp_user": {
-				Type:        framework.TypeString,
-				Description: `web API user for Venafi Platform Example: admin`,
-				Required:    true,
-			},
-			"tpp_password": {
-				Type:        framework.TypeString,
-				Description: `Password for web API user Example: password`,
-				Required:    true,
-				DisplayAttrs: &framework.DisplayAttributes{
-					Sensitive: true,
-				},
-			},
-			"trust_bundle_file": {
-				Type: framework.TypeString,
-				Description: `Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server.
-Example:
-  trust_bundle_file = "/full/path/to/chain.pem""`,
-			},
-			"apikey": {
-				Type:        framework.TypeString,
-				Description: `API key for Venafi Cloud. Example: 142231b7-cvb0-412e-886b-6aeght0bc93d`,
-				DisplayAttrs: &framework.DisplayAttributes{
-					Sensitive: true,
-				},
-			},
-			"cloud_url": {
-				Type:        framework.TypeString,
-				Description: `URL for Venafi Cloud. Set it only if you want to use non production Cloud. Deprecated, use 'url' instead`,
-				Deprecated:  true,
-			},
 			"ext_key_usage": {
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{},
@@ -136,13 +77,27 @@ Also you can use constants from this module (like 1, 5,8) direct or use OIDs (li
 			policyFieldCreateRole: {
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: `Automatically create empty role for polic if it does not exists`,
+				Description: `Automatically create empty role for policy if it does not exists`,
+			},
+			"venafi_secret": {
+				Type:        framework.TypeString,
+				Description: `The name of the credentials object to be used for authentication`,
+				Required:    true,
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathUpdateVenafiPolicy,
-			logical.ReadOperation:   b.pathReadVenafiPolicy,
-			logical.DeleteOperation: b.pathDeleteVenafiPolicy,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathUpdateVenafiPolicy,
+				Summary:  "Configure the settings of a Venafi policy",
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathReadVenafiPolicy,
+				Summary:  "Return the Venafi policy specified in path",
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathDeleteVenafiPolicy,
+				Summary:  "Removes the Venafi policy specified in path",
+			},
 		},
 
 		HelpSynopsis:    pathVenafiPolicySyn,
@@ -160,9 +115,13 @@ func pathVenafiPolicyContent(b *backend) *framework.Path {
 				Description: "Name of the Venafi policy config",
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathReadVenafiPolicyContent,
-			logical.UpdateOperation: b.pathUpdateVenafiPolicyContent,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathReadVenafiPolicyContent,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathUpdateVenafiPolicyContent,
+			},
 		},
 
 		HelpSynopsis:    pathVenafiPolicySyn,
@@ -174,8 +133,10 @@ func pathVenafiPolicyContent(b *backend) *framework.Path {
 func pathVenafiPolicyList(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: venafiPolicyPath,
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathListVenafiPolicy,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathListVenafiPolicy,
+			},
 		},
 
 		HelpSynopsis:    pathImportQueueSyn,
@@ -187,8 +148,10 @@ func pathVenafiPolicyList(b *backend) *framework.Path {
 func pathVenafiPolicyMap(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: venafiRolePolicyMapPath,
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathShowVenafiPolicyMap,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathShowVenafiPolicyMap,
+			},
 		},
 
 		HelpSynopsis:    pathImportQueueSyn,
@@ -203,11 +166,11 @@ func (b *backend) refreshVenafiPolicyEnforcementContent(storage logical.Storage,
 
 	venafiPolicyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policyName)
 	if err != nil {
-		return fmt.Errorf("Error getting policy config %s: %s", policyName, err)
+		return fmt.Errorf("error getting policy config %s: %s", policyName, err)
 
 	}
 	if venafiPolicyConfig == nil {
-		return fmt.Errorf("Policy config for %s is empty", policyName)
+		return fmt.Errorf("policy config for %s is empty", policyName)
 	}
 
 	if venafiPolicyConfig.AutoRefreshInterval > 0 {
@@ -218,7 +181,7 @@ func (b *backend) refreshVenafiPolicyEnforcementContent(storage logical.Storage,
 
 	policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
 	if err != nil {
-		return fmt.Errorf("Error getting policy %s from Venafi: %s", policyName, err)
+		return fmt.Errorf("error getting policy %s from Venafi: %s", policyName, err)
 
 	}
 
@@ -235,7 +198,7 @@ func (b *backend) refreshVenafiPolicyEnforcementContent(storage logical.Storage,
 
 	}
 	if err := storage.Put(ctx, jsonEntry); err != nil {
-		return fmt.Errorf("Error saving policy last update time: %s", err)
+		return fmt.Errorf("error saving policy last update time: %s", err)
 
 	}
 
@@ -296,48 +259,17 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 
 	log.Printf("%s Write policy endpoint configuration into storage", logPrefixVenafiPolicyEnforcement)
 
-	url := data.Get("url").(string)
-	var tppUrl, cloudUrl string
-
-	if url == "" {
-		tppUrl = data.Get("tpp_url").(string)
-		url = tppUrl
-	}
-	if url == "" {
-		cloudUrl = data.Get("cloud_url").(string)
-		url = cloudUrl
-	}
-
 	venafiPolicyConfig := &venafiPolicyConfigEntry{
-		venafiConnectionConfig: venafiConnectionConfig{
-			TPPURL:          tppUrl,
-			URL:             url,
-			AccessToken:     data.Get("access_token").(string),
-			RefreshToken:    data.Get("refresh_token").(string),
-			CloudURL:        cloudUrl,
-			Zone:            data.Get("zone").(string),
-			TPPPassword:     data.Get("tpp_password").(string),
-			Apikey:          data.Get("apikey").(string),
-			TPPUser:         data.Get("tpp_user").(string),
-			TrustBundleFile: data.Get("trust_bundle_file").(string),
-		},
 		AutoRefreshInterval: int64(data.Get("auto_refresh_interval").(int)),
 		VenafiImportTimeout: data.Get("import_timeout").(int),
 		VenafiImportWorkers: data.Get("import_workers").(int),
 		CreateRole:          data.Get(policyFieldCreateRole).(bool),
+		VenafiSecret:        data.Get("venafi_secret").(string),
 	}
 	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
 	venafiPolicyConfig.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
 	if err != nil {
 		return
-	}
-
-	if venafiPolicyConfig.Apikey == "" && (venafiPolicyConfig.URL == "" || venafiPolicyConfig.TPPUser == "" || venafiPolicyConfig.TPPPassword == "") && (venafiPolicyConfig.URL == "" || venafiPolicyConfig.AccessToken == "") {
-		return logical.ErrorResponse("Invalid mode. apikey or tpp credentials/token required"), nil
-	}
-
-	if(venafiPolicyConfig.AccessToken != "" && (venafiPolicyConfig.TPPPassword != "" || venafiPolicyConfig.TPPUser != "")) {
-		return logical.ErrorResponse("Mixed credentials, access token and user/password are set"), nil
 	}
 
 	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+name, venafiPolicyConfig)
@@ -348,7 +280,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	log.Printf("%s Geting policy from zone %s", logPrefixVenafiPolicyEnforcement, data.Get("zone").(string))
+	log.Printf("%s Geting policy using Venafi secret: %s", logPrefixVenafiPolicyEnforcement, venafiPolicyConfig.VenafiSecret)
 	policy, err := b.getPolicyFromVenafi(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
@@ -367,11 +299,10 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 
 	//Send policy to the user output
 	respData := formPolicyRespData(*policyEntry)
-	warnings := getWarnings(venafiPolicyConfig, name)
 
 	return &logical.Response{
 		Data:     respData,
-		Warnings: warnings,
+		Warnings: []string{},
 	}, nil
 
 }
@@ -557,11 +488,11 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Stora
 		//catch the scenario when token is expired and deleted.
 		var regex = regexp.MustCompile("(Token).*(not found)")
 
-		//validate if the error is related to a expired accces token, at this moment the only way can validate this is using the error message
+		//validate if the error is related to a expired access token, at this moment the only way can validate this is using the error message
 		//and verify if that message describes errors related to expired access token.
 		if (strings.Contains(msg, "\"error\":\"expired_token\"") && strings.Contains(msg, "\"error_description\":\"Access token expired\"")) || regex.MatchString(msg) {
 
-			cfg, err := b.getConfing(ctx, storage, policyConfig)
+			cfg, err := b.getConfig(ctx, storage, policyConfig)
 
 			if err != nil {
 				return nil, err
@@ -574,7 +505,7 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Stora
 					return nil, err
 				}
 
-				//everything went fine so get the new client with the new refreshed acces token
+				//everything went fine so get the new client with the new refreshed access token
 				cl, err := b.ClientVenafi(ctx, storage, policyConfig)
 				if err != nil {
 					return nil, err
@@ -589,7 +520,7 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Stora
 					return policy, nil
 				}
 			} else {
-				err = fmt.Errorf("Tried to get new access token but refresh token is empty")
+				err = fmt.Errorf("tried to get new access token but refresh token is empty")
 				return nil, err
 			}
 
@@ -629,38 +560,27 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
+	secret, err := b.getVenafiSecret(ctx, req.Storage, config.VenafiSecret)
+	if err != nil {
+		log.Printf("%s error reading Venafi secret configuration: %s", logPrefixVenafiPolicyEnforcement, err)
+		return nil, err
+	}
+
 	rolesList, err := b.getRolesListForVenafiPolicy(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
 
-	var tppPass, accessToken, refreshToken, apiKey, strMask string
-
-	strMask = "********"
-
-	if config.TPPPassword != "" {
-		tppPass = strMask
-	}
-	if config.Apikey != "" {
-		apiKey = strMask
-	}
-	if config.AccessToken != "" {
-		accessToken = strMask
-	}
-	if config.RefreshToken != "" {
-		refreshToken = strMask
-	}
-
 	//Send config to the user output
 	respData := map[string]interface{}{
-		"url":                       config.URL,
-		"zone":                      config.Zone,
-		"tpp_user":                  config.TPPUser,
-		"tpp_password":              tppPass,
-		"apikey":                    apiKey,
-		"access_token":               accessToken,
-		"refresh_token":             refreshToken,
-		"trust_bundle_file":         config.TrustBundleFile,
+		"url":                       secret.URL,
+		"zone":                      secret.Zone,
+		"tpp_user":                  secret.TPPUser,
+		"tpp_password":              secret.getMaskString(),
+		"apikey":                    secret.getMaskString(),
+		"access_token":              secret.getMaskString(),
+		"refresh_token":             secret.getMaskString(),
+		"trust_bundle_file":         secret.TrustBundleFile,
 		policyFieldImportRoles:      rolesList.importRoles,
 		policyFieldDefaultsRoles:    rolesList.defaultsRoles,
 		policyFieldEnforcementRoles: rolesList.enforceRoles,
@@ -680,34 +600,6 @@ type rolesListForVenafiPolicy struct {
 	importRoles   []string
 	enforceRoles  []string
 	defaultsRoles []string
-}
-
-func getWarnings(entry *venafiPolicyConfigEntry, name string) []string {
-
-	var warnings []string
-
-	if entry.venafiConnectionConfig.TPPURL != "" {
-		warnings = append(warnings, "tpp_url is deprecated, please use url instead")
-	}
-
-	if entry.venafiConnectionConfig.CloudURL != "" {
-		warnings = append(warnings, "cloud_url is deprecated, please use url instead")
-	}
-
-	if entry.venafiConnectionConfig.TPPUser != "" {
-		warnings = append(warnings, "tpp_user is deprecated, please use access_token instead")
-	}
-
-	if entry.venafiConnectionConfig.TPPPassword != "" {
-		warnings = append(warnings, "tpp_password is deprecated, please use access_token instead")
-	}
-
-	//Include success message in warnings
-	if len(warnings) > 0 {
-		warnings = append(warnings, "Policy: "+name+" saved successfully")
-	}
-
-	return warnings
 }
 
 func (b *backend) getRolesListForVenafiPolicy(ctx context.Context, storage logical.Storage, policyName string) (rolesList rolesListForVenafiPolicy, err error) {
@@ -882,36 +774,36 @@ func checkAgainstVenafiPolicy(
 			}
 		}
 		if !checkStringArrByRegexp(csr.Subject.Organization, policy.SubjectORegexes, false) {
-			return fmt.Errorf("Organization %v doesn't match regexps: %v", role.Organization, policy.SubjectORegexes)
+			return fmt.Errorf("organization %v doesn't match regexps: %v", role.Organization, policy.SubjectORegexes)
 		}
 
 		if !checkStringArrByRegexp(csr.Subject.OrganizationalUnit, policy.SubjectOURegexes, false) {
-			return fmt.Errorf("Organization Unit %v doesn't match regexps: %v", csr.Subject.OrganizationalUnit, policy.SubjectOURegexes)
+			return fmt.Errorf("organization Unit %v doesn't match regexps: %v", csr.Subject.OrganizationalUnit, policy.SubjectOURegexes)
 		}
 
 		if !checkStringArrByRegexp(csr.Subject.Country, policy.SubjectCRegexes, false) {
-			return fmt.Errorf("Country %v doesn't match regexps: %v", csr.Subject.Country, policy.SubjectCRegexes)
+			return fmt.Errorf("country %v doesn't match regexps: %v", csr.Subject.Country, policy.SubjectCRegexes)
 		}
 
 		if !checkStringArrByRegexp(csr.Subject.Locality, policy.SubjectLRegexes, false) {
-			return fmt.Errorf("Location %v doesn't match regexps: %v", csr.Subject.Locality, policy.SubjectLRegexes)
+			return fmt.Errorf("location %v doesn't match regexps: %v", csr.Subject.Locality, policy.SubjectLRegexes)
 		}
 
 		if !checkStringArrByRegexp(csr.Subject.Province, policy.SubjectSTRegexes, false) {
-			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", csr.Subject.Province, policy.SubjectSTRegexes)
+			return fmt.Errorf("state (Province) %v doesn't match regexps: %v", csr.Subject.Province, policy.SubjectSTRegexes)
 		}
 		keyValid := true
 		if csr.PublicKeyAlgorithm == x509.RSA {
-			pubkey, ok := csr.PublicKey.(*rsa.PublicKey)
+			pubKey, ok := csr.PublicKey.(*rsa.PublicKey)
 			if ok {
-				keyValid = checkKey("rsa", pubkey.Size()*8, "", policy.AllowedKeyConfigurations)
+				keyValid = checkKey("rsa", pubKey.Size()*8, "", policy.AllowedKeyConfigurations)
 			} else {
 				log.Printf("%s invalid key in csr", logPrefixVenafiPolicyEnforcement)
 			}
 		} else if csr.PublicKeyAlgorithm == x509.ECDSA {
-			pubkey, ok := csr.PublicKey.(*ecdsa.PublicKey)
+			pubKey, ok := csr.PublicKey.(*ecdsa.PublicKey)
 			if ok {
-				keyValid = checkKey("ecdsa", 0, pubkey.Curve.Params().Name, policy.AllowedKeyConfigurations)
+				keyValid = checkKey("ecdsa", 0, pubKey.Curve.Params().Name, policy.AllowedKeyConfigurations)
 			}
 		}
 		if !keyValid {
@@ -943,23 +835,23 @@ func checkAgainstVenafiPolicy(
 		}
 
 		if !checkStringArrByRegexp(role.Organization, policy.SubjectORegexes, false) {
-			return fmt.Errorf("Organization %v doesn't match regexps: %v", role.Organization, policy.SubjectORegexes)
+			return fmt.Errorf("organization %v doesn't match regexps: %v", role.Organization, policy.SubjectORegexes)
 		}
 
 		if !checkStringArrByRegexp(role.OU, policy.SubjectOURegexes, false) {
-			return fmt.Errorf("Organization Unit %v doesn't match regexps: %v", role.OU, policy.SubjectOURegexes)
+			return fmt.Errorf("organization Unit %v doesn't match regexps: %v", role.OU, policy.SubjectOURegexes)
 		}
 
 		if !checkStringArrByRegexp(role.Country, policy.SubjectCRegexes, false) {
-			return fmt.Errorf("Country %v doesn't match regexps: %v", role.Country, policy.SubjectCRegexes)
+			return fmt.Errorf("country %v doesn't match regexps: %v", role.Country, policy.SubjectCRegexes)
 		}
 
 		if !checkStringArrByRegexp(role.Locality, policy.SubjectLRegexes, false) {
-			return fmt.Errorf("Location %v doesn't match regexps: %v", role.Locality, policy.SubjectLRegexes)
+			return fmt.Errorf("location %v doesn't match regexps: %v", role.Locality, policy.SubjectLRegexes)
 		}
 
 		if !checkStringArrByRegexp(role.Province, policy.SubjectSTRegexes, false) {
-			return fmt.Errorf("State (Province) %v doesn't match regexps: %v", role.Province, policy.SubjectSTRegexes)
+			return fmt.Errorf("state (Province) %v doesn't match regexps: %v", role.Province, policy.SubjectSTRegexes)
 		}
 		if !checkKey(role.KeyType, role.KeyBits, ecdsaCurvesSizesToName(role.KeyBits), policy.AllowedKeyConfigurations) {
 			return fmt.Errorf("key type not compatible vith Venafi policies")
@@ -999,13 +891,13 @@ func (b *backend) getVenafiPolicyConfig(ctx context.Context, s logical.Storage, 
 }
 
 type venafiPolicyConfigEntry struct {
-	venafiConnectionConfig
 	ExtKeyUsage          []x509.ExtKeyUsage `json:"ext_key_usage"`
 	AutoRefreshInterval  int64              `json:"auto_refresh_interval"`
 	LastPolicyUpdateTime int64              `json:"last_policy_update_time"`
 	VenafiImportTimeout  int                `json:"import_timeout"`
 	VenafiImportWorkers  int                `json:"import_workers"`
 	CreateRole           bool               `json:"create_role"`
+	VenafiSecret         string             `json:"venafi_secret"`
 }
 
 type venafiPolicyEntry struct {

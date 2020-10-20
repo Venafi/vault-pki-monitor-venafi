@@ -29,7 +29,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	glob "github.com/ryanuber/go-glob"
+	"github.com/ryanuber/go-glob"
 	"golang.org/x/crypto/cryptobyte"
 	cbbasn1 "golang.org/x/crypto/cryptobyte/asn1"
 	"golang.org/x/net/idna"
@@ -100,7 +100,7 @@ type caInfoBundle struct {
 }
 
 func (b *caInfoBundle) GetCAChain() []*certutil.CertBlock {
-	chain := []*certutil.CertBlock{}
+	var chain []*certutil.CertBlock
 
 	// Include issuing CA in Chain, not including Root Authority
 	if (len(b.Certificate.AuthorityKeyId) > 0 &&
@@ -733,8 +733,8 @@ func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
 	// Read in names -- CN, DNS and email addresses
 	var cn string
 	var ridSerialNumber string
-	dnsNames := []string{}
-	emailAddresses := []string{}
+	var dnsNames []string
+	var emailAddresses []string
 	{
 		if data.csr != nil && data.role.UseCSRCommonName {
 			cn = data.csr.Subject.CommonName
@@ -808,7 +808,7 @@ func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
 				}
 			}
 		}
-		if venafiPolciyCheck {
+		if venafiPolicyCheck {
 			//Calling Venafi policy check before performing any checks
 			log.Println("Checking creation bundle against Venafi policy")
 			err := checkAgainstVenafiPolicy(data.req, data.role, isCA, data.csr, cn, []string{}, emailAddresses, dnsNames)
@@ -872,7 +872,7 @@ func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
 	}
 
 	// Get and verify any IP SANs
-	ipAddresses := []net.IP{}
+	var ipAddresses []net.IP
 	{
 		if data.csr != nil && data.role.UseCSRSANs {
 			if len(data.csr.IPAddresses) > 0 {
@@ -900,7 +900,7 @@ func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
 		}
 	}
 
-	URIs := []*url.URL{}
+	var URIs []*url.URL
 	{
 		if data.csr != nil && data.role.UseCSRSANs {
 			if len(data.csr.URIs) > 0 {
@@ -1060,7 +1060,7 @@ func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
 // information
 func addKeyUsages(data *dataBundle, certTemplate *x509.Certificate) {
 	if data.params.IsCA {
-		certTemplate.KeyUsage = x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
+		certTemplate.KeyUsage = x509.KeyUsageCertSign | x509.KeyUsageCRLSign
 		return
 	}
 
@@ -1259,7 +1259,7 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 			!bytes.Equal(data.signingBundle.Certificate.AuthorityKeyId, data.signingBundle.Certificate.SubjectKeyId) {
 
 			result.CAChain = []*certutil.CertBlock{
-				&certutil.CertBlock{
+				{
 					Certificate: data.signingBundle.Certificate,
 					Bytes:       data.signingBundle.CertificateBytes,
 				},
@@ -1647,5 +1647,5 @@ func stringToOid(in string) (asn1.ObjectIdentifier, error) {
 		}
 		ret = append(ret, i)
 	}
-	return asn1.ObjectIdentifier(ret), nil
+	return ret, nil
 }
