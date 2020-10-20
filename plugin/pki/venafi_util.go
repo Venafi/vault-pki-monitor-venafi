@@ -229,7 +229,13 @@ func writeVenafiSecret(b *backend, storage logical.Storage, secretData map[strin
 }
 
 func writePolicy(b *backend, storage logical.Storage, policyData map[string]interface{}, t *testing.T, policyName string) *logical.Response {
-	writeVenafiSecret(b, storage, policyData, t, venafiSecretDefaultName)
+
+	secretName := policyData["venafi_secret"].(string)
+	if secretName == "" {
+		t.Fatalf("failed to read Venafi Secret on policy %s. Looks like its empty", policyName)
+	}
+
+	writeVenafiSecret(b, storage, policyData, t, secretName)
 
 	t.Log("Writing Venafi policy configuration")
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{

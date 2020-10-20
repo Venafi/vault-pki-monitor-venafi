@@ -15,7 +15,7 @@ var policyTPPData = map[string]interface{}{
 	"tpp_password":      os.Getenv("TPP_PASSWORD"),
 	"zone":              os.Getenv("TPP_ZONE"),
 	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-	"venafi_secret":     venafiSecretDefaultName,
+	"venafi_secret":     venafiSecretDefaultName + "Tpp",
 }
 
 var policyTPPData2 = map[string]interface{}{
@@ -24,14 +24,14 @@ var policyTPPData2 = map[string]interface{}{
 	"tpp_password":      os.Getenv("TPP_PASSWORD"),
 	"zone":              os.Getenv("TPP_ZONE2"),
 	"trust_bundle_file": os.Getenv("TRUST_BUNDLE"),
-	"venafi_secret":     venafiSecretDefaultName,
+	"venafi_secret":     venafiSecretDefaultName + "Tpp2",
 }
 
 var policyCloudData = map[string]interface{}{
 	"apikey":        os.Getenv("CLOUD_APIKEY"),
 	"cloud_url":     os.Getenv("CLOUD_URL"),
 	"zone":          os.Getenv("CLOUD_ZONE_RESTRICTED"),
-	"venafi_secret": venafiSecretDefaultName,
+	"venafi_secret": venafiSecretDefaultName + "Cloud",
 }
 
 var wantTPPRoleEntry = roleEntry{
