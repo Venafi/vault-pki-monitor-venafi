@@ -7,11 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Venafi/vcert/pkg/certificate"
+	"github.com/Venafi/vcert/pkg/endpoint"
 	"github.com/Venafi/vcert/pkg/verror"
 	"github.com/hashicorp/vault/sdk/framework"
 	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -26,7 +28,7 @@ type Job struct {
 	importPath string
 	ctx        context.Context
 	//req        *logical.Request
-	storage logical.Storage
+	storage *logical.Storage
 }
 
 // This returns the list of queued for import to TPP certificates
@@ -142,7 +144,7 @@ func (b *backend) fillImportQueueTask(roleName string, policyName string, noOfWo
 			importPath: importPath,
 			roleName:   roleName,
 			policyName: policyName,
-			storage:    storage,
+			storage:    &storage,
 			ctx:        ctx,
 		}
 		jobs <- job
@@ -171,7 +173,7 @@ func (b *backend) controlImportQueue(conf *logical.BackendConfig) {
 
 	policyMap, err := getPolicyRoleMap(ctx, b.storage)
 	if err != nil {
-		log.Printf("Can get policy map: %s", err)
+		log.Printf("Can't get policy map: %s", err)
 		return
 	}
 
@@ -194,7 +196,7 @@ func (b *backend) controlImportQueue(conf *logical.BackendConfig) {
 			continue
 		}
 
-		policyConfig, err := b.getVenafiPolicyConfig(ctx, b.storage, policyMap.Roles[roleName].ImportPolicy)
+		policyConfig, err := b.getVenafiPolicyConfig(ctx, &b.storage, policyMap.Roles[roleName].ImportPolicy)
 		if err != nil || policyConfig == nil {
 			log.Printf("%s Error getting policy %v: %v\n Exiting.", logPrefixVenafiImport, policyMap.Roles[roleName].ImportPolicy, err)
 			continue
@@ -231,7 +233,7 @@ func (b *backend) processImportToTPP(job Job) string {
 		return fmt.Sprintf("%s Could not create venafi client: %s", msg, err)
 	}
 
-	certEntry, err := job.storage.Get(job.ctx, importPath+job.entry)
+	certEntry, err := (*job.storage).Get(job.ctx, importPath+job.entry)
 	if err != nil {
 		return fmt.Sprintf("%s Could not get certificate from %s: %s", msg, importPath+job.entry, err)
 	}
@@ -268,6 +270,65 @@ func (b *backend) processImportToTPP(job Job) string {
 			//TODO: Here should be renew instead of deletion
 			b.deleteCertFromQueue(job)
 		}
+
+		///
+		if (err != nil) && (cl.GetType() == endpoint.ConnectorTypeTPP) {
+			msg := err.Error()
+
+			//catch the scenario when token is expired and deleted.
+			var regex = regexp.MustCompile("(Token).*(not found)")
+
+			//validate if the error is related to a expired accces token, at this moment the only way can validate this is using the error message
+			//and verify if that message describes errors related to expired access token.
+			if (strings.Contains(msg, "\"error\":\"expired_token\"") && strings.Contains(msg, "\"error_description\":\"Access token expired\"")) || regex.MatchString(msg) {
+
+				cfg, err := b.getConfing(job.ctx, job.storage, job.policyName)
+
+				if err != nil {
+					return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
+				}
+
+				if cfg.Credentials.RefreshToken != "" {
+					msg := fmt.Sprintf("Token will be updated by the Job with id: %v ###", job.id)
+					b.Logger().Debug(msg)
+					err = synchronizedUpdateAccessToken(cfg, b, job.ctx, job.storage, job.policyName)
+
+					if err != nil {
+						return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
+					}
+
+					//everything went fine so get the new client with the new refreshed access token
+					cl, err := b.ClientVenafi(job.ctx, job.storage, job.policyName)
+					if err != nil {
+						return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
+					}
+
+					b.Logger().Debug("Reading policy configuration again")
+
+					importResp, err = cl.ImportCertificate(importReq)
+					if err != nil {
+						if errors.Is(err, verror.ServerBadDataResponce) || errors.Is(err, verror.UserDataError) {
+							//remove this from current queue, since this is because probably certificate exist on server
+							//or user feed certificate with invalid data.
+							b.deleteCertFromQueue(job)
+						}
+						return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
+					} else {
+						log.Printf("%s %s Certificate imported:\n %s", logPrefixVenafiImport, msg, pp(importResp))
+						b.deleteCertFromQueue(job)
+						return pp(importResp)
+					}
+				} else {
+					return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
+				}
+
+			} else {
+				return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
+			}
+		}
+		///
+
+
 		return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
 
 	}
@@ -282,12 +343,12 @@ func (b *backend) deleteCertFromQueue(job Job) {
 	msg := fmt.Sprintf("Job id: %v ###", job.id)
 	importPath := job.importPath
 	log.Printf("%s %s Removing certificate from import path %s", logPrefixVenafiImport, msg, importPath+job.entry)
-	err := job.storage.Delete(job.ctx, importPath+job.entry)
+	err := (*job.storage).Delete(job.ctx, importPath+job.entry)
 	if err != nil {
 		log.Printf("%s %s Could not delete %s from queue: %s", logPrefixVenafiImport, msg, importPath+job.entry, err)
 	} else {
 		log.Printf("%s %s Certificate with SN %s removed from queue", logPrefixVenafiImport, msg, job.entry)
-		_, err := job.storage.List(job.ctx, importPath)
+		_, err := (*job.storage).List(job.ctx, importPath)
 		if err != nil {
 			log.Printf("%s %s Could not get queue list: %s", logPrefixVenafiImport, msg, err)
 		}

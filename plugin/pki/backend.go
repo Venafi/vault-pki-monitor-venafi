@@ -118,6 +118,7 @@ type backend struct {
 	revokeStorageLock sync.RWMutex
 	tidyCASGuard      *uint32
 	taskStorage       taskStorageStruct
+	mux sync.Mutex
 }
 
 const backendHelp = `

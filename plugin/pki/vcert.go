@@ -15,7 +15,7 @@ import (
 const venafiPolicyCheck = true
 const venafiPolicyDenyAll = true
 
-func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, policyName string) (
+func (b *backend) ClientVenafi(ctx context.Context, s *logical.Storage, policyName string) (
 	endpoint.Connector, error) {
 
 	if policyName == "" {
@@ -43,7 +43,7 @@ func (b *backend) ClientVenafi(ctx context.Context, s logical.Storage, policyNam
 	return secret.getConnection()
 }
 
-func (b *backend) getConfig(ctx context.Context, s logical.Storage, policyName string) (
+func (b *backend) getConfig(ctx context.Context, s *logical.Storage, policyName string) (
 	*vcert.Config, error) {
 
 	if policyName == "" {
