@@ -286,7 +286,7 @@ func storeAccessData(b *backend, ctx context.Context, storage *logical.Storage, 
 		return err
 	}
 
-	secret, err := b.getVenafiSecret(ctx, *storage, policy.VenafiSecret)
+	secret, err := b.getVenafiSecret(ctx, storage, policy.VenafiSecret)
 	if err != nil {
 		return err
 	}

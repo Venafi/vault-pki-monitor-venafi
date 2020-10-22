@@ -282,7 +282,7 @@ func (b *backend) processImportToTPP(job Job) string {
 			//and verify if that message describes errors related to expired access token.
 			if (strings.Contains(msg, "\"error\":\"expired_token\"") && strings.Contains(msg, "\"error_description\":\"Access token expired\"")) || regex.MatchString(msg) {
 
-				cfg, err := b.getConfing(job.ctx, job.storage, job.policyName)
+				cfg, err := b.getConfig(job.ctx, job.storage, job.policyName)
 
 				if err != nil {
 					return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
@@ -327,7 +327,6 @@ func (b *backend) processImportToTPP(job Job) string {
 			}
 		}
 		///
-
 
 		return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
 

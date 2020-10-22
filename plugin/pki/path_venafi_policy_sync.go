@@ -211,7 +211,7 @@ func (b *backend) synchronizeRoleDefaults(ctx context.Context, storage logical.S
 		return fmt.Sprintf("%s", err)
 	}
 
-	secret, err := b.getVenafiSecret(ctx, storage, policy.VenafiSecret)
+	secret, err := b.getVenafiSecret(ctx, &storage, policy.VenafiSecret)
 	if err != nil {
 		return fmt.Sprintf("%s", err)
 	}
@@ -279,7 +279,7 @@ func (b *backend) getVenafiPolicyParams(ctx context.Context, storage logical.Sto
 		//and verify if that message describes errors related to expired access token.
 		if (strings.Contains(msg, "\"error\":\"expired_token\"") && strings.Contains(msg, "\"error_description\":\"Access token expired\"")) || regex.MatchString(msg) {
 
-			cfg, err := b.getConfing(ctx, &storage, policyConfig)
+			cfg, err := b.getConfig(ctx, &storage, policyConfig)
 
 			if err != nil {
 				return entry, err
