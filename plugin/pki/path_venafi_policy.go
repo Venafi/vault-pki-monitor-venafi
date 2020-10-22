@@ -283,7 +283,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	}
 
 	log.Printf("%s Geting policy using Venafi secret: %s", logPrefixVenafiPolicyEnforcement, venafiPolicyConfig.VenafiSecret)
-	policy, err := b.getPolicyFromVenafi(ctx, req.Storage, name)
+	policy, err := b.getPolicyFromVenafi(ctx, &req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -562,7 +562,7 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	secret, err := b.getVenafiSecret(ctx, req.Storage, config.VenafiSecret)
+	secret, err := b.getVenafiSecret(ctx, &req.Storage, config.VenafiSecret)
 	if err != nil {
 		log.Printf("%s error reading Venafi secret configuration: %s", logPrefixVenafiPolicyEnforcement, err)
 		return nil, err

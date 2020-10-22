@@ -147,7 +147,7 @@ func (b *backend) pathReadVenafiSecret(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("missing venafi secret name"), nil
 	}
 
-	cred, err := b.getVenafiSecret(ctx, req.Storage, secretName)
+	cred, err := b.getVenafiSecret(ctx, &req.Storage, secretName)
 	if err != nil {
 		return nil, err
 	}
@@ -163,8 +163,8 @@ func (b *backend) pathReadVenafiSecret(ctx context.Context, req *logical.Request
 	return resp, nil
 }
 
-func (b *backend) getVenafiSecret(ctx context.Context, s logical.Storage, name string) (*venafiSecretEntry, error) {
-	entry, err := s.Get(ctx, venafiSecretsPath+name)
+func (b *backend) getVenafiSecret(ctx context.Context, s *logical.Storage, name string) (*venafiSecretEntry, error) {
+	entry, err := (*s).Get(ctx, venafiSecretsPath+name)
 	if err != nil {
 		return nil, err
 	}
