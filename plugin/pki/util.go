@@ -240,6 +240,13 @@ func getTppConnector(cfg *vcert.Config) (*tpp.Connector, error) {
 	return tppConnector, nil
 }
 
+func synchronizedUpdateAccessToken(cfg *vcert.Config, b *backend, ctx context.Context, storage *logical.Storage, roleName string) error {
+	b.mux.Lock()
+	err := updateAccessToken(cfg, b, ctx, storage, roleName)
+	b.mux.Unlock()
+	return err
+}
+
 func updateAccessToken(cfg *vcert.Config, b *backend, ctx context.Context, storage *logical.Storage, roleName string) error {
 	tppConnector, _ := getTppConnector(cfg)
 
@@ -269,7 +276,7 @@ func updateAccessToken(cfg *vcert.Config, b *backend, ctx context.Context, stora
 }
 
 func storeAccessData(b *backend, ctx context.Context, storage *logical.Storage, policyName string, resp tpp.OauthRefreshAccessTokenResponse) error {
-	policy, err := b.getVenafiPolicyConfig(ctx, (*storage), policyName)
+	policy, err := b.getVenafiPolicyConfig(ctx, storage, policyName)
 
 	if err != nil {
 		return err
@@ -288,9 +295,17 @@ func storeAccessData(b *backend, ctx context.Context, storage *logical.Storage, 
 		return err
 	}
 
+
 	if err := (*storage).Put(ctx, jsonEntry); err != nil {
 		return err
 	}
+
+	//save the new credential on the backend storage.
+	storageB := b.storage
+	if err := storageB.Put(ctx, jsonEntry); err != nil {
+		return err
+	}
+
 	return nil
 }
 

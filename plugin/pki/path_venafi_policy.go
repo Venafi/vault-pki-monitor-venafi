@@ -201,7 +201,7 @@ func (b *backend) refreshVenafiPolicyEnforcementContent(storage logical.Storage,
 
 	ctx := context.Background()
 
-	venafiPolicyConfig, err := b.getVenafiPolicyConfig(ctx, storage, policyName)
+	venafiPolicyConfig, err := b.getVenafiPolicyConfig(ctx, &storage, policyName)
 	if err != nil {
 		return fmt.Errorf("Error getting policy config %s: %s", policyName, err)
 
@@ -216,18 +216,20 @@ func (b *backend) refreshVenafiPolicyEnforcementContent(storage logical.Storage,
 		return nil
 	}
 
-	policy, err := b.getPolicyFromVenafi(ctx, storage, policyName)
+	policy, err := b.getPolicyFromVenafi(ctx, &storage, policyName)
 	if err != nil {
 		return fmt.Errorf("Error getting policy %s from Venafi: %s", policyName, err)
 
 	}
 
 	log.Printf("%s Saving policy %s", logPrefixVenafiPolicyEnforcement, policyName)
-	_, err = savePolicyEntry(policy, policyName, ctx, storage)
+	_, err = savePolicyEntry(policy, policyName, ctx, &storage)
 	if err != nil {
 		return fmt.Errorf("%s Error saving policy: %s", logPrefixVenafiPolicyEnforcement, err)
 
 	}
+	//policy config's credentials may be got updated so get it from storage again before saving it.
+	venafiPolicyConfig, _ = b.getVenafiPolicyConfig(ctx, &storage, policyName)
 
 	jsonEntry, err := logical.StorageEntryJSON(venafiPolicyPath+policyName, venafiPolicyConfig)
 	if err != nil {
@@ -275,12 +277,12 @@ func (b *backend) pathReadVenafiPolicyContent(ctx context.Context, req *logical.
 func (b *backend) pathUpdateVenafiPolicyContent(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
-	policy, err := b.getPolicyFromVenafi(ctx, req.Storage, name)
+	policy, err := b.getPolicyFromVenafi(ctx, &req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
 
-	policyEntry, err := savePolicyEntry(policy, name, ctx, req.Storage)
+	policyEntry, err := savePolicyEntry(policy, name, ctx, &req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -349,11 +351,11 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	}
 
 	log.Printf("%s Geting policy from zone %s", logPrefixVenafiPolicyEnforcement, data.Get("zone").(string))
-	policy, err := b.getPolicyFromVenafi(ctx, req.Storage, name)
+	policy, err := b.getPolicyFromVenafi(ctx, &req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
-	policyEntry, err := savePolicyEntry(policy, name, ctx, req.Storage)
+	policyEntry, err := savePolicyEntry(policy, name, ctx, &req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -474,7 +476,7 @@ func (b *backend) updateRolesPolicyAttributes(ctx context.Context, req *logical.
 	return nil
 }
 
-func savePolicyEntry(policy *endpoint.Policy, name string, ctx context.Context, storage logical.Storage) (policyEntry *venafiPolicyEntry, err error) {
+func savePolicyEntry(policy *endpoint.Policy, name string, ctx context.Context, storage *logical.Storage) (policyEntry *venafiPolicyEntry, err error) {
 
 	//Form policy entry for storage
 	policyEntry = &venafiPolicyEntry{
@@ -499,7 +501,7 @@ func savePolicyEntry(policy *endpoint.Policy, name string, ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	if err := storage.Put(ctx, jsonEntry); err != nil {
+	if err := (*storage).Put(ctx, jsonEntry); err != nil {
 		return nil, err
 	}
 
@@ -542,7 +544,7 @@ func formPolicyRespData(policy venafiPolicyEntry) (respData map[string]interface
 	}
 }
 
-func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Storage, policyConfig string) (policy *endpoint.Policy, err error) {
+func (b *backend) getPolicyFromVenafi(ctx context.Context, storage *logical.Storage, policyConfig string) (policy *endpoint.Policy, err error) {
 	log.Printf("%s Creating Venafi client", logPrefixVenafiPolicyEnforcement)
 	cl, err := b.ClientVenafi(ctx, storage, policyConfig)
 	if err != nil {
@@ -568,7 +570,7 @@ func (b *backend) getPolicyFromVenafi(ctx context.Context, storage logical.Stora
 			}
 
 			if cfg.Credentials.RefreshToken != "" {
-				err = updateAccessToken(cfg, b, ctx, &storage, policyConfig)
+				err = synchronizedUpdateAccessToken(cfg, b, ctx, storage, policyConfig)
 
 				if err != nil {
 					return nil, err
@@ -982,8 +984,8 @@ func checkAgainstVenafiPolicy(
 	return nil
 }
 
-func (b *backend) getVenafiPolicyConfig(ctx context.Context, s logical.Storage, n string) (*venafiPolicyConfigEntry, error) {
-	entry, err := s.Get(ctx, venafiPolicyPath+n)
+func (b *backend) getVenafiPolicyConfig(ctx context.Context, s *logical.Storage, n string) (*venafiPolicyConfigEntry, error) {
+	entry, err := (*s).Get(ctx, venafiPolicyPath+n)
 	if err != nil {
 		return nil, err
 	}
