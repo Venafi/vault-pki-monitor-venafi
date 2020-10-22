@@ -179,7 +179,7 @@ Note that the URL for the zip file, referenced below, changes as new versions of
     **Trust Protection Platform**:
 
     ```text 
-    $ vault write venafi pki/venafi-policy/default \
+    $ vault write pki/venafi-policy/default \
         defaults_roles="venafi-role" enforcement_roles="venafi-role" \
         zone="DevOps\\Default" \
         url="https://tpp.example.com" trust_bundle_file="/path/to/bundle.pem" \
@@ -189,7 +189,7 @@ Note that the URL for the zip file, referenced below, changes as new versions of
     **Venafi Cloud**:
 
     ```text
-    $ vault write venafi pki/venafi/policy-default \
+    $ vault write pki/venafi/policy-default \
         defaults_roles="venafi-role" enforcement_roles="venafi-role" \
         apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
         zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
@@ -231,7 +231,7 @@ Venafi Policy limits the PKI role based on Venafi Platform policies or Venafi Cl
 1. Or sign a CSR from a file by writing to the `/sign` endpoint with the name of the role: 
 
     ```text
-    $ vault write pki/sign/venafi-policy csr=@test_example_com.csr
+    $ vault write pki/sign/venafi-role csr=@test_example_com.csr
     ```
 
 ## Upgrading
