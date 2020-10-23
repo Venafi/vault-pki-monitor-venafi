@@ -40,7 +40,7 @@ func (b *backend) ClientVenafi(ctx context.Context, s *logical.Storage, policyNa
 	if secret == nil {
 		return nil, fmt.Errorf("expected Venafi secret but got nil from Vault storage %v", secret)
 	}
-	return secret.getConnection()
+	return secret.getConnection(config.Zone)
 }
 
 func (b *backend) getConfig(ctx context.Context, s *logical.Storage, policyName string) (
@@ -69,7 +69,7 @@ func (b *backend) getConfig(ctx context.Context, s *logical.Storage, policyName 
 		return nil, fmt.Errorf("expected Venafi secret but got nil from Vault storage %v", secret)
 	}
 
-	return secret.getConfig(true)
+	return secret.getConfig(config.Zone, true)
 }
 
 func pp(a interface{}) string {
@@ -85,7 +85,6 @@ type venafiSecretEntry struct {
 	URL             string `json:"url"`
 	AccessToken     string `json:"access_token"`
 	RefreshToken    string `json:"refresh_token"`
-	Zone            string `json:"zone"`
 	TPPPassword     string `json:"tpp_password"`
 	TPPUser         string `json:"tpp_user"`
 	TrustBundleFile string `json:"trust_bundle_file"`
@@ -93,8 +92,8 @@ type venafiSecretEntry struct {
 	CloudURL        string `json:"cloud_url"`
 }
 
-func (c venafiSecretEntry) getConnection() (endpoint.Connector, error) {
-	cfg, err := c.getConfig(false)
+func (c venafiSecretEntry) getConnection(zone string) (endpoint.Connector, error) {
+	cfg, err := c.getConfig(zone, false)
 	if err == nil {
 		client, err := vcert.NewClient(cfg)
 		if err != nil {
@@ -109,10 +108,10 @@ func (c venafiSecretEntry) getConnection() (endpoint.Connector, error) {
 
 }
 
-func (c venafiSecretEntry) getConfig(includeRefreshToken bool) (*vcert.Config, error) {
+func (c venafiSecretEntry) getConfig(zone string, includeRefreshToken bool) (*vcert.Config, error) {
 	var cfg = &vcert.Config{
 		BaseUrl:     c.URL,
-		Zone:        c.Zone,
+		Zone:        zone,
 		LogVerbose:  true,
 		Credentials: &endpoint.Authentication{},
 	}

@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	venafiSecretsPath                = "venafi/"
-	venafiSecretDefaultName          = "defaultSecret"
+	venafiSecretPath                 = "venafi/"
+	venafiSecretDefaultName          = "secret_"
 	pathVenafiSecretsSynopsis        = ""
 	pathVenafiSecretsDescription     = ""
 	pathVenafiSecretsListSynopsis    = ""
@@ -30,7 +30,7 @@ var (
 
 func pathVenafiSecretsList(b *backend) *framework.Path {
 	ret := &framework.Path{
-		Pattern: venafiSecretsPath + "?$",
+		Pattern: venafiSecretPath + "?$",
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListVenafiSecrets,
@@ -46,7 +46,7 @@ func pathVenafiSecretsList(b *backend) *framework.Path {
 
 func pathVenafiSecrets(b *backend) *framework.Path {
 	ret := &framework.Path{
-		Pattern: venafiSecretsPath + framework.GenericNameRegex("name"),
+		Pattern: venafiSecretPath + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -97,13 +97,6 @@ func pathVenafiSecrets(b *backend) *framework.Path {
 				Description: `URL for Venafi Cloud. Set it only if you want to use non production Cloud. Deprecated, use 'url' instead`,
 				Deprecated:  true,
 			},
-			"zone": {
-				Type: framework.TypeString,
-				Description: `Name of Venafi Platform or Cloud policy. 
-Example for Platform: testPolicy\\vault
-Example for Venafi Cloud: Default`,
-				Default: `Default`,
-			},
 			"trust_bundle_file": {
 				Type: framework.TypeString,
 				Description: `Use to specify a PEM formatted file with certificates to be used as trust anchors when communicating with the remote server.
@@ -133,7 +126,7 @@ Example:
 }
 
 func (b *backend) pathListVenafiSecrets(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List(ctx, venafiSecretsPath)
+	entries, err := req.Storage.List(ctx, venafiSecretPath)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +157,7 @@ func (b *backend) pathReadVenafiSecret(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) getVenafiSecret(ctx context.Context, s *logical.Storage, name string) (*venafiSecretEntry, error) {
-	entry, err := (*s).Get(ctx, venafiSecretsPath+name)
+	entry, err := (*s).Get(ctx, venafiSecretPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +194,6 @@ func (b *backend) pathUpdateVenafiSecret(ctx context.Context, req *logical.Reque
 
 	entry := &venafiSecretEntry{
 		URL:             url,
-		Zone:            data.Get("zone").(string),
 		TPPUrl:          tppUrl,
 		TPPUser:         data.Get("tpp_user").(string),
 		TPPPassword:     data.Get("tpp_password").(string),
@@ -217,7 +209,7 @@ func (b *backend) pathUpdateVenafiSecret(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	jsonEntry, err := logical.StorageEntryJSON(venafiSecretsPath+name, entry)
+	jsonEntry, err := logical.StorageEntryJSON(venafiSecretPath+name, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +240,7 @@ func (b *backend) pathDeleteVenafiSecret(ctx context.Context, req *logical.Reque
 	name := data.Get("name").(string)
 
 	//Deleting secrets path
-	err := req.Storage.Delete(ctx, venafiSecretsPath+name)
+	err := req.Storage.Delete(ctx, venafiSecretPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +251,6 @@ func (b *backend) pathDeleteVenafiSecret(ctx context.Context, req *logical.Reque
 func (c *venafiSecretEntry) ToResponseData() map[string]interface{} {
 	responseData := map[string]interface{}{
 		"url":               c.URL,
-		"zone":              c.Zone,
 		"tpp_user":          c.TPPUser,
 		"tpp_password":      c.getMaskString(),
 		"access_token":      c.getMaskString(),
@@ -306,10 +297,6 @@ func validateVenafiSecretEntry(entry *venafiSecretEntry) error {
 	//When api key is null, that means TPP is being used, and requires a URL
 	if entry.URL == "" && entry.Apikey == "" {
 		return fmt.Errorf(errorTextURLEmpty)
-	}
-
-	if entry.Zone == "" {
-		return fmt.Errorf(errorTextZoneEmpty)
 	}
 
 	if entry.TPPUser != "" && entry.Apikey != "" {

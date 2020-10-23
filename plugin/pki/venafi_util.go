@@ -120,7 +120,7 @@ var venafiTestTPPConfigAllAllow = map[string]interface{}{
 	"zone":                  os.Getenv("TPP_ZONE"),
 	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
 	"auto_refresh_interval": 1,
-	"venafi_secret":         venafiSecretDefaultName,
+	"venafi_secret":         venafiSecretDefaultName + "tpp",
 }
 
 var venafiTestTPPConfigNoRefresh = map[string]interface{}{
@@ -130,14 +130,14 @@ var venafiTestTPPConfigNoRefresh = map[string]interface{}{
 	"zone":                  os.Getenv("TPP_ZONE"),
 	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
 	"auto_refresh_interval": 0,
-	"venafi_secret":         venafiSecretDefaultName,
+	"venafi_secret":         venafiSecretDefaultName + "tpp_noRefresh",
 }
 
 var venafiTestConfigBadData = map[string]interface{}{
 	"cloud_url":     os.Getenv("CLOUD_URL"),
 	"apikey":        os.Getenv("CLOUD_APIKEY"),
 	"zone":          os.Getenv("CLOUD_ZONE_RESTRICTED"),
-	"venafi_secret": venafiSecretDefaultName,
+	"venafi_secret": venafiSecretDefaultName + "badData",
 }
 
 var venafiTestTPPConfigRestricted = map[string]interface{}{
@@ -147,7 +147,7 @@ var venafiTestTPPConfigRestricted = map[string]interface{}{
 	"zone":                  os.Getenv("TPP_ZONE_RESTRICTED"),
 	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
 	"auto_refresh_interval": 1,
-	"venafi_secret":         venafiSecretDefaultName,
+	"venafi_secret":         venafiSecretDefaultName + "tpp_restricted",
 }
 
 var venafiTestCloudConfigRestricted = map[string]interface{}{
@@ -155,7 +155,7 @@ var venafiTestCloudConfigRestricted = map[string]interface{}{
 	"apikey":                os.Getenv("CLOUD_APIKEY"),
 	"zone":                  os.Getenv("CLOUD_ZONE_RESTRICTED"),
 	"auto_refresh_interval": 1,
-	"venafi_secret":         venafiSecretDefaultName,
+	"venafi_secret":         venafiSecretDefaultName + "cloud_restricted",
 }
 
 var venafiTestTokenConfigRestricted = map[string]interface{}{
@@ -164,7 +164,7 @@ var venafiTestTokenConfigRestricted = map[string]interface{}{
 	"zone":                  os.Getenv("TPP_ZONE_RESTRICTED"),
 	"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
 	"auto_refresh_interval": 1,
-	"venafi_secret":         venafiSecretDefaultName,
+	"venafi_secret":         venafiSecretDefaultName + "token_restricted",
 }
 
 var venafiTestCloudConfigAllAllow = map[string]interface{}{
@@ -172,12 +172,12 @@ var venafiTestCloudConfigAllAllow = map[string]interface{}{
 	"apikey":                os.Getenv("CLOUD_APIKEY"),
 	"zone":                  os.Getenv("CLOUD_ZONE"),
 	"auto_refresh_interval": 1,
-	"venafi_secret":         venafiSecretDefaultName,
+	"venafi_secret":         venafiSecretDefaultName + "cloud",
 }
 
 var createVenafiSecretStep = logicaltest.TestStep{
 	Operation: logical.UpdateOperation,
-	Path:      venafiSecretsPath + venafiSecretDefaultName,
+	Path:      venafiSecretPath + venafiTestTPPConfigAllAllow["venafi_secret"].(string),
 	Data:      venafiTestTPPConfigAllAllow,
 }
 
@@ -214,7 +214,7 @@ func writeVenafiSecret(b *backend, storage logical.Storage, secretData map[strin
 	t.Log("Writing Venafi secret configuration")
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      venafiSecretsPath + venafiSecretName,
+		Path:      venafiSecretPath + venafiSecretName,
 		Storage:   storage,
 		Data:      secretData,
 	})
@@ -257,7 +257,8 @@ func writePolicy(b *backend, storage logical.Storage, policyData map[string]inte
 }
 
 func writePolicyToClient(mountPoint string, client *api.Client, t *testing.T) {
-	_, err := client.Logical().Write(mountPoint+"/"+venafiSecretsPath+venafiSecretDefaultName, venafiTestTPPConfigAllAllow)
+	venafiSecretName := venafiTestTPPConfigAllAllow["venafi_secret"].(string)
+	_, err := client.Logical().Write(mountPoint+"/"+venafiSecretPath+venafiSecretName, venafiTestTPPConfigAllAllow)
 	if err != nil {
 		t.Fatal(err)
 	}

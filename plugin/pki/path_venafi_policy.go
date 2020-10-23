@@ -36,6 +36,13 @@ func pathVenafiPolicy(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the Venafi policy config",
 			},
+			"zone": {
+				Type: framework.TypeString,
+				Description: `Name of Venafi Platform or Cloud policy. 
+Example for Platform: testPolicy\\vault
+Example for Venafi Cloud: Default`,
+				Default: `Default`,
+			},
 			"ext_key_usage": {
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{},
@@ -262,12 +269,19 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	log.Printf("%s Write policy endpoint configuration into storage", logPrefixVenafiPolicyEnforcement)
 
 	venafiPolicyConfig := &venafiPolicyConfigEntry{
+		Zone:                data.Get("zone").(string),
 		AutoRefreshInterval: int64(data.Get("auto_refresh_interval").(int)),
 		VenafiImportTimeout: data.Get("import_timeout").(int),
 		VenafiImportWorkers: data.Get("import_workers").(int),
 		CreateRole:          data.Get(policyFieldCreateRole).(bool),
 		VenafiSecret:        data.Get("venafi_secret").(string),
 	}
+
+	if venafiPolicyConfig.Zone == "" {
+		err = fmt.Errorf(errorTextZoneEmpty)
+		return
+	}
+
 	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
 	venafiPolicyConfig.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
 	if err != nil {
@@ -576,13 +590,13 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 	//Send config to the user output
 	respData := map[string]interface{}{
 		"url":                       secret.URL,
-		"zone":                      secret.Zone,
 		"tpp_user":                  secret.TPPUser,
 		"tpp_password":              secret.getMaskString(),
 		"apikey":                    secret.getMaskString(),
 		"access_token":              secret.getMaskString(),
 		"refresh_token":             secret.getMaskString(),
 		"trust_bundle_file":         secret.TrustBundleFile,
+		"zone":                      config.Zone,
 		policyFieldImportRoles:      rolesList.importRoles,
 		policyFieldDefaultsRoles:    rolesList.defaultsRoles,
 		policyFieldEnforcementRoles: rolesList.enforceRoles,
@@ -893,6 +907,7 @@ func (b *backend) getVenafiPolicyConfig(ctx context.Context, s *logical.Storage,
 }
 
 type venafiPolicyConfigEntry struct {
+	Zone                 string             `json:"zone"`
 	ExtKeyUsage          []x509.ExtKeyUsage `json:"ext_key_usage"`
 	AutoRefreshInterval  int64              `json:"auto_refresh_interval"`
 	LastPolicyUpdateTime int64              `json:"last_policy_update_time"`
