@@ -296,7 +296,7 @@ func storeAccessData(b *backend, ctx context.Context, storage *logical.Storage, 
 	secret.AccessToken = resp.Access_token
 
 	// Store it
-	jsonEntry, err := logical.StorageEntryJSON(venafiSecretsPath+policy.VenafiSecret, secret)
+	jsonEntry, err := logical.StorageEntryJSON(venafiSecretPath+policy.VenafiSecret, secret)
 	if err != nil {
 		return err
 	}

@@ -129,7 +129,7 @@ func (c venafiSecretEntry) getConfig(zone string, includeRefreshToken bool) (*vc
 
 	var cfg = &vcert.Config{
 		BaseUrl:     c.URL,
-		Zone:        c.Zone,
+		Zone:        zone,
 		LogVerbose:  true,
 		Credentials: &endpoint.Authentication{},
 	}

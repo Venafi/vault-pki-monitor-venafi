@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	venafiSecretsPath                = "venafi/"
-	venafiSecretDefaultName          = "defaultSecret"
+	venafiSecretPath                 = "venafi/"
+	venafiSecretDefaultName          = "secret_"
 	pathVenafiSecretsSynopsis        = ""
 	pathVenafiSecretsDescription     = ""
 	pathVenafiSecretsListSynopsis    = ""
@@ -30,7 +30,7 @@ var (
 
 func pathVenafiSecretsList(b *backend) *framework.Path {
 	ret := &framework.Path{
-		Pattern: venafiSecretsPath + "?$",
+		Pattern: venafiSecretPath + "?$",
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListVenafiSecrets,
@@ -46,7 +46,7 @@ func pathVenafiSecretsList(b *backend) *framework.Path {
 
 func pathVenafiSecrets(b *backend) *framework.Path {
 	ret := &framework.Path{
-		Pattern: venafiSecretsPath + framework.GenericNameRegex("name"),
+		Pattern: venafiSecretPath + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -134,7 +134,7 @@ Example:
 }
 
 func (b *backend) pathListVenafiSecrets(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List(ctx, venafiSecretsPath)
+	entries, err := req.Storage.List(ctx, venafiSecretPath)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func (b *backend) pathReadVenafiSecret(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) getVenafiSecret(ctx context.Context, s *logical.Storage, name string) (*venafiSecretEntry, error) {
-	entry, err := (*s).Get(ctx, venafiSecretsPath+name)
+	entry, err := (*s).Get(ctx, venafiSecretPath+name)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (b *backend) pathUpdateVenafiSecret(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	jsonEntry, err := logical.StorageEntryJSON(venafiSecretsPath+name, entry)
+	jsonEntry, err := logical.StorageEntryJSON(venafiSecretPath+name, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +249,7 @@ func (b *backend) pathDeleteVenafiSecret(ctx context.Context, req *logical.Reque
 	name := data.Get("name").(string)
 
 	//Deleting secrets path
-	err := req.Storage.Delete(ctx, venafiSecretsPath+name)
+	err := req.Storage.Delete(ctx, venafiSecretPath+name)
 	if err != nil {
 		return nil, err
 	}
