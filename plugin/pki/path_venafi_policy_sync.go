@@ -216,8 +216,12 @@ func (b *backend) synchronizeRoleDefaults(ctx context.Context, storage logical.S
 		return fmt.Sprintf("%s", err)
 	}
 
-	venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, policyName,
-		secret.Zone)
+	zone := policy.Zone
+	if zone == "" {
+		zone = secret.Zone
+	}
+
+	venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, policyName, zone)
 	if err != nil {
 		return fmt.Sprintf("%s", err)
 	}

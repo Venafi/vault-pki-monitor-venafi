@@ -84,6 +84,12 @@ Also you can use constants from this module (like 1, 5,8) direct or use OIDs (li
 				Description: `The name of the credentials object to be used for authentication`,
 				Required:    true,
 			},
+			"zone": {
+				Type: framework.TypeString,
+				Description: `Name of Venafi Platform or Cloud policy. 
+Example for Platform: testPolicy\\vault
+Example for Venafi Cloud: Default`,
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -267,6 +273,7 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 		VenafiImportWorkers: data.Get("import_workers").(int),
 		CreateRole:          data.Get(policyFieldCreateRole).(bool),
 		VenafiSecret:        data.Get("venafi_secret").(string),
+		Zone:                data.Get("zone").(string),
 	}
 	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
 	venafiPolicyConfig.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
@@ -576,7 +583,7 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 	//Send config to the user output
 	respData := map[string]interface{}{
 		"url":                       secret.URL,
-		"zone":                      secret.Zone,
+		"zone":                      config.Zone,
 		"tpp_user":                  secret.TPPUser,
 		"tpp_password":              secret.getMaskString(),
 		"apikey":                    secret.getMaskString(),
@@ -900,6 +907,7 @@ type venafiPolicyConfigEntry struct {
 	VenafiImportWorkers  int                `json:"import_workers"`
 	CreateRole           bool               `json:"create_role"`
 	VenafiSecret         string             `json:"venafi_secret"`
+	Zone                 string             `json:"zone"`
 }
 
 type venafiPolicyEntry struct {

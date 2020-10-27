@@ -40,7 +40,14 @@ func (b *backend) ClientVenafi(ctx context.Context, s *logical.Storage, policyNa
 	if secret == nil {
 		return nil, fmt.Errorf("expected Venafi secret but got nil from Vault storage %v", secret)
 	}
-	return secret.getConnection()
+
+	if config.Zone != "" {
+		b.Logger().Debug("Using zone [%s] from Policy.", config.Zone)
+	} else {
+		b.Logger().Debug("Using zone [%s] from venafi secret. Policy zone not found.", secret.Zone)
+	}
+
+	return secret.getConnection(config.Zone)
 }
 
 func (b *backend) getConfig(ctx context.Context, s *logical.Storage, policyName string) (
@@ -69,7 +76,13 @@ func (b *backend) getConfig(ctx context.Context, s *logical.Storage, policyName 
 		return nil, fmt.Errorf("expected Venafi secret but got nil from Vault storage %v", secret)
 	}
 
-	return secret.getConfig(true)
+	if config.Zone != "" {
+		b.Logger().Debug("Using zone [%s] from Policy.", config.Zone)
+	} else {
+		b.Logger().Debug("Using zone [%s] from venafi secret. Policy zone not found.", secret.Zone)
+	}
+
+	return secret.getConfig(config.Zone, true)
 }
 
 func pp(a interface{}) string {
@@ -93,8 +106,8 @@ type venafiSecretEntry struct {
 	CloudURL        string `json:"cloud_url"`
 }
 
-func (c venafiSecretEntry) getConnection() (endpoint.Connector, error) {
-	cfg, err := c.getConfig(false)
+func (c venafiSecretEntry) getConnection(zone string) (endpoint.Connector, error) {
+	cfg, err := c.getConfig(zone, false)
 	if err == nil {
 		client, err := vcert.NewClient(cfg)
 		if err != nil {
@@ -109,7 +122,11 @@ func (c venafiSecretEntry) getConnection() (endpoint.Connector, error) {
 
 }
 
-func (c venafiSecretEntry) getConfig(includeRefreshToken bool) (*vcert.Config, error) {
+func (c venafiSecretEntry) getConfig(zone string, includeRefreshToken bool) (*vcert.Config, error) {
+	if zone == "" {
+		zone = c.Zone
+	}
+
 	var cfg = &vcert.Config{
 		BaseUrl:     c.URL,
 		Zone:        c.Zone,

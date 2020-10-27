@@ -102,7 +102,8 @@ func pathVenafiSecrets(b *backend) *framework.Path {
 				Description: `Name of Venafi Platform or Cloud policy. 
 Example for Platform: testPolicy\\vault
 Example for Venafi Cloud: Default`,
-				Default: `Default`,
+				Default:  `Default`,
+				Required: true,
 			},
 			"trust_bundle_file": {
 				Type: framework.TypeString,
