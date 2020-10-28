@@ -569,12 +569,6 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	secret, err := b.getVenafiSecret(ctx, &req.Storage, config.VenafiSecret)
-	if err != nil {
-		log.Printf("%s error reading Venafi secret configuration: %s", logPrefixVenafiPolicyEnforcement, err)
-		return nil, err
-	}
-
 	rolesList, err := b.getRolesListForVenafiPolicy(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
@@ -582,14 +576,7 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 
 	//Send config to the user output
 	respData := map[string]interface{}{
-		"url":                       secret.URL,
 		"zone":                      config.Zone,
-		"tpp_user":                  secret.TPPUser,
-		"tpp_password":              secret.getMaskString(),
-		"apikey":                    secret.getMaskString(),
-		"access_token":              secret.getMaskString(),
-		"refresh_token":             secret.getMaskString(),
-		"trust_bundle_file":         secret.TrustBundleFile,
 		policyFieldImportRoles:      rolesList.importRoles,
 		policyFieldDefaultsRoles:    rolesList.defaultsRoles,
 		policyFieldEnforcementRoles: rolesList.enforceRoles,
