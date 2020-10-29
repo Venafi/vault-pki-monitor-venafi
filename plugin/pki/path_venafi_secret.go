@@ -10,10 +10,10 @@ import (
 const (
 	venafiSecretPath                 = "venafi/"
 	venafiSecretDefaultName          = "secret_"
-	pathVenafiSecretsSynopsis        = ""
-	pathVenafiSecretsDescription     = ""
-	pathVenafiSecretsListSynopsis    = ""
-	pathVenafiSecretsListDescription = ""
+	pathVenafiSecretsSynopsis        = "Manage the Venafi secrets that can be created with this backend."
+	pathVenafiSecretsDescription     = "This path lets you manage the Venafi secrets that can be created with this backend."
+	pathVenafiSecretsListSynopsis    = "List the existing Venafi secrets in this backend."
+	pathVenafiSecretsListDescription = "Venafi secrets will be listed by the secret name."
 	tokenMode                        = `TPP Token (access_token, refresh_token)` // #nosec G101
 	tppMode                          = `TPP Credentials (tpp_user, tpp_password)`
 	cloudMode                        = `Cloud API Key (apikey)`
