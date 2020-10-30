@@ -51,9 +51,9 @@ VAULT_CLIENT_TIMEOUT = 180s
 
 test: linter
 	VAULT_ACC=1 \
-	GO111MODULE=on \
-	go get -u gotest.tools/gotestsum@v0.5.4
+	go get -u gotest.tools/gotestsum
 	gotestsum --junitfile  junit.xml  -- -timeout $(TEST_TIMEOUT) ./...
+	go clean -cache -modcache
 
 policy_test:
 	go test github.com/Venafi/vault-pki-monitor-venafi/plugin/pki -run ^TestBackend_VenafiPolicy*$
