@@ -51,7 +51,8 @@ VAULT_CLIENT_TIMEOUT = 180s
 
 test: linter
 	VAULT_ACC=1 \
-	go get gotest.tools/gotestsum
+	GO111MODULE=on \
+	go get -u gotest.tools/gotestsum@v0.5.4
 	gotestsum --junitfile  junit.xml  -- -timeout $(TEST_TIMEOUT) ./...
 
 policy_test:
