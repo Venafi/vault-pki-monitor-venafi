@@ -3,7 +3,7 @@ package pki
 import (
 	"context"
 	"fmt"
-	"github.com/Venafi/vcert/pkg/endpoint"
+	"github.com/Venafi/vcert/v4/pkg/endpoint"
 	"github.com/hashicorp/vault/sdk/framework"
 	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -205,13 +205,23 @@ func (b *backend) synchronizeRoleDefaults(ctx context.Context, storage logical.S
 		return "entry is nil"
 	}
 
-	var venafiConfig venafiConnectionConfig
-	if err := entry.DecodeJSON(&venafiConfig); err != nil {
-		return fmt.Sprintf("error reading Venafi policy configuration: %s", err)
+	var policy venafiPolicyConfigEntry
+	err = entry.DecodeJSON(&policy)
+	if err != nil {
+		return fmt.Sprintf("%s", err)
 	}
 
-	venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, policyName,
-		venafiConfig.Zone)
+	secret, err := b.getVenafiSecret(ctx, &storage, policy.VenafiSecret)
+	if err != nil {
+		return fmt.Sprintf("%s", err)
+	}
+
+	zone := policy.Zone
+	if zone == "" {
+		zone = secret.Zone
+	}
+
+	venafiPolicyEntry, err := b.getVenafiPolicyParams(ctx, storage, policyName, zone)
 	if err != nil {
 		return fmt.Sprintf("%s", err)
 	}
@@ -273,7 +283,7 @@ func (b *backend) getVenafiPolicyParams(ctx context.Context, storage logical.Sto
 		//and verify if that message describes errors related to expired access token.
 		if (strings.Contains(msg, "\"error\":\"expired_token\"") && strings.Contains(msg, "\"error_description\":\"Access token expired\"")) || regex.MatchString(msg) {
 
-			cfg, err := b.getConfing(ctx, &storage, policyConfig)
+			cfg, err := b.getConfig(ctx, &storage, policyConfig)
 
 			if err != nil {
 				return entry, err

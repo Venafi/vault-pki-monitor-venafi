@@ -6,9 +6,9 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/Venafi/vcert/pkg/certificate"
-	"github.com/Venafi/vcert/pkg/endpoint"
-	"github.com/Venafi/vcert/pkg/verror"
+	"github.com/Venafi/vcert/v4/pkg/certificate"
+	"github.com/Venafi/vcert/v4/pkg/endpoint"
+	"github.com/Venafi/vcert/v4/pkg/verror"
 	"github.com/hashicorp/vault/sdk/framework"
 	hconsts "github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -282,7 +282,7 @@ func (b *backend) processImportToTPP(job Job) string {
 			//and verify if that message describes errors related to expired access token.
 			if (strings.Contains(msg, "\"error\":\"expired_token\"") && strings.Contains(msg, "\"error_description\":\"Access token expired\"")) || regex.MatchString(msg) {
 
-				cfg, err := b.getConfing(job.ctx, job.storage, job.policyName)
+				cfg, err := b.getConfig(job.ctx, job.storage, job.policyName)
 
 				if err != nil {
 					return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
@@ -327,7 +327,6 @@ func (b *backend) processImportToTPP(job Job) string {
 			}
 		}
 		///
-
 
 		return fmt.Sprintf("%s could not import certificate: %s\n", msg, err)
 

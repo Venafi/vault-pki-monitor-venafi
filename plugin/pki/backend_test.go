@@ -152,7 +152,10 @@ func TestBackend_CSRValues(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps:          []logicaltest.TestStep{venafiTPPCreateSimplePolicyStep},
+		Steps: []logicaltest.TestStep{
+			createVenafiSecretStep,
+			venafiTPPCreateSimplePolicyStep,
+		},
 	}
 
 	intdata := map[string]interface{}{}
@@ -179,7 +182,10 @@ func TestBackend_URLsCRUD(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps:          []logicaltest.TestStep{venafiTPPCreateSimplePolicyStep},
+		Steps: []logicaltest.TestStep{
+			createVenafiSecretStep,
+			venafiTPPCreateSimplePolicyStep,
+		},
 	}
 
 	intdata := map[string]interface{}{}
@@ -209,7 +215,9 @@ func TestBackend_RSARoles(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{venafiTPPCreateSimplePolicyStep,
+		Steps: []logicaltest.TestStep{
+			createVenafiSecretStep,
+			venafiTPPCreateSimplePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -250,7 +258,9 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{venafiTPPCreateSimplePolicyStep,
+		Steps: []logicaltest.TestStep{
+			createVenafiSecretStep,
+			venafiTPPCreateSimplePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -291,7 +301,9 @@ func TestBackend_ECRoles(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{venafiTPPCreateSimplePolicyStep,
+		Steps: []logicaltest.TestStep{
+			createVenafiSecretStep,
+			venafiTPPCreateSimplePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -332,7 +344,9 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 
 	testCase := logicaltest.TestCase{
 		LogicalBackend: b,
-		Steps: []logicaltest.TestStep{venafiTPPCreateSimplePolicyStep,
+		Steps: []logicaltest.TestStep{
+			createVenafiSecretStep,
+			venafiTPPCreateSimplePolicyStep,
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
@@ -2577,6 +2591,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 			cert.URIs)
 	}
 }
+
 func setCerts() {
 	cak, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {

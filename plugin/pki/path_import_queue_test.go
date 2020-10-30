@@ -7,9 +7,9 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/Venafi/vcert"
-	"github.com/Venafi/vcert/pkg/certificate"
-	"github.com/Venafi/vcert/pkg/endpoint"
+	"github.com/Venafi/vcert/v4"
+	"github.com/Venafi/vcert/v4/pkg/certificate"
+	"github.com/Venafi/vcert/v4/pkg/endpoint"
 	"github.com/hashicorp/vault/sdk/logical"
 	"log"
 	"net/http"
@@ -24,41 +24,41 @@ type getRoleDataFunc func(string, int, int) map[string]interface{}
 
 func getTPPRoleConfig(domain string, timeout, workers int) map[string]interface{} {
 	return map[string]interface{}{
-		"allowed_domains":       domain,
-		"allow_subdomains":      "true",
-		"max_ttl":               "4h",
-		"allow_bare_domains":    true,
-		"generate_lease":        true,
-		"venafi_import":         true,
-		"tpp_url":               os.Getenv("TPP_URL"),
-		"tpp_user":              os.Getenv("TPP_USER"),
-		"tpp_password":          os.Getenv("TPP_PASSWORD"),
-		"zone":                  os.Getenv("TPP_ZONE"),
-		"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
-		"import_timeout": timeout,
-		"import_workers": workers,
+		"allowed_domains":    domain,
+		"allow_subdomains":   "true",
+		"max_ttl":            "4h",
+		"allow_bare_domains": true,
+		"generate_lease":     true,
+		"venafi_import":      true,
+		"tpp_url":            os.Getenv("TPP_URL"),
+		"tpp_user":           os.Getenv("TPP_USER"),
+		"tpp_password":       os.Getenv("TPP_PASSWORD"),
+		"zone":               os.Getenv("TPP_ZONE"),
+		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
+		"import_timeout":     timeout,
+		"import_workers":     workers,
 	}
 }
 
 func getCloudRoleConfig(domain string, timeout, workers int) map[string]interface{} {
 	return map[string]interface{}{
-		"allowed_domains":       domain,
-		"allow_subdomains":      "true",
-		"max_ttl":               "4h",
-		"allow_bare_domains":    true,
-		"generate_lease":        true,
-		"venafi_import":         true,
-		"apikey":                os.Getenv("CLOUD_APIKEY"),
-		"cloud_url":             os.Getenv("CLOUD_URL"),
-		"zone":                  os.Getenv("CLOUD_ZONE"),
-		"trust_bundle_file":     os.Getenv("TRUST_BUNDLE"),
-		"import_timeout": timeout,
-		"import_workers": workers,
-		"organization":          "Venafi Inc.",
-		"ou":                    "Integration",
-		"locality":              "Salt Lake",
-		"province":              "Utah",
-		"country":               "US",
+		"allowed_domains":    domain,
+		"allow_subdomains":   "true",
+		"max_ttl":            "4h",
+		"allow_bare_domains": true,
+		"generate_lease":     true,
+		"venafi_import":      true,
+		"apikey":             os.Getenv("CLOUD_APIKEY"),
+		"cloud_url":          os.Getenv("CLOUD_URL"),
+		"zone":               os.Getenv("CLOUD_ZONE"),
+		"trust_bundle_file":  os.Getenv("TRUST_BUNDLE"),
+		"import_timeout":     timeout,
+		"import_workers":     workers,
+		"organization":       "Venafi Inc.",
+		"ou":                 "Integration",
+		"locality":           "Salt Lake",
+		"province":           "Utah",
+		"country":            "US",
 	}
 }
 
@@ -112,13 +112,13 @@ func calcThumbprint(cert string) string {
 }
 func TestBackend_PathImportToTPP(t *testing.T) {
 	policy := copyMap(venafiTestTPPConfigAllAllow)
-	testBackend_pathImport(t, getTPPRoleConfig, getTPPConnection, policy)
+	testBackendPathImport(t, getTPPRoleConfig, getTPPConnection, policy)
 }
 func TestBackend_PathImportToCloud(t *testing.T) {
 	policy := copyMap(venafiTestCloudConfigAllAllow)
-	testBackend_pathImport(t, getCloudRoleConfig, getCloudConnection, policy)
+	testBackendPathImport(t, getCloudRoleConfig, getCloudConnection, policy)
 }
-func testBackend_pathImport(t *testing.T, getRoleData getRoleDataFunc, getConnection getConnectionFunc, policy map[string]interface{}) {
+func testBackendPathImport(t *testing.T, getRoleData getRoleDataFunc, getConnection getConnectionFunc, policy map[string]interface{}) {
 	rand := randSeq(9)
 	domain := "example.com"
 	testRoleName := "test-import"
@@ -428,7 +428,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var certs_list []string
+	var certsList []string
 	//Importing certs in multiple roles
 	var randRoles []string
 
@@ -465,7 +465,7 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 
 		for j := 1; j < 10; j++ {
 			randCN := rand + strconv.Itoa(j) + "-import." + domain
-			certs_list = append(certs_list, randCN)
+			certsList = append(certsList, randCN)
 			certData := map[string]interface{}{
 				"common_name": randCN,
 			}
@@ -502,8 +502,8 @@ func TestBackend_PathImportToTPPMultipleCerts(t *testing.T) {
 
 	time.Sleep(30 * time.Second)
 	//After creating all certificates we need to check that they exist in TPP
-	log.Println("Trying check all certificates from list", certs_list)
-	for _, singleCN := range certs_list {
+	log.Println("Trying check all certificates from list", certsList)
+	for _, singleCN := range certsList {
 		//retrieve imported certificate
 		//res.Certificates[0].CertificateRequestId != "\\VED\\Policy\\devops\\vcert\\renx3.venafi.example.com"
 		log.Println("Trying to retrieve requested certificate", singleCN)
@@ -553,7 +553,7 @@ func TestCleanupImportToTPP(t *testing.T) {
 		Storage: b.storage,
 	}
 
-	//cleanup non existant role. no problem should occur
+	//cleanup non existent role. no problem should occur
 	b.cleanupImportToTPP("test-role", ctx, req)
 }
 
