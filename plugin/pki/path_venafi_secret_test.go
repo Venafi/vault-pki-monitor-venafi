@@ -30,6 +30,7 @@ func TestVenafiSecretValidate(t *testing.T) {
 		Apikey:      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 		TPPUser:     "admin",
 		TPPPassword: "xxxx",
+		Zone:        "zoneName",
 	}
 
 	err = validateVenafiSecretEntry(entry)
@@ -44,6 +45,7 @@ func TestVenafiSecretValidate(t *testing.T) {
 		URL:         "https://qa-tpp.exmple.com/vedsdk",
 		AccessToken: "foo123bar==",
 		Apikey:      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+		Zone:        "zoneName",
 	}
 
 	err = validateVenafiSecretEntry(entry)
