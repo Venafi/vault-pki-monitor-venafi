@@ -122,15 +122,21 @@ Note that the URL for the zip file, referenced below, changes as new versions of
    Success! Enabled the vault-pki-monitor-venafi_strict secrets engine at: pki/
    ```
 
-1. Configure a Venafi secret that maps a name in Vault to connection and authentication settings for enrolling certificates using Venafi. The zone is a policy folder for Trust Protection Platform or a DevOps project zone for Venafi Cloud. Obtain the `access_token` and `refresh_token` for Trust Protection Platform using the [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#obtaining-an-authorization-token) (`getcred` action with `--client-id "hashicorp-vault-monitor-by-venafi"` and `--scope "certificate:manage,discover"`) or the Platform's Authorize REST API method. 
+1. Configure a Venafi secret that maps a name in Vault to connection and authentication
+   settings for retrieving certificate policy and importing certificates into Venafi. The
+   zone is a policy folder for Trust Protection Platform or a DevOps project zone for
+   Venafi Cloud. Obtain the `access_token` and `refresh_token` for Trust Protection
+   Platform using the
+   [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#obtaining-an-authorization-token)
+   (`getcred` action with `--client-id "hashicorp-vault-monitor-by-venafi"` and
+   `--scope "certificate:manage,discover"`) or the Platform's Authorize REST API method. 
 
-    **Trust Protection Platform**:
+   **Trust Protection Platform**:
 
-    ```
-    $ vault write pki/venafi-policy/default \
-        zone="DevOps\\Default" \
-        url="https://tpp.example.com" trust_bundle_file="/path/to/bundle.pem" \
-        access_token="tn1PwE1QTZorXmvnTowSyA==" refresh_token="MGxV7DzNnclQi9CkJMCXCg=="
+   ```
+   $ vault write pki/venafi/tpp \
+       url="https://tpp.example.com" trust_bundle_file="/path/to/bundle.pem" \
+       access_token="tn1PwE1QTZorXmvnTowSyA==" refresh_token="MGxV7DzNnclQi9CkJMCXCg=="
    ```
 
    :pushpin: **NOTE**: Supplying a `refresh_token` allows the secrets engine to
@@ -142,18 +148,44 @@ Note that the URL for the zip file, referenced below, changes as new versions of
 
    **Venafi Cloud**:
 
-    ```
-    $ vault write pki/venafi/policy-default \ 
-        apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
-        zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
-    ```
+   ```
+   $ vault write pki/venafi/cloud apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+   ```
 
-    Following options are supported (note: this list can also be viewed from the command line using `vault path-help pki/venafi-policy/default`):
+   Following options are supported (note: this list can also be viewed
+   from the command line using `vault path-help pki/venafi/default`):
 
-    | Parameter             | Type   | Description                                                                         | Example   |
+   | Parameter             | Type   | Description                                                                         | Example   |
    | --------------------- | ------ | ----------------------------------------------------------------------------------- | --------- |
    |`access_token`         |string  | Trust Protection Platform access token for the "hashicorp-vault-monitor-by-venafi" API Application |`tn1PwE1QTZorXmvnTowSyA==`|
    |`apikey`               |string  | Venafi Cloud API key                                                                |`142231b7-cvb0-412e-886b-6aeght0bc93d`|
+   |`url`                  |string  | Venafi service URL, generally only applicable to Trust Protection Platform          |`https://tpp.venafi.example`|
+   |`refresh_token`        |string  | Refresh Token for Venafi Platform.                                                  |`MGxV7DzNnclQi9CkJMCXCg==`|
+   |`tpp_password`         |string  | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible |`somePassword?`|
+   |`tpp_user`             |string  | **[DEPRECATED]** Trust Protection Platform WebSDK username, use `access_token` if possible |`admin`|
+   |`trust_bundle_file`    |string  | Text file containing trust anchor certificates in PEM format, generally required for Trust Protection Platform |`"/path/to/chain.pem"`|
+   |`zone`                 |string  | Trust Protection Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI) to be used when no `zone` is specified by the venafi-policy |`testpolicy\\vault`|
+
+1. Configure a default Venafi policy that will only enable issuance of policy 
+   compliant certificate for all PKI roles in the path.
+
+   **Trust Protection Platform**:
+
+   ```
+   $ vault write pki/venafi-policy/default venafi_secret="tpp" zone="DevOps\\Default"
+   ```
+
+   **Venafi Cloud**:
+
+   ```
+   $ vault write pki/venafi-policy/default venafi_secret="cloud" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+   ```
+
+   The following options are supported (note: this list can also be viewed
+   from the command line using `vault path-help pki/venafi-policy/default`):
+
+   | Parameter             | Type   | Description                                                                         | Example   |
+   | --------------------- | ------ | ----------------------------------------------------------------------------------- | --------- |
    |`auto_refresh_interval`|int     | Interval of Venafi policy update in seconds. Set to 0 to disable automatic refresh  | 0 | 
    |`defaults_roles`       |string  | List of roles where default values from Venafi will be applied                      |`tpp`|
    |`enforcement_roles`    |string  | List of roles where Venafi policy enforcement is enabled                            |`tpp`|
@@ -161,59 +193,42 @@ Note that the URL for the zip file, referenced below, changes as new versions of
    |`import_roles`         |string  | List of roles where issued certificates will be imported into the Venafi `zone`     |`tpp`|
    |`import_timeout`       |int     | Maximum wait in seconds before re-attempting certificate import from queue          | 15 |
    |`import_workers`       |int     | Maximum number of concurrent threads to use for Venafi import                       | 5 |
-   |`name`                 |string  | Name of the venafi-policy to apply to roles                                         |`another-policy`|
-   |`url`                  |string  | Venafi service URL, generally only applicable to Trust Protection Platform          |`https://tpp.venafi.example`|
-   |`refresh_token`        |string  | Refresh Token for Venafi Platform.                                                  |`MGxV7DzNnclQi9CkJMCXCg==`|
-   |`tpp_password`         |string  | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible |`somePassword?`|
-   |`tpp_user`             |string  | **[DEPRECATED]** Trust Protection Platform WebSDK username, use `access_token` if possible |`admin`|
-   |`trust_bundle_file`    |string  | Text file containing trust anchor certificates in PEM format, generally required for Trust Protection Platform |`"/path/to/chain.pem"`|
-   |`zone`                 |string   | Trust Protection Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI) |`testpolicy\\vault`|
+   |`zone`                 |string  | Trust Protection Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI) |`testpolicy\\vault`|
 
-3. Configure a [role](https://www.vaultproject.io/api-docs/secret/pki#create-update-role) with which you want to use for enforcement policy.
+1. Configure a [role](https://www.vaultproject.io/api-docs/secret/pki#create-update-role) with which you want to use for enforcement policy.
 
     ```text
     $ vault write pki/roles/venafi-role generate_lease=true ttl=1h max_ttl=1h allow_any_name=true
     ```
-4. Update the policy and add the created role to the defaults and enforcement lists.
+
+1. Update the Venafi policy and add the created role to the defaults and enforcement lists.
 
     **Trust Protection Platform**:
 
     ```text 
-    $ vault write pki/venafi-policy/default \
-        defaults_roles="venafi-role" enforcement_roles="venafi-role" \
-        zone="DevOps\\Default" \
-        url="https://tpp.example.com" trust_bundle_file="/path/to/bundle.pem" \
-        access_token="tn1PwE1QTZorXmvnTowSyA==" refresh_token="MGxV7DzNnclQi9CkJMCXCg=="
+    $ vault write pki/venafi-policy/default defaults_roles="venafi-role" enforcement_roles="venafi-role" zone="DevOps\\Default"
     ```
 
     **Venafi Cloud**:
 
     ```text
-    $ vault write pki/venafi/policy-default \
-        defaults_roles="venafi-role" enforcement_roles="venafi-role" \
-        apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
-        zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+    $ vault write pki/venafi-policy/default defaults_roles="venafi-role" enforcement_roles="venafi-role" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
     ```
 
-5. Create a policy for Visibility. This will contain a zone where certificates issues by the Vault CA will be imported to. Visibility is enabled at the policy level using the `import_roles` parameter.
+1. Create a policy for Visibility. This will contain a zone where certificates
+   issues by the Vault CA will be imported to. Visibility is enabled at the policy
+   level using the `import_roles` parameter.
 
     **Trust Protection Platform**:
 
     ```text
-    $ vault write pki/venafi-policy/visibility \
-        import_roles="venafi-role" \
-        zone="DevOps\\Vault Monitor" \
-        url="https://tpp.example.com" trust_bundle_file="/path/to/bundle.pem" \
-        access_token="tn1PwE1QTZorXmvnTowSyA==" refresh_token="MGxV7DzNnclQi9CkJMCXCg=="
+    $ vault write pki/venafi-policy/visibility import_roles="venafi-role" zone="DevOps\\Vault Monitor"
     ```
 
     **Venafi Cloud**:
 
     ```text
-    $ vault write pki/venafi/policy-visibility \
-        import_roles="venafi-role" \
-        zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz" \
-        apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    $ vault write pki/venafi/policy-visibility import_roles="venafi-role" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
     ```
 
 ## Usage
