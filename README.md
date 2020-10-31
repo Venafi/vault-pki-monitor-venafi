@@ -24,12 +24,14 @@ original HashiCorp Vault PKI secrets engine.
 
 ## Requirements for use with Trust Protection Platform
 
-1. For policy enforcement, the Venafi WebSDK user that Vault will be using needs to have been granted view and read
-   permissions to the policy folder from which Venafi policy will be obtained.
-1. For issuance visibility, the Venafi WebSDK user that Vault will be using needs to have been granted write and create
-   permission to the policy folder where Vault issued certificates will be imported, and the 
-   _Allow Users to Import Duplicate Certificates and Reuse Private Keys_ policy of that folder needs to be set to 'Yes'
-   to ensure that all certificates issued by the Vault can be imported.
+1. For policy enforcement, the Venafi WebSDK user that Vault will be using needs
+   to have been granted view and read permissions to the policy folder from which
+   Venafi policy will be obtained.
+1. For issuance visibility, the Venafi WebSDK user that Vault will be using needs
+   to have been granted write and create permission to the policy folder where
+   Vault issued certificates will be imported, and the _Allow Users to Import
+   Duplicate Certificates and Reuse Private Keys_ policy of that folder needs to be
+   set to 'Yes' to ensure that all certificates issued by the Vault can be imported.
 
 ### Trust between Vault and Trust Protection Platform
 
@@ -58,8 +60,11 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
    link to /private/etc. To avoid errors, choose an alternative directory such
    as /private/etc/vault/vault_plugins.
 
-1. Download the latest `vault-pki-monitor-venafi` [release package](../../releases/latest) for your operating system. There are two versions, optional and script. The "optional" version allows certificates to be issues by the Vault CA when there is no Venafi policy applied whereas the "strict" version will return an error.
-Note that the URL for the zip file, referenced below, changes as new versions of the plugin are released.
+1. Download the latest `vault-pki-monitor-venafi` [release package](../../releases/latest) for
+   your operating system. There are two versions, optional and script. The "optional" version
+   allows certificates to be issues by the Vault CA when there is no Venafi policy applied
+   whereas the "strict" version will return an error. Note that the URL for the zip file,
+   referenced below, changes as new versions of the plugin are released.
 
     ```text
     $ wget -q https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/v0.0.1/vault-pki-monitor-venafi_v0.0.1+1_linux_strict.zip
@@ -78,7 +83,8 @@ Note that the URL for the zip file, referenced below, changes as new versions of
     $ mv vault-pki-monitor-venafi_strict /etc/vault/vault_plugins
     ```
 
-1. Update the Vault [server configuration](https://www.vaultproject.io/docs/configuration/) to specify the plugin directory:
+1. Update the Vault [server configuration](https://www.vaultproject.io/docs/configuration/)
+   to specify the plugin directory:
 
     ```text
    plugin_directory = "/etc/vault/vault_plugins"
@@ -206,18 +212,20 @@ Note that the URL for the zip file, referenced below, changes as new versions of
     **Trust Protection Platform**:
 
     ```text 
-    $ vault write pki/venafi-policy/default defaults_roles="venafi-role" enforcement_roles="venafi-role" zone="DevOps\\Default"
+    $ vault write pki/venafi-policy/default \
+        defaults_roles="venafi-role" enforcement_roles="venafi-role" zone="DevOps\\Default"
     ```
 
     **Venafi Cloud**:
 
     ```text
-    $ vault write pki/venafi-policy/default defaults_roles="venafi-role" enforcement_roles="venafi-role" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+    $ vault write pki/venafi-policy/default \
+        defaults_roles="venafi-role" enforcement_roles="venafi-role" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
     ```
 
-1. Create a policy for Visibility. This will contain a zone where certificates
-   issues by the Vault CA will be imported to. Visibility is enabled at the policy
-   level using the `import_roles` parameter.
+1. Create another Venafi policy for visibility. This will specify the zone where
+   certificates issued by the Vault CA will be imported. Visibility is enabled at the
+   policy level using the `import_roles` parameter.
 
     **Trust Protection Platform**:
 
@@ -233,7 +241,10 @@ Note that the URL for the zip file, referenced below, changes as new versions of
 
 ## Usage
 
-Venafi Policy limits the PKI role based on Venafi Platform policies or Venafi Cloud zones. Policy enforcement is configured using the special *venafi-policy* path which InfoSec teams can use to require compliance from a Vault CA. The Venafi monitoring plugin also places these requests in a queue that get imported back to Venafi Trust Protection Platform or Venafi Cloud.
+Venafi Policy limits the PKI role based on Venafi Platform policies or Venafi Cloud zones.
+Policy enforcement is configured using the special *venafi-policy* path which InfoSec teams can
+use to require compliance from a Vault CA. The Venafi monitoring plugin also places these
+requests in a queue that get imported back to Venafi Trust Protection Platform or Venafi Cloud.
 
 1. Generate a certificate by writing to the Vault CA and the Venafi role.
 
@@ -241,7 +252,9 @@ Venafi Policy limits the PKI role based on Venafi Platform policies or Venafi Cl
    $ vault write pki/issue/venafi-role common_name="test.allowed.org" alt_names="test-1.allowed.org,test-2.allowed.org"
    ```
 
-   If the request is policy compliant, the request will return a certificate successfully. This certificate will also be placed in the visibility import queue to be uploaded to the Venafi Trust Protection Platform.
+   If the request is policy compliant, the request will return a certificate successfully. This
+   certificate will also be placed in the visibility import queue to be uploaded to the Venafi
+   Trust Protection Platform.
 
 1. Or sign a CSR from a file by writing to the `/sign` endpoint with the name of the role: 
 
@@ -251,7 +264,8 @@ Venafi Policy limits the PKI role based on Venafi Platform policies or Venafi Cl
 
 ## Upgrading
 
-To upgrade to a new version of this plugin, review the [release notes]() to understand the impact and then follow the [standard procedure](https://www.vaultproject.io/docs/upgrading/plugins). 
+To upgrade to a new version of this plugin, review the [release notes]() to understand the impact
+and then follow the [standard procedure](https://www.vaultproject.io/docs/upgrading/plugins). 
 The following command will trigger a plug reload globally:
 
    ```text
@@ -262,7 +276,8 @@ The following command will trigger a plug reload globally:
    reload_id    d8180af4-01e0-d4d8-10ce-0daf69fbb6ed
    ```
 
-   :warning: **IMPORTANT:** Every member of a Vault cluster must be running with the same version of the plugin to avoid inconsistent, unexpected, and possibly erroneous results.
+   :warning: **IMPORTANT:** Every member of a Vault cluster must be running with the same version
+   of the plugin to avoid inconsistent, unexpected, and possibly erroneous results.
 
 ## License
 
