@@ -184,7 +184,8 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
    **Venafi Cloud**:
 
    ```
-   $ vault write pki/venafi-policy/default venafi_secret="cloud" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+   $ vault write pki/venafi-policy/default \
+       venafi_secret="cloud" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
    ```
 
    The following options are supported (note: this list can also be viewed
@@ -220,7 +221,8 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
 
     ```text
     $ vault write pki/venafi-policy/default \
-        defaults_roles="venafi-role" enforcement_roles="venafi-role" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+        defaults_roles="venafi-role" enforcement_roles="venafi-role" \
+        zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
     ```
 
 1. Create another Venafi policy for visibility. This will specify the zone where
@@ -236,7 +238,8 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
     **Venafi Cloud**:
 
     ```text
-    $ vault write pki/venafi/policy-visibility import_roles="venafi-role" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+    $ vault write pki/venafi-policy/visibility \
+        import_roles="venafi-role" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
     ```
 
 ## Usage
