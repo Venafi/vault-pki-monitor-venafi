@@ -281,7 +281,8 @@ func (b *backend) getVenafiPolicyParams(ctx context.Context, storage logical.Sto
 
 		//validate if the error is related to a expired accces token, at this moment the only way can validate this is using the error message
 		//and verify if that message describes errors related to expired access token.
-		if (strings.Contains(msg, "\"error\":\"expired_token\"") && strings.Contains(msg, "\"error_description\":\"Access token expired\"")) || regex.MatchString(msg) {
+		code := getStatusCode(msg)
+		if code == HTTP_UNAUTHORIZED || regex.MatchString(msg) {
 
 			cfg, err := b.getConfig(ctx, &storage, policyConfig)
 

@@ -218,6 +218,36 @@ func (b *backend) pathUpdateVenafiSecret(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	if entry.RefreshToken != "" {
+
+		cfg, err := createConfigFromFieldData(entry)
+
+		if err != nil {
+
+			return logical.ErrorResponse(err.Error()), nil
+
+		}
+
+		tokenInfo, err := getAccessData(cfg)
+
+		if err != nil {
+
+			return logical.ErrorResponse(err.Error()), nil
+
+		} else {
+
+			if tokenInfo.Access_token != "" {
+				entry.AccessToken = tokenInfo.Access_token
+			}
+
+			if tokenInfo.Refresh_token != "" {
+				entry.RefreshToken = tokenInfo.Refresh_token
+			}
+
+		}
+
+	}
+
 	jsonEntry, err := logical.StorageEntryJSON(venafiSecretPath+name, entry)
 	if err != nil {
 		return nil, err
