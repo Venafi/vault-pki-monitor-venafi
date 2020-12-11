@@ -2,28 +2,24 @@
 MKFILE_PATH := $(lastword $(MAKEFILE_LIST))
 CURRENT_DIR := $(patsubst %/,%,$(dir $(realpath $(MKFILE_PATH))))
 
-
 # List of tests to run
 TEST ?= $$(go list ./... | grep -v /vendor/ | grep -v /e2e)
 TEST_TIMEOUT?=20m
 GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 
 #Plugin information
-PLUGIN_NAME := vault-pki-monitor-venafi
+PLUGIN_NAME := venafi-pki-monitor
 PLUGIN_DIR := pkg/bin
 PLUGIN_PATH := $(PLUGIN_DIR)/$(PLUGIN_NAME)
 DIST_DIR := pkg/dist
-ifdef BUILD_NUMBER
-VERSION=`git describe --abbrev=0 --tags`+$(BUILD_NUMBER)
-else
 VERSION=`git describe --abbrev=0 --tags`
+
+ifdef BUILD_NUMBER
+VERSION:=$(VERSION)+$(BUILD_NUMBER)
 endif
 
-#define version if release is set
 ifdef RELEASE_VERSION
-ifdef BUILD_NUMBER
-VERSION=$(RELEASE_VERSION)+$(BUILD_NUMBER)
-else
+ifneq ($(RELEASE_VERSION),none)
 VERSION=$(RELEASE_VERSION)
 endif
 endif
@@ -85,7 +81,7 @@ ca:
 clean:
 	rm -rf $(PLUGIN_DIR)
 	rm -rf $(DIST_DIR)
-	rm -rf artifcats
+	rm -rf artifacts
 
 build: build_strict build_optional
 
@@ -130,16 +126,16 @@ import_cert_write:
 
 
 collect_artifacts:
-	rm -rf artifcats
-	mkdir -p artifcats
-	cp -rv $(DIST_DIR)/*.zip artifcats
-	cd artifcats; echo '```' > ../release.txt
-	cd artifcats; sha256sum * >> ../release.txt
-	cd artifcats; echo '```' >> ../release.txt
+	rm -rf artifacts
+	mkdir -p artifacts
+	cp -rv $(DIST_DIR)/*.zip artifacts
 
 release:
+	echo '```' > release.txt
+	cd artifacts; sha256sum * >> ../release.txt
+	echo '```' >> release.txt
 	go get -u github.com/tcnksm/ghr
-	ghr -prerelease -n $$RELEASE_VERSION -body="$$(cat ./release.txt)" $$RELEASE_VERSION artifcats/
+	ghr -prerelease -n $$RELEASE_VERSION -body="$$(cat ./release.txt)" $$RELEASE_VERSION artifacts/
 
 #Docker server with consul
 docker_server_prepare:
