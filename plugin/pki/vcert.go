@@ -42,9 +42,9 @@ func (b *backend) ClientVenafi(ctx context.Context, s *logical.Storage, policyNa
 	}
 
 	if config.Zone != "" {
-		b.Logger().Debug("Using zone [%s] from Policy.", config.Zone)
+		b.Logger().Debug("Using zone from Venafi Policy.", "zone", config.Zone)
 	} else {
-		b.Logger().Debug("Using zone [%s] from venafi secret. Policy zone not found.", secret.Zone)
+		b.Logger().Debug("Using zone from Venafi secret since Policy zone not found.", "zone", secret.Zone)
 	}
 
 	return secret.getConnection(config.Zone)
