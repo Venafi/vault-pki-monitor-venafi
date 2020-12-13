@@ -1,3 +1,7 @@
+## v0.8.2 (December 11, 2020)
+
+Updated credential requirements for Trust Protection Platform to support initialization with only a `refresh_token`.
+
 ## v0.8.1 (October 30, 2020)
 
 Introduced Venafi Secret for specifying Venafi connection and authentication settings.
