@@ -74,6 +74,11 @@ Also you can use constants from this module (like 1, 5,8) direct or use OIDs (li
 				Default:     5,
 				Description: `Max amount of simultaneously working instances of vcert import`,
 			},
+			"import_only_non_compliant": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "Import to Venafi only certificates non-compliant to zone policy",
+			},
 			policyFieldCreateRole: {
 				Type:        framework.TypeBool,
 				Default:     false,
@@ -268,12 +273,13 @@ func (b *backend) pathUpdateVenafiPolicy(ctx context.Context, req *logical.Reque
 	log.Printf("%s Write policy endpoint configuration into storage", logPrefixVenafiPolicyEnforcement)
 
 	venafiPolicyConfig := &venafiPolicyConfigEntry{
-		AutoRefreshInterval: int64(data.Get("auto_refresh_interval").(int)),
-		VenafiImportTimeout: data.Get("import_timeout").(int),
-		VenafiImportWorkers: data.Get("import_workers").(int),
-		CreateRole:          data.Get(policyFieldCreateRole).(bool),
-		VenafiSecret:        data.Get("venafi_secret").(string),
-		Zone:                data.Get("zone").(string),
+		AutoRefreshInterval:    int64(data.Get("auto_refresh_interval").(int)),
+		VenafiImportTimeout:    data.Get("import_timeout").(int),
+		VenafiImportWorkers:    data.Get("import_workers").(int),
+		CreateRole:             data.Get(policyFieldCreateRole).(bool),
+		VenafiSecret:           data.Get("venafi_secret").(string),
+		Zone:                   data.Get("zone").(string),
+		ImportOnlyNonCompliant: data.Get("import_only_non_compliant").(bool),
 	}
 	unparsedKeyUsage := data.Get("ext_key_usage").([]string)
 	venafiPolicyConfig.ExtKeyUsage, err = parseExtKeyUsageParameter(unparsedKeyUsage)
@@ -587,6 +593,7 @@ func (b *backend) pathReadVenafiPolicy(ctx context.Context, req *logical.Request
 		"import_timeout":            config.VenafiImportTimeout,
 		"import_workers":            config.VenafiImportWorkers,
 		"create_role":               config.CreateRole,
+		"import_only_non_compliant": config.ImportOnlyNonCompliant,
 	}
 
 	return &logical.Response{
@@ -701,7 +708,7 @@ func checkAgainstVenafiPolicy(
 	}
 
 	venafiEnforcementPolicy := policyMap.Roles[role.Name].EnforcementPolicy
-	if venafiEnforcementPolicy == "" {
+	if venafiEnforcementPolicy == "" && venafiPolicyDenyAll{
 		venafiEnforcementPolicy = defaultVenafiPolicyName
 	}
 
@@ -872,6 +879,76 @@ func checkAgainstVenafiPolicy(
 	return nil
 }
 
+func checkCSR(isCA bool, csr *x509.CertificateRequest, policy venafiPolicyEntry) error {
+	if isCA {
+		if len(csr.EmailAddresses) != 0 || len(csr.IPAddresses) != 0 || len(csr.URIs) != 0 || (len(csr.DNSNames) != 0 &&
+			csr.DNSNames[0] != csr.Subject.CommonName) { //workaround for setting SAN if CA have normal domain in CN
+			return fmt.Errorf("CA doesn`t allowed to have any SANs: %v, %v, %v, %v", csr.EmailAddresses, csr.DNSNames, csr.IPAddresses, csr.URIs)
+		}
+	} else {
+		if !checkStringByRegexp(csr.Subject.CommonName, policy.SubjectCNRegexes) {
+				return fmt.Errorf("common name %s doesn't match regexps: %v", csr.Subject.CommonName, policy.SubjectCNRegexes)
+		}
+		if !checkStringArrByRegexp(csr.EmailAddresses, policy.EmailSanRegExs, true) {
+			return fmt.Errorf("emails %v doesn't match regexps: %v", csr.EmailAddresses, policy.EmailSanRegExs)
+		}
+		if !checkStringArrByRegexp(csr.DNSNames, policy.DnsSanRegExs, true) {
+			return fmt.Errorf("DNS sans %v doesn't match regexps: %v", csr.DNSNames, policy.DnsSanRegExs)
+		}
+		ips := make([]string, len(csr.IPAddresses))
+		for i, ip := range csr.IPAddresses {
+			ips[i] = ip.String()
+		}
+		if !checkStringArrByRegexp(ips, policy.IpSanRegExs, true) {
+			return fmt.Errorf("IPs %v doesn't match regexps: %v", ips, policy.IpSanRegExs)
+		}
+		uris := make([]string, len(csr.URIs))
+		for i, uri := range csr.URIs {
+			uris[i] = uri.String()
+		}
+		if !checkStringArrByRegexp(uris, policy.UriSanRegExs, true) {
+			return fmt.Errorf("URIs %v doesn't match regexps: %v", uris, policy.UriSanRegExs)
+		}
+	}
+	if !checkStringArrByRegexp(csr.Subject.Organization, policy.SubjectORegexes, false) {
+		return fmt.Errorf("Organization %v doesn't match regexps: %v", csr.Subject.Organization, policy.SubjectORegexes)
+	}
+
+	if !checkStringArrByRegexp(csr.Subject.OrganizationalUnit, policy.SubjectOURegexes, false) {
+		return fmt.Errorf("Organization Unit %v doesn't match regexps: %v", csr.Subject.OrganizationalUnit, policy.SubjectOURegexes)
+	}
+
+	if !checkStringArrByRegexp(csr.Subject.Country, policy.SubjectCRegexes, false) {
+		return fmt.Errorf("Country %v doesn't match regexps: %v", csr.Subject.Country, policy.SubjectCRegexes)
+	}
+
+	if !checkStringArrByRegexp(csr.Subject.Locality, policy.SubjectLRegexes, false) {
+		return fmt.Errorf("Location %v doesn't match regexps: %v", csr.Subject.Locality, policy.SubjectLRegexes)
+	}
+
+	if !checkStringArrByRegexp(csr.Subject.Province, policy.SubjectSTRegexes, false) {
+		return fmt.Errorf("State (Province) %v doesn't match regexps: %v", csr.Subject.Province, policy.SubjectSTRegexes)
+	}
+	keyValid := true
+	if csr.PublicKeyAlgorithm == x509.RSA {
+		pubkey, ok := csr.PublicKey.(*rsa.PublicKey)
+		if ok {
+			keyValid = checkKey("rsa", pubkey.Size()*8, "", policy.AllowedKeyConfigurations)
+		} else {
+			log.Printf("%s invalid key in csr", logPrefixVenafiPolicyEnforcement)
+		}
+	} else if csr.PublicKeyAlgorithm == x509.ECDSA {
+		pubkey, ok := csr.PublicKey.(*ecdsa.PublicKey)
+		if ok {
+			keyValid = checkKey("ecdsa", 0, pubkey.Curve.Params().Name, policy.AllowedKeyConfigurations)
+		}
+	}
+		if !keyValid {
+			return fmt.Errorf("key type not compatible vith Venafi policies")
+		}
+		return nil
+	}
+
 func (b *backend) getVenafiPolicyConfig(ctx context.Context, s *logical.Storage, n string) (*venafiPolicyConfigEntry, error) {
 	entry, err := (*s).Get(ctx, venafiPolicyPath+n)
 	if err != nil {
@@ -889,14 +966,15 @@ func (b *backend) getVenafiPolicyConfig(ctx context.Context, s *logical.Storage,
 }
 
 type venafiPolicyConfigEntry struct {
-	ExtKeyUsage          []x509.ExtKeyUsage `json:"ext_key_usage"`
-	AutoRefreshInterval  int64              `json:"auto_refresh_interval"`
-	LastPolicyUpdateTime int64              `json:"last_policy_update_time"`
-	VenafiImportTimeout  int                `json:"import_timeout"`
-	VenafiImportWorkers  int                `json:"import_workers"`
-	CreateRole           bool               `json:"create_role"`
-	VenafiSecret         string             `json:"venafi_secret"`
-	Zone                 string             `json:"zone"`
+	ExtKeyUsage            []x509.ExtKeyUsage `json:"ext_key_usage"`
+	AutoRefreshInterval    int64              `json:"auto_refresh_interval"`
+	LastPolicyUpdateTime   int64              `json:"last_policy_update_time"`
+	VenafiImportTimeout    int                `json:"import_timeout"`
+	VenafiImportWorkers    int                `json:"import_workers"`
+	CreateRole             bool               `json:"create_role"`
+	VenafiSecret           string             `json:"venafi_secret"`
+	Zone                   string             `json:"zone"`
+	ImportOnlyNonCompliant bool               `json:"import_only_non_compliant"`
 }
 
 type venafiPolicyEntry struct {

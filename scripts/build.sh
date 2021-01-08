@@ -10,10 +10,10 @@ CURRENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 if [ ${BUILD_MODE} == "strict" ]; then
     echo "Changing  venafiPolicyDenyAll to true"
-    sed -i 's/const venafiPolicyDenyAll =.*/const venafiPolicyDenyAll = true/' plugin/pki/vcert.go
+    sed -i 's/var venafiPolicyDenyAll =.*/var venafiPolicyDenyAll = true/' plugin/pki/vcert.go
 elif [ ${BUILD_MODE} == "optional" ]; then
     echo "Changing  venafiPolicyDenyAll to false"
-    sed -i 's/const venafiPolicyDenyAll =.*/const venafiPolicyDenyAll = false/' plugin/pki/vcert.go
+    sed -i 's/var venafiPolicyDenyAll =.*/var venafiPolicyDenyAll = false/' plugin/pki/vcert.go
 else
     echo "Can't determine build mode"
     exit 1
@@ -50,3 +50,5 @@ for os in linux darwin windows; do
         zip -j "${archive_name}.zip" "${binary_name}" "${binary_name}.SHA256SUM"
     done
 done
+echo "Changing  venafiPolicyDenyAll to default value(true)"
+    sed -i 's/var venafiPolicyDenyAll =.*/var venafiPolicyDenyAll = true/' plugin/pki/vcert.go

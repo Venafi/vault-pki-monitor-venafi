@@ -175,6 +175,16 @@ var venafiTestCloudConfigAllAllow = map[string]interface{}{
 	"venafi_secret":         venafiSecretDefaultName + "cloud",
 }
 
+var venafiTestTPPConfigImportOnlyNonCompliant = map[string]interface{}{
+	"tpp_url":                   os.Getenv("TPP_URL"),
+	"tpp_user":                  os.Getenv("TPP_USER"),
+	"tpp_password":              os.Getenv("TPP_PASSWORD"),
+	"zone":                      os.Getenv("TPP_ZONE_RESTRICTED"),
+	"trust_bundle_file":         os.Getenv("TRUST_BUNDLE"),
+	"import_only_non_compliant": true,
+	"auto_refresh_interval":     1,
+	"venafi_secret":             venafiSecretDefaultName + "tpp",
+}
 var createVenafiSecretStep = logicaltest.TestStep{
 	Operation: logical.UpdateOperation,
 	Path:      venafiSecretPath + venafiTestTPPConfigAllAllow["venafi_secret"].(string),
