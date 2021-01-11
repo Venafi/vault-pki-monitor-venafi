@@ -713,7 +713,7 @@ func Test_fillImportQueueTask(t *testing.T) {
 	}
 }
 
-func Test_ImportCertificateMatchingVenafiPoloyTask(t *testing.T) {
+func Test_ImportCertificateMatchingVenafiPolicyTask(t *testing.T) {
 	//This test case should not import the certificate, since the csr matches with the
 	//venafi policy.
 	var getRoleData getRoleDataFunc = getTPPRoleRestrictedConfig
@@ -843,7 +843,7 @@ func Test_ImportCertificateMatchingVenafiPoloyTask(t *testing.T) {
 
 }
 
-func Test_ImportCertificateNotMatchingVenafiPoloyTask(t *testing.T) {
+func Test_ImportCertificateNotMatchingVenafiPolicyTask(t *testing.T) {
 	//This test case should  import the certificate, since some csr's attributes doesn't match with the
 	//venafi policy.
 	venafiPolicyDenyAll = false
