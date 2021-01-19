@@ -257,11 +257,11 @@ func (b *backend) processImportToTPP(job Job) string {
 	if job.importOnlyNonCompliant {
 		valid, err := b.checkCertMatchPolicy(Certificate, job.policyName)
 		if err != nil {
-			return fmt.Sprintf("Fail to check cert to matching policies: %v", err)
+			return fmt.Sprintf("Failed checking certificate compliance with policies: %v", err)
 		}
 		if valid {
 			b.deleteCertFromQueue(job)
-			return fmt.Sprintf("Skip import compliant certificate %v for role %v", job.entry, job.roleName)
+			return fmt.Sprintf("Skipped import of compliant certificate %v for role %v", job.entry, job.roleName)
 		}
 	}
 
