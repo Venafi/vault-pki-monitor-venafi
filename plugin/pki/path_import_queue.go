@@ -205,6 +205,9 @@ func (b *backend) controlImportQueue(conf *logical.BackendConfig) {
 		}
 		b.taskStorage.register(fillQueuePrefix+roleName, func() {
 			log.Printf("%s run queue filler %s", logPrefixVenafiImport, roleName)
+			//get the policy config here, since this is on the scoupe of this anonymous methods, this will
+			//solve an issue with the ImportOnlyNonCompliant that doesn't hold the correct value.
+			policyConfig, _ := b.getVenafiPolicyConfig(ctx, &b.storage, policyMap.Roles[roleName].ImportPolicy)
 			b.fillImportQueueTask(roleName, policyMap.Roles[roleName].ImportPolicy, policyConfig.VenafiImportWorkers, b.storage, policyConfig.ImportOnlyNonCompliant, conf)
 		}, 1, time.Duration(policyConfig.VenafiImportTimeout)*time.Second)
 
