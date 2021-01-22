@@ -189,4 +189,4 @@ mount_docker:
 	$(VAULT_CMD) secrets enable -path=$(MOUNT) -plugin-name=$(PLUGIN_NAME) plugin
 
 linter:
-	golangci-lint run
+	golangci-lint run --timeout 3m0s
