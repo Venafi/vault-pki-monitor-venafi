@@ -189,4 +189,5 @@ mount_docker:
 	$(VAULT_CMD) secrets enable -path=$(MOUNT) -plugin-name=$(PLUGIN_NAME) plugin
 
 linter:
+	@golangci-lint --version || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /go/bin
 	golangci-lint run --timeout 3m0s
