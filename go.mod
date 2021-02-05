@@ -3,7 +3,7 @@ module github.com/Venafi/vault-pki-monitor-venafi
 go 1.13
 
 require (
-	github.com/Venafi/vcert/v4 v4.11.1
+	github.com/Venafi/vcert/v4 v4.13.0
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
 	github.com/fatih/structs v1.1.0
 	github.com/go-test/deep v1.0.7
