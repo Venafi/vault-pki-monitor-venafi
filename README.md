@@ -170,7 +170,7 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
    |`tpp_password`         |string  | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible |`somePassword?`|
    |`tpp_user`             |string  | **[DEPRECATED]** Trust Protection Platform WebSDK username, use `access_token` if possible |`admin`|
    |`trust_bundle_file`    |string  | Text file containing trust anchor certificates in PEM format, generally required for Trust Protection Platform |`"/path/to/chain.pem"`|
-   |`zone`                 |string  | Trust Protection Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI) to be used when no `zone` is specified by the venafi-policy |`testpolicy\\vault`|
+   |`zone`                 |string  | Trust Protection Platform policy folder or Venafi Cloud Application Name and Issuing Template API Alias (e.g. "Business App\Enterprise CIT") to be used when no `zone` is specified by the venafi-policy |`testpolicy\\vault`|
 
 1. Configure a default Venafi policy that will only enable issuance of policy 
    compliant certificate for all PKI roles in the path.
@@ -200,7 +200,7 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
    |`import_roles`         |string  | List of roles where issued certificates will be imported into the Venafi `zone`     |`tpp`|
    |`import_timeout`       |int     | Maximum wait in seconds before re-attempting certificate import from queue          | 15 |
    |`import_workers`       |int     | Maximum number of concurrent threads to use for Venafi import                       | 5 |
-   |`zone`                 |string  | Trust Protection Platform policy folder or Venafi Cloud Application Name and Issuing Template API Alias (e.g. "Business App\Enterprise CIT")) |`testpolicy\\vault`|
+   |`zone`                 |string  | Trust Protection Platform policy folder or Venafi Cloud Application Name and Issuing Template API Alias (e.g. "Business App\Enterprise CIT") |`testpolicy\\vault`|
 
 1. Configure a [role](https://www.vaultproject.io/api-docs/secret/pki#create-update-role) with which you want to use for enforcement policy.
 
