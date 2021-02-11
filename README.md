@@ -185,7 +185,7 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
 
    ```
    $ vault write pki/venafi-policy/default \
-       venafi_secret="cloud" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+       venafi_secret="cloud" zone="Business App\\Enterprise CIT"
    ```
 
    The following options are supported (note: this list can also be viewed
@@ -200,7 +200,7 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
    |`import_roles`         |string  | List of roles where issued certificates will be imported into the Venafi `zone`     |`tpp`|
    |`import_timeout`       |int     | Maximum wait in seconds before re-attempting certificate import from queue          | 15 |
    |`import_workers`       |int     | Maximum number of concurrent threads to use for Venafi import                       | 5 |
-   |`zone`                 |string  | Trust Protection Platform policy folder or Venafi Cloud zone ID (shown in Venafi Cloud UI) |`testpolicy\\vault`|
+   |`zone`                 |string  | Trust Protection Platform policy folder or Venafi Cloud Application Name and Issuing Template API Alias (e.g. "Business App\Enterprise CIT")) |`testpolicy\\vault`|
 
 1. Configure a [role](https://www.vaultproject.io/api-docs/secret/pki#create-update-role) with which you want to use for enforcement policy.
 
@@ -222,7 +222,7 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
     ```text
     $ vault write pki/venafi-policy/default \
         defaults_roles="venafi-role" enforcement_roles="venafi-role" \
-        zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+        venafi_secret="cloud" zone="Business App\\Enterprise CIT"
     ```
 
 1. Create another Venafi policy for visibility. This will specify the zone where
@@ -239,7 +239,7 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
 
     ```text
     $ vault write pki/venafi-policy/visibility \
-        import_roles="venafi-role" zone="zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"
+        import_roles="venafi-role" venafi_secret="cloud" zone="Business App\\Enterprise CIT"
     ```
 
 ## Usage

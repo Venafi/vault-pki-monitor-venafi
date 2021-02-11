@@ -1,3 +1,11 @@
+## v0.9.0 (February 10, 2021)
+
+Updated Venafi Cloud integration to use OutagePREDICT instead of DevOpsACCELERATE.
+
+## v0.8.3 (January 23, 2021)
+
+Enhanced monitoring behavior to allow limiting Venafi import to certificates a Vault CA issues that do not comply with Venafi policy.
+
 ## v0.8.2 (December 11, 2020)
 
 Updated credential requirements for Trust Protection Platform to support initialization with only a `refresh_token`.
