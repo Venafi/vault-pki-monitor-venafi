@@ -67,20 +67,20 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
    referenced below, changes as new versions of the plugin are released.
 
     ```text
-    $ wget -q https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/v0.0.1/vault-pki-monitor-venafi_v0.0.1+1_linux_strict.zip
+    $ wget -q https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/v0.0.1/venafi-pki-monitor_v0.0.1_linux_strict.zip
     ```
 
 1. Compare the checksum of the package to the listed value on the GitHub release page.
 
     ```text
-    $ sha256sum vault-pki-monitor-venafi_v0.0.1+1_linux_strict.zip
+    $ sha256sum venafi-pki-monitor_v0.0.1_linux_strict.zip
     ```
 
 1. Unzip the binary to the plugin directory.
 
     ```text
-    $ unzip vault-pki-monitor-venafi_v0.0.1+1_linux_strict.zip
-    $ mv vault-pki-monitor-venafi_strict /etc/vault/vault_plugins
+    $ unzip venafi-pki-monitor_v0.0.1_linux_strict.zip
+    $ mv venafi-pki-monitor /etc/vault/vault_plugins
     ```
 
 1. Update the Vault [server configuration](https://www.vaultproject.io/docs/configuration/)
@@ -99,20 +99,21 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
 
 1. Start your vault using the [server command](https://www.vaultproject.io/docs/commands/server).
 
-1. Get the SHA-256 checksum of the `vault-pki-monitor-venafi` plugin binary: 
+1. Get the SHA-256 checksum of the `venafi-pki-monitor` plugin binary (should be the same value 
+   found in the `venafi-pki-monitor.SHA256SUM` file that accompanied the plugin in the zip file): 
 
     ```text
-    $ SHA256=$(sha256sum /etc/vault/vault_plugins/vault-pki-monitor-venafi_strict |cut -d' ' -f1)
+    $ SHA256=$(sha256sum /etc/vault/vault_plugins/venafi-pki-monitor |cut -d' ' -f1)
     ```
 
-1. Register the `vault-pki-monitor-venafi` plugin in the Vault 
+1. Register the `venafi-pki-monitor` plugin in the Vault 
    [system catalog](https://www.vaultproject.io/docs/internals/plugins#plugin-catalog):
 
    ```
-   $ vault write sys/plugins/catalog/secret/vault-pki-monitor-venafi_strict \
-       sha_256="${SHA256}" command="vault-pki-monitor-venafi_strict"
+   $ vault write sys/plugins/catalog/secret/venafi-pki-monitor \
+       sha_256="${SHA256}" command="venafi-pki-monitor"
 
-   Success! Data written to: sys/plugins/catalog/secret/vault-pki-monitor-venafi_strict
+   Success! Data written to: sys/plugins/catalog/secret/venafi-pki-monitor
    ```
 
    :pushpin: **NOTE**: If you get an error that says "can not execute files
@@ -120,12 +121,12 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
     plugin directory correctly with a non-symlinked directory as mentioned earlier. Also,
     make sure this change is reflected when calling for the SHA-256 checksum.
 
-1. Enable the secrets engine for the `vault-pki-monitor-venafi` plugin:
+1. Enable the secrets engine for the `venafi-pki-monitor` plugin:
 
    ```text
-   $ vault secrets enable -path=pki -plugin-name=vault-pki-monitor-venafi_strict plugin
+   $ vault secrets enable -path=pki -plugin-name=venafi-pki-monitor plugin
 
-   Success! Enabled the vault-pki-monitor-venafi_strict secrets engine at: pki/
+   Success! Enabled the venafi-pki-monitor secrets engine at: pki/
    ```
 
 1. Configure a Venafi secret that maps a name in Vault to connection and authentication
@@ -267,12 +268,12 @@ requests in a queue that get imported back to Venafi Trust Protection Platform o
 
 ## Upgrading
 
-To upgrade to a new version of this plugin, review the [release notes]() to understand the impact
-and then follow the [standard procedure](https://www.vaultproject.io/docs/upgrading/plugins). 
+To upgrade to a new version of this plugin, review the [release notes](../../releases/latest) to understand
+the impact and then follow the [standard procedure](https://www.vaultproject.io/docs/upgrading/plugins). 
 The following command will trigger a plug reload globally:
 
    ```text
-   $ vault write sys/plugins/reload/backend plugin=vault-pki-monitor-venafi_strict scope=global
+   $ vault write sys/plugins/reload/backend plugin=venafi-pki-monitor scope=global
 
    Key          Value
    ---          -----
