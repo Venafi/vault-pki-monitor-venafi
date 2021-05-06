@@ -1,7 +1,7 @@
 ![Venafi](Venafi_logo.png)
 [![MPL 2.0 License](https://img.shields.io/badge/License-MPL%202.0-blue.svg)](https://opensource.org/licenses/MPL-2.0)
 ![Community Supported](https://img.shields.io/badge/Support%20Level-Community-brightgreen)
-![Compatible with TPP 18.2+ & Cloud](https://img.shields.io/badge/Compatibility-TPP%2018.2+%20%26%20Cloud-f9a90c)  
+![Compatible with TPP 18.2+ & VaaS](https://img.shields.io/badge/Compatibility-TPP%2018.2+%20%26%20VaaS-f9a90c)  
 _**This open source project is community-supported.** To report a problem or share an idea, use
 **[Issues](../../issues)**; and if you have a suggestion for fixing the issue, please include those details, too.
 In addition, use **[Pull Requests](../../pulls)** to contribute actual bug fixes or proposed enhancements.
@@ -11,9 +11,10 @@ We welcome and appreciate all contributions. Got questions or want to discuss so
 # Venafi PKI Monitoring Secrets Engine for HashiCorp Vault
 
 This solution allows [HashiCorp Vault](https://www.vaultproject.io/) users to provide their
-Information Security organization visibility into certificate issuance.
-Vault issued certificates are automatically forwarded to the 
-[Venafi Platform](https://www.venafi.com/platform/trust-protection-platform) or the [Venafi Cloud for DevOps](https://www.venafi.com/platform/cloud/devops) service which enables
+Information Security organization proactive policy enforcement and visibility into certificate issuance.
+Vault issued certificates can be automatically forwarded to 
+[Venafi Trust Protection Platform](https://www.venafi.com/platform/trust-protection-platform) or
+[Venafi as a Service](https://www.venafi.com/venaficloud) service which enables
 risk assessment, incident response, and auditing that ensures compliance with enterprise security policy.
 The [secrets engine](https://www.vaultproject.io/docs/secrets/pki/index.html) component was sourced from the
 original HashiCorp Vault PKI secrets engine.
@@ -22,7 +23,7 @@ original HashiCorp Vault PKI secrets engine.
 
 * HashiCorp Vault: https://www.vaultproject.io/downloads.html
 
-## Requirements for use with Trust Protection Platform
+### Venafi Trust Protection Platform Requirements
 
 1. For policy enforcement, the Venafi WebSDK user that Vault will be using needs
    to have been granted view and read permissions to the policy folder from which
@@ -33,7 +34,7 @@ original HashiCorp Vault PKI secrets engine.
    Duplicate Certificates and Reuse Private Keys_ policy of that folder needs to be
    set to 'Yes' to ensure that all certificates issued by the Vault can be imported.
 
-### Trust between Vault and Trust Protection Platform
+#### Trust between Vault and Trust Protection Platform
 
 The Trust Protection Platform REST API (WebSDK) must be secured with a
 certificate. Generally, the certificate is issued by a CA that is not publicly
@@ -48,11 +49,33 @@ in PEM format (e.g. /opt/venafi/bundle.pem) and reference it using the
 `trust_bundle_file` parameter whenever you create or update a PKI role in your
 Vault.
 
+### Venafi as a Service Requirements
+
+If you are using Venafi as a Service, verify the following:
+
+- The Venafi as a Service REST API at [https://api.venafi.cloud](https://api.venafi.cloud/swagger-ui.html)
+is accessible from the systems where Vault will be running.
+- You have successfully registered for a Venafi as a Service account, have been granted at least the
+"Resource Owner" role, and know your API key.
+- A CA Account and Issuing Template exist and have been configured with:
+    - Recommended Settings values for:
+        - Organizational Unit (OU)
+        - Organization (O)
+        - City/Locality (L)
+        - State/Province (ST)
+        - Country (C)
+    - Issuing Rules that:
+        - (Recommended) Limits Common Name and Subject Alternative Name to domains that are allowed by your organization
+        - (Recommended) Restricts the Key Length to 2048 or higher
+        - (Recommended) Does not allow Private Key Reuse
+- An Application exists where you are among the owners, and you know the Application name.
+- An Issuing Template is assigned to the Application, and you know its API Alias.
+
 ## Setup
 
 This plugin was originally sourced from the
 [built-in Vault PKI secrets engine](https://www.vaultproject.io/docs/secrets/pki/index.html)
-and enhanced with features for integrating with Venafi Platform and Cloud.
+and enhanced with features for integrating with Trust Protection Platform and Venafi as a Service.
 
 1. Create the [directory](https://www.vaultproject.io/docs/internals/plugins#plugin-directory)
    where your Vault server will look for plugins (e.g. /etc/vault/vault_plugins).
@@ -131,9 +154,9 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
 
 1. Configure a Venafi secret that maps a name in Vault to connection and authentication
    settings for retrieving certificate policy and importing certificates into Venafi. The
-   zone is a policy folder for Trust Protection Platform or a DevOps project zone for
-   Venafi Cloud. Obtain the `access_token` and `refresh_token` for Trust Protection
-   Platform using the
+   zone is a policy folder for Trust Protection Platform or an Application with Issuing
+   Template alias for Venafi as a Service. Obtain the `access_token` and `refresh_token`
+   for Trust Protection Platform using the
    [VCert CLI](https://github.com/Venafi/vcert/blob/master/README-CLI-PLATFORM.md#obtaining-an-authorization-token)
    (`getcred` action with `--client-id "hashicorp-vault-monitor-by-venafi"` and
    `--scope "certificate:manage,discover"`) or the Platform's Authorize REST API method. 
@@ -153,10 +176,10 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
    to modify the Venafi secret in the future (i.e. depending upon whether the
    original set of tokens has been refreshed by the secrets engine plugin).
 
-   **Venafi Cloud**:
+   **Venafi as a Service**:
 
    ```
-   $ vault write pki/venafi/cloud apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+   $ vault write pki/venafi/vaas apikey="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
    ```
 
    Following options are supported (note: this list can also be viewed
@@ -165,13 +188,13 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
    | Parameter             | Type   | Description                                                                         | Example   |
    | --------------------- | ------ | ----------------------------------------------------------------------------------- | --------- |
    |`access_token`         |string  | Trust Protection Platform access token for the "hashicorp-vault-monitor-by-venafi" API Application |`tn1PwE1QTZorXmvnTowSyA==`|
-   |`apikey`               |string  | Venafi Cloud API key                                                                |`142231b7-cvb0-412e-886b-6aeght0bc93d`|
+   |`apikey`               |string  | Venafi as a Service API key                                                         |`142231b7-cvb0-412e-886b-6aeght0bc93d`|
    |`url`                  |string  | Venafi service URL, generally only applicable to Trust Protection Platform          |`https://tpp.venafi.example`|
    |`refresh_token`        |string  | Refresh Token for Venafi Platform.                                                  |`MGxV7DzNnclQi9CkJMCXCg==`|
    |`tpp_password`         |string  | **[DEPRECATED]** Trust Protection Platform WebSDK password, use `access_token` if possible |`somePassword?`|
    |`tpp_user`             |string  | **[DEPRECATED]** Trust Protection Platform WebSDK username, use `access_token` if possible |`admin`|
    |`trust_bundle_file`    |string  | Text file containing trust anchor certificates in PEM format, generally required for Trust Protection Platform |`"/path/to/chain.pem"`|
-   |`zone`                 |string  | Trust Protection Platform policy folder or Venafi Cloud Application Name and Issuing Template API Alias (e.g. "Business App\Enterprise CIT") to be used when no `zone` is specified by the venafi-policy |`testpolicy\\vault`|
+   |`zone`                 |string  | Policy folder for TPP or Application name and Issuing Template API Alias for VaaS (e.g. "Business App\Enterprise CIT") to be used when no `zone` is specified by the venafi-policy |`testpolicy\\vault`|
 
 1. Configure a default Venafi policy that will only enable issuance of policy 
    compliant certificate for all PKI roles in the path.
@@ -182,11 +205,11 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
    $ vault write pki/venafi-policy/default venafi_secret="tpp" zone="DevOps\\Default"
    ```
 
-   **Venafi Cloud**:
+   **Venafi as a Service**:
 
    ```
    $ vault write pki/venafi-policy/default \
-       venafi_secret="cloud" zone="Business App\\Enterprise CIT"
+       venafi_secret="vaas" zone="Business App\\Enterprise CIT"
    ```
 
    The following options are supported (note: this list can also be viewed
@@ -201,9 +224,9 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
    |`import_roles`         |string  | List of roles where issued certificates will be imported into the Venafi `zone`     |`tpp`|
    |`import_timeout`       |int     | Maximum wait in seconds before re-attempting certificate import from queue          | 15 |
    |`import_workers`       |int     | Maximum number of concurrent threads to use for Venafi import                       | 5 |
-   |`zone`                 |string  | Trust Protection Platform policy folder or Venafi Cloud Application Name and Issuing Template API Alias (e.g. "Business App\Enterprise CIT") |`testpolicy\\vault`|
+   |`zone`                 |string  | Policy folder for TPP or Application name and Issuing Template API Alias for VaaS (e.g. "Business App\Enterprise CIT")|`testpolicy\\vault`|
 
-1. Configure a [role](https://www.vaultproject.io/api-docs/secret/pki#create-update-role) with which you want to use for enforcement policy.
+1. Configure a [role](https://www.vaultproject.io/api-docs/secret/pki#create-update-role) with which you want to use for enforcing certificate policy.
 
     ```text
     $ vault write pki/roles/venafi-role generate_lease=true ttl=1h max_ttl=1h allow_any_name=true
@@ -218,12 +241,12 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
         defaults_roles="venafi-role" enforcement_roles="venafi-role" zone="DevOps\\Default"
     ```
 
-    **Venafi Cloud**:
+    **Venafi as a Service**:
 
     ```text
     $ vault write pki/venafi-policy/default \
         defaults_roles="venafi-role" enforcement_roles="venafi-role" \
-        venafi_secret="cloud" zone="Business App\\Enterprise CIT"
+        venafi_secret="vaas" zone="Business App\\Enterprise CIT"
     ```
 
 1. Create another Venafi policy for visibility. This will specify the zone where
@@ -236,19 +259,19 @@ and enhanced with features for integrating with Venafi Platform and Cloud.
     $ vault write pki/venafi-policy/visibility import_roles="venafi-role" zone="DevOps\\Vault Monitor"
     ```
 
-    **Venafi Cloud**:
+    **Venafi as a Service**:
 
     ```text
     $ vault write pki/venafi-policy/visibility \
-        import_roles="venafi-role" venafi_secret="cloud" zone="Business App\\Enterprise CIT"
+        import_roles="venafi-role" venafi_secret="vaas" zone="Business App\\Enterprise CIT"
     ```
 
 ## Usage
 
-Venafi Policy limits the PKI role based on Venafi Platform policies or Venafi Cloud zones.
-Policy enforcement is configured using the special *venafi-policy* path which InfoSec teams can
-use to require compliance from a Vault CA. The Venafi monitoring plugin also places these
-requests in a queue that get imported back to Venafi Trust Protection Platform or Venafi Cloud.
+Venafi Policy limits the PKI role based on Trust Protection Platform policies or Venafi as a
+Service Issuing Template rules.  Policy enforcement is configured using the special *venafi-policy* 
+path which InfoSec teams can use to require compliance from a Vault CA. The Venafi monitoring plugin
+can also add the resulting certificates to a queue for them to be imported into TPP or VaaS.
 
 1. Generate a certificate by writing to the Vault CA and the Venafi role.
 
