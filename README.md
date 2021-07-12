@@ -93,6 +93,10 @@ and enhanced with features for integrating with Trust Protection Platform and Ve
     $ wget -q https://github.com/Venafi/vault-pki-monitor-venafi/releases/download/v0.0.1/venafi-pki-monitor_v0.0.1_linux_strict.zip
     ```
 
+   :pushpin: **NOTE**: Release binaries are built and tested using the latest generally
+   available version of Vault at the time.  Backward compatibility with older versions of Vault
+   is typical but not confirmed by testing.
+
 1. Compare the checksum of the package to the listed value on the GitHub release page.
 
     ```text
