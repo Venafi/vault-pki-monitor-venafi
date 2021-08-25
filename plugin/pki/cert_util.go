@@ -466,7 +466,7 @@ func validateOtherSANs(data *dataBundle, requested map[string][]string) (string,
 	}
 	allowed, err := parseOtherSANs(data.role.AllowedOtherSANs)
 	if err != nil {
-		return "", "", errwrap.Wrapf("error parsing role's allowed SANs: {{err}}", err)
+		return "", "", fmt.Errorf("error parsing role's allowed SANs: %w", err)
 	}
 	for oid, names := range requested {
 		for _, name := range names {
@@ -854,7 +854,7 @@ func generateCreationBundle(b *backend, data *dataBundle, isCA bool) error {
 	if sans := data.apiData.Get("other_sans").([]string); len(sans) > 0 {
 		requested, err := parseOtherSANs(sans)
 		if err != nil {
-			return errutil.UserError{Err: errwrap.Wrapf("could not parse requested other SAN: {{err}}", err).Error()}
+			return errutil.UserError{Err: fmt.Errorf("could not parse requested other SAN: %w", err).Error()}
 		}
 		badOID, badName, err := validateOtherSANs(data, requested)
 		switch {
@@ -1183,7 +1183,7 @@ func createCertificate(data *dataBundle) (*certutil.ParsedCertBundle, error) {
 	}
 
 	if err := handleOtherSANs(certTemplate, data.params.OtherSANs); err != nil {
-		return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling other SANs: {{err}}", err).Error()}
+		return nil, errutil.InternalError{Err: fmt.Errorf("error marshaling other SANs: %w", err).Error()}
 	}
 
 	// Add this before calling addKeyUsages
