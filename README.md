@@ -242,7 +242,8 @@ and enhanced with features for integrating with Trust Protection Platform and Ve
 
     ```text 
     $ vault write pki/venafi-policy/default \
-        defaults_roles="venafi-role" enforcement_roles="venafi-role" zone="DevOps\\Default"
+        defaults_roles="venafi-role" enforcement_roles="venafi-role" \
+        venafi_secret="tpp" zone="DevOps\\Default"
     ```
 
     **Venafi as a Service**:
