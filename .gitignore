@@ -4,3 +4,4 @@ pki_custom
 credentials
 demo.sh
 !*/**
+*.DS_Store
