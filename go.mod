@@ -7,15 +7,14 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
 	github.com/fatih/structs v1.1.0
 	github.com/go-test/deep v1.0.7
-	github.com/hashicorp/errwrap v1.0.0
-	github.com/hashicorp/vault v1.5.5
-	github.com/hashicorp/vault/api v1.0.5-0.20200630205458-1a16f3c699c6
-	github.com/hashicorp/vault/sdk v0.1.14-0.20201020233143-625c50e68971
-	github.com/mitchellh/mapstructure v1.3.2
+	github.com/hashicorp/errwrap v1.1.0
+	github.com/hashicorp/vault v1.7.6
+	github.com/hashicorp/vault/api v1.1.1
+	github.com/hashicorp/vault/sdk v0.2.1-0.20211101201606-6453490da33b
+	github.com/mitchellh/mapstructure v1.3.3
 	github.com/ryanuber/go-glob v1.0.0
-	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
-	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
-	gotest.tools/gotestsum v1.6.1 // indirect
+	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
+	golang.org/x/net v0.0.0-20210510120150-4163338589ed
 )
 
 replace github.com/hashicorp/vault/api => github.com/hashicorp/vault/api v0.0.0-20200718022110-340cc2fa263f
