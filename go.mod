@@ -15,7 +15,6 @@ require (
 	github.com/ryanuber/go-glob v1.0.0
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9
-	gotest.tools/gotestsum v1.6.1 // indirect
 )
 
 replace github.com/hashicorp/vault/api => github.com/hashicorp/vault/api v0.0.0-20200718022110-340cc2fa263f
