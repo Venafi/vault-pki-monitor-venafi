@@ -272,6 +272,12 @@ and enhanced with features for integrating with Trust Protection Platform and Ve
         import_roles="venafi-role" venafi_secret="vaas" zone="Business App\\Enterprise CIT"
     ```
 
+1. The final step is to make your PKI secrets engine a certificate authority by generating a new
+   key pair and CSR which you will either sign locally (root CA) or have signed by another CA. 
+   See steps 1 and 2 of the
+   [Building Your Own Certificate Authority](https://developer.hashicorp.com/vault/tutorials/secrets-management/pki-engine)
+   tutorial by HashiCorp.
+
 ## Usage
 
 Venafi Policy limits the PKI role based on Trust Protection Platform policies or Venafi as a
