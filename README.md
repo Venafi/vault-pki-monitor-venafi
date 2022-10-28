@@ -261,7 +261,8 @@ and enhanced with features for integrating with Trust Protection Platform and Ve
     **Trust Protection Platform**:
 
     ```text
-    $ vault write pki/venafi-policy/visibility import_roles="venafi-role" zone="DevOps\\Vault Monitor"
+    $ vault write pki/venafi-policy/visibility \
+        import_roles="venafi-role" venafi_secret="tpp" zone="DevOps\\Vault Monitor"
     ```
 
     **Venafi as a Service**:
