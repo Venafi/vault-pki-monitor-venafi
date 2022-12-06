@@ -8,10 +8,10 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/go-test/deep v1.0.7
 	github.com/hashicorp/errwrap v1.0.0
-	github.com/hashicorp/vault v1.5.5
-	github.com/hashicorp/vault/api v1.0.5-0.20200630205458-1a16f3c699c6
-	github.com/hashicorp/vault/sdk v0.1.14-0.20201020233143-625c50e68971
-	github.com/mitchellh/mapstructure v1.3.2
+	github.com/hashicorp/vault v1.6.2
+	github.com/hashicorp/vault/api v1.0.5-0.20201001211907-38d91b749c77
+	github.com/hashicorp/vault/sdk v0.1.14-0.20210127182440-8477cfe632c0
+	github.com/mitchellh/mapstructure v1.3.3
 	github.com/ryanuber/go-glob v1.0.0
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
